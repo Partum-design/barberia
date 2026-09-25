@@ -2088,3 +2088,143 @@ h1, h2, h3, .font-display {
 .biz-contact a:hover { background: rgb(255 255 255 / 0.04); }
 .biz-contact svg { width: 1rem; height: 1rem; flex-shrink: 0; color: var(--gold); }
 @media (min-width: 900px) { .biz-visit { grid-template-columns: repeat(3, 1fr); } }
+
+/* ==========================================================================
+   Accesibilidad
+   Opciones de la barra "Accesibilidad" (components/a11y/Accesibilidad.tsx),
+   guardadas como atributos data-* en <html>. Casi todo el sitio mide en rem,
+   así que subir el tamaño raíz agranda textos, botones y espacios a la vez.
+   ========================================================================== */
+
+html[data-texto="grande"] { font-size: 118.75%; }
+html[data-texto="muygrande"] { font-size: 137.5%; }
+
+html[data-contraste="alto"] {
+  --ink-muted: #f6f0e4;
+  --ink-faint: rgba(246, 240, 228, 0.88);
+  --ink-ghost: rgba(246, 240, 228, 0.7);
+  --line: rgba(240, 224, 190, 0.45);
+  --line-strong: rgba(240, 224, 190, 0.7);
+}
+html[data-contraste="alto"] [class*="text-white/"],
+html[data-contraste="alto"] .login-footnote,
+html[data-contraste="alto"] .login-field > label,
+html[data-contraste="alto"] .login-input-wrap > input::placeholder,
+html[data-contraste="alto"] .site-footer { color: #fff !important; }
+html[data-contraste="alto"] :is(input, select, textarea) { border-color: rgba(240, 224, 190, 0.8) !important; }
+html[data-contraste="alto"] .grain-layer { display: none; }
+
+html[data-enlaces="subrayados"] a { text-decoration: underline !important; text-underline-offset: 0.2em; text-decoration-thickness: 2px; }
+
+html[data-movimiento="reducido"] *,
+html[data-movimiento="reducido"] *::before,
+html[data-movimiento="reducido"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Foco muy visible para quien navega con teclado */
+:is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #e6c576 !important;
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed; left: 1rem; top: -4rem; z-index: 100;
+  border-radius: 0.75rem; background: #e6c576; padding: 0.75rem 1.1rem;
+  color: #100d09; font-size: 1rem; font-weight: 700;
+  transition: top 150ms ease;
+}
+.skip-link:focus { top: 1rem; }
+
+/* Botón flotante: siempre con texto, no sólo el icono */
+.a11y-fab {
+  position: fixed; left: 1rem; bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 60;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  min-height: 3rem; border: 2px solid #e6c576; border-radius: 999px;
+  background: #100d09; padding: 0.55rem 1rem 0.55rem 0.8rem;
+  color: #f6f0e4; font-size: 0.95rem; font-weight: 700;
+  box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.8);
+}
+.a11y-fab svg { height: 1.4rem; width: 1.4rem; color: #e6c576; }
+.a11y-fab:hover { background: #1e1911; }
+/* En los paneles móviles la barra de navegación ocupa el borde inferior */
+@media (max-width: 767px) {
+  body:has(.app-mobile-nav) .a11y-fab { bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
+  .a11y-fab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .a11y-fab { padding: 0.7rem; }
+}
+
+.a11y-panel {
+  position: fixed; left: 1rem; bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.75rem); z-index: 61;
+  width: min(22rem, calc(100vw - 2rem)); max-height: calc(100dvh - 7rem); overflow-y: auto;
+  border: 1px solid rgba(240, 224, 190, 0.3); border-radius: 1.25rem;
+  background: #100d09; padding: 1.1rem; color: #f6f0e4;
+  box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.95);
+  font-size: 1rem;
+}
+@media (max-width: 767px) {
+  body:has(.app-mobile-nav) .a11y-panel { bottom: calc(9rem + env(safe-area-inset-bottom)); max-height: calc(100dvh - 11rem); }
+}
+.a11y-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.a11y-panel-head h2 { font-size: 1.2rem; font-weight: 700; }
+.a11y-panel-head button { display: grid; place-items: center; height: 2.75rem; width: 2.75rem; border-radius: 999px; }
+.a11y-panel-head button:hover { background: rgb(255 255 255 / 0.08); }
+.a11y-group { margin-top: 0.9rem; display: grid; gap: 0.5rem; border: 0; padding: 0; }
+.a11y-group legend { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.5rem; font-size: 0.95rem; font-weight: 700; }
+.a11y-group legend svg { height: 1.1rem; width: 1.1rem; color: #e6c576; }
+.a11y-sizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.a11y-sizes button {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.2rem;
+  min-height: 4.2rem; border: 2px solid rgba(240, 224, 190, 0.25); border-radius: 0.9rem;
+  padding: 0.5rem 0.25rem; font-size: 0.85rem; font-weight: 600;
+}
+.a11y-sizes button span { font-weight: 800; line-height: 1; }
+.a11y-sizes button[aria-pressed="true"] { border-color: #e6c576; background: rgb(230 197 118 / 0.14); color: #f0dfb6; }
+.a11y-switch {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%;
+  min-height: 3.5rem; border: 2px solid rgba(240, 224, 190, 0.2); border-radius: 0.9rem;
+  padding: 0.6rem 0.75rem; text-align: left;
+}
+.a11y-switch[aria-checked="true"] { border-color: #e6c576; background: rgb(230 197 118 / 0.12); }
+.a11y-switch-icon svg { height: 1.3rem; width: 1.3rem; color: #e6c576; }
+.a11y-switch-text { flex: 1; min-width: 0; }
+.a11y-switch-text strong { display: block; font-size: 0.95rem; }
+.a11y-switch-text small { display: block; color: rgba(246, 240, 228, 0.75); font-size: 0.8rem; line-height: 1.35; }
+.a11y-switch-state { flex: none; border-radius: 999px; background: rgb(255 255 255 / 0.08); padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 700; }
+.a11y-switch[aria-checked="true"] .a11y-switch-state { background: #e6c576; color: #100d09; }
+.a11y-read, .a11y-reset {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;
+  min-height: 3.25rem; margin-top: 0.9rem; border-radius: 0.9rem; font-size: 0.95rem; font-weight: 700;
+}
+.a11y-read { background: #e6c576; color: #100d09; }
+.a11y-read svg, .a11y-reset svg { height: 1.2rem; width: 1.2rem; }
+.a11y-reset { margin-top: 0.5rem; border: 2px solid rgba(240, 224, 190, 0.25); }
+.a11y-hint { margin-top: 0.45rem; color: rgba(246, 240, 228, 0.7); font-size: 0.8rem; text-align: center; }
+
+/* Acceso y restablecer contraseña: letra cómoda de leer */
+.login-access header > p:last-child { font-size: 0.95rem; }
+.login-field > label { font-size: 0.9rem; }
+.login-input-wrap > input { min-height: 3.1rem; font-size: 1rem; }
+.login-input-wrap > button { display: grid; place-items: center; height: 2.5rem; width: 2.5rem; }
+.login-submit { min-height: 3.1rem; font-size: 1rem; }
+.login-alert { font-size: 0.9rem; }
+.login-footnote { font-size: 0.8rem; color: rgb(243 236 219 / 0.6); }
+.login-forgot, .login-modes button { font-size: 0.9rem; min-height: 2.75rem; }
+.login-shell-single { width: min(100%, 34rem); grid-template-columns: 1fr !important; }
+.login-shell-single .login-access { padding: 1.75rem; }
+.login-title-lg { margin-top: 0.55rem; color: var(--ink); font-family: var(--font-display); font-size: clamp(1.75rem, 6vw, 2.3rem); font-weight: 700; line-height: 1.1; outline: none; }
+.login-lead-lg { margin-top: 0.7rem; color: var(--ink-muted); font-size: 1rem; line-height: 1.6; }
+.login-code-input { text-align: center; font-family: var(--font-num), monospace; font-size: 1.8rem !important; letter-spacing: 0.5em; padding-left: 1.4rem !important; }
+.login-help { margin-top: 0.5rem; color: var(--ink-muted); font-size: 0.85rem; line-height: 1.5; }

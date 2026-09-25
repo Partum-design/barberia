@@ -219,18 +219,12 @@ function Acceso() {
             {modo === "entrar" && (
               <div className="login-options">
                 <span />
-                <button
-                  type="button"
+                <Link
+                  href={correo.trim() ? `/restablecer?email=${encodeURIComponent(correo.trim())}` : "/restablecer"}
                   className="login-forgot"
-                  onClick={() => {
-                    setError(null);
-                    setAviso(
-                      "Pide a la administración de la barbería que te asigne una contraseña nueva desde su panel."
-                    );
-                  }}
                 >
                   ¿Olvidaste tu contraseña?
-                </button>
+                </Link>
               </div>
             )}
 

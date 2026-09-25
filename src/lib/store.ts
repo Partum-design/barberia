@@ -209,9 +209,11 @@ function ejecutar(op: Operacion): boolean {
   return true;
 }
 
-function logout() {
+async function logout() {
   publicar({ sesion: null });
-  getSupabaseBrowser()?.auth.signOut();
+  // Se espera al cierre real: si se navega antes, la cookie puede seguir viva
+  // y el middleware devolvería a la persona a su panel.
+  await getSupabaseBrowser()?.auth.signOut();
 }
 
 function suscribir(f: () => void) {

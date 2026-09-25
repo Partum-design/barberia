@@ -41,14 +41,23 @@ export function Stage({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducido) {
-      setSoportado(false);
-      return;
-    }
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    setSoportado(Boolean(ctx));
+    // Respeta tanto la preferencia del sistema como el "Menos movimiento" de
+    // la barra de accesibilidad, que puede cambiar con la página abierta.
+    const evaluar = () => {
+      const reducido =
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        document.documentElement.dataset.movimiento === "reducido";
+      if (reducido) {
+        setSoportado(false);
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+      setSoportado(Boolean(ctx));
+    };
+    evaluar();
+    window.addEventListener("barberia:accesibilidad", evaluar);
+    return () => window.removeEventListener("barberia:accesibilidad", evaluar);
   }, []);
 
   useEffect(() => {

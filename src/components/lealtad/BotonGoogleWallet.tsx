@@ -43,8 +43,8 @@ export function BotonGoogleWallet({
       setEstado("reposo");
       setError(
         r.configurado === false
-          ? `Google Wallet aún no está activado. Falta definir: ${r.faltan?.join(", ")}.`
-          : r.error ?? "No se pudo generar el pase."
+          ? "La tarjeta para Google Wallet todavía no está disponible. Mientras tanto, muestra tu número de tarjeta en la barbería."
+          : r.error ?? "No se pudo generar el pase. Intenta de nuevo en un momento."
       );
       return;
     }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Marca } from "@/components/shell/Marca";
+import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 
 // Display grotesk para titulares de producto
 const outfit = Outfit({
@@ -60,10 +61,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`dark ${outfit.variable} ${jakarta.variable} ${playfair.variable} ${bebas.variable} ${plexMono.variable}`}
     >
+      <head>
+        {/* Aplica las opciones de accesibilidad guardadas antes de pintar */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_ACCESIBILIDAD }} />
+      </head>
       <body className="antialiased">
+        <a href="#contenido" className="skip-link">
+          Saltar al contenido
+        </a>
         {/* Grano de película: rompe el banding de los degradados oscuros */}
         <div className="grain-layer" aria-hidden />
-        {children}
+        <div id="contenido" tabIndex={-1} className="outline-none">
+          {children}
+        </div>
+        <Accesibilidad />
         <footer className="site-footer">
           <Marca />
           <span>Sitio y sistema por Partum Design</span>

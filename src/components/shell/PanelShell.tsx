@@ -65,7 +65,7 @@ export function PanelShell({
 }: {
   sesion: Sesion;
   activo: string;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -112,8 +112,8 @@ export function PanelShell({
             </div>
           </div>
           <button
-            onClick={() => {
-              onLogout();
+            onClick={async () => {
+              await onLogout();
               router.push("/");
             }}
             className="app-logout"
@@ -130,8 +130,8 @@ export function PanelShell({
             <Marca className="max-w-[12rem] truncate uppercase" />
           </Link>
           <button
-            onClick={() => {
-              onLogout();
+            onClick={async () => {
+              await onLogout();
               router.push("/");
             }}
             className="flex items-center gap-1.5 text-xs font-medium text-white/70"

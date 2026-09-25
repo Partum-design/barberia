@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { CalendarCheck, Clock3, Scissors, ShieldCheck } from "lucide-react";
 import { FlujoReserva } from "@/components/booking/FlujoReserva";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
+import { MODO_LOCAL } from "@/lib/modo";
+import { Marca } from "@/components/shell/Marca";
 
 // Nodo Cliente: búsqueda de barberos + reserva con bloqueo de slot.
-// En esta demo los barberos y las citas viven en el almacén local del navegador.
 export default function ReservarPage() {
-  const { listo, barberos } = useDemoStore();
+  const { listo, barberos } = useBarberia();
   const activos = useMemo(() => barberos.filter((m) => m.activo), [barberos]);
 
   return (
@@ -18,14 +19,14 @@ export default function ReservarPage() {
         <nav className="booking-nav">
           <Link href="/" className="login-brand">
             <span className="login-brand-mark"><Scissors className="h-4 w-4" /></span>
-            <span>Hair<strong>cut</strong></span>
+            <Marca />
           </Link>
           <Link href="/" className="booking-back">Volver al inicio</Link>
         </nav>
         <div className="booking-hero-copy">
           <p className="login-kicker text-mint-raw">Reserva protegida</p>
           <h1>Tu cita, lista en pocos minutos.</h1>
-          <p>Elige barbero y horario. HAIRCUT mantiene el espacio disponible mientras confirmas.</p>
+          <p>Elige barbero y horario. Mantenemos tu espacio apartado mientras confirmas.</p>
         </div>
         <div className="booking-trust">
           <span><Clock3 className="h-4 w-4" /> Bloqueo de 10 minutos</span>
@@ -44,7 +45,7 @@ export default function ReservarPage() {
           </ol>
         </aside>
         <div className="booking-panel anim-in anim-d2">
-          {listo && <FlujoReserva barberos={activos} demo />}
+          {listo && <FlujoReserva barberos={activos} local={MODO_LOCAL} />}
         </div>
       </section>
     </main>

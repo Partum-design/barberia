@@ -4,27 +4,26 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Banknote, Check, Plus, ShieldCheck } from "lucide-react";
+import { Banknote, Check, CreditCard, ShieldCheck } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { SavedCard } from "@/components/marketing/SavedCard";
-import { MastercardMark, MercadoPagoMark, StripeMark, VisaMark } from "@/components/payments/BrandMarks";
-import { useDemoStore } from "@/lib/demo-store";
+import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
+import { useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
 // Nodo Cliente: método de pago guardado + historial de cobros de sus citas.
 export default function PagosPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, citas, sesion } = store;
-  const [activeCard, setActiveCard] = useState<"visa" | "mastercard">("visa");
   const [provider, setProvider] = useState<"stripe" | "mercado-pago">("stripe");
+  const clienteId = sesion?.id ?? "";
 
   const mias = useMemo(
     () =>
       citas
-        .filter((c) => c.cliente_id === "cli-1" && c.estado !== "cancelada")
+        .filter((c) => c.cliente_id === clienteId && c.estado !== "cancelada")
         .sort((a, b) => b.inicio.localeCompare(a.inicio)),
-    [citas]
+    [citas, clienteId]
   );
 
   if (!listo) return null;
@@ -46,13 +45,16 @@ export default function PagosPage() {
       <div className="payments-layout">
         <section className="payments-wallet anim-in anim-d1">
           <div className="payments-section-heading">
-            <div><p>Métodos guardados</p><span>Selecciona tu tarjeta principal y tócala para girarla.</span></div>
+            <div><p>Métodos guardados</p><span>Tus tarjetas quedan tokenizadas por la pasarela de pago.</span></div>
             <span className="payments-secure"><ShieldCheck /> Protegido</span>
           </div>
 
-          <div className="payments-cards-grid">
-            <SavedCard nombre={sesion.nombre} toast={false} trust={false} brand="visa" last4="5521" active={activeCard === "visa"} onSelect={() => setActiveCard("visa")} />
-            <SavedCard nombre={sesion.nombre} toast={false} trust={false} brand="mastercard" last4="1084" active={activeCard === "mastercard"} onSelect={() => setActiveCard("mastercard")} />
+          <div
+            className="rounded-2xl border border-dashed border-brand-500/30 p-8 text-center text-sm"
+            style={{ background: "var(--card)", color: "var(--ink-muted)" }}
+          >
+            Aún no tienes métodos guardados. Tu tarjeta se guarda de forma segura la primera vez que
+            pagas una cita en línea.
           </div>
 
           <div className="payment-provider-panel">
@@ -65,10 +67,8 @@ export default function PagosPage() {
                 <MercadoPagoMark /><span>{provider === "mercado-pago" && <Check />} Saldo y SPEI</span>
               </button>
             </div>
-            <p className="payment-provider-note"><ShieldCheck /> Configuración visual de demostración; ningún cargo se procesa desde esta pantalla.</p>
+            <p className="payment-provider-note"><ShieldCheck /> Nunca guardamos el número completo de tu tarjeta.</p>
           </div>
-
-          <button className="add-payment-method"><Plus /> Agregar otro método</button>
         </section>
 
         <section className="payments-history anim-in anim-d2">
@@ -82,21 +82,19 @@ export default function PagosPage() {
             </div>
           )}
           <div className="payments-history-list">
-          {mias.map((c, index) => (
+          {mias.map((c) => (
             <article
               key={c.id}
               className="payment-history-row"
             >
               <div className={`payment-history-mark ${c.metodo_pago}`}>
-                {c.metodo_pago === "tarjeta"
-                  ? index % 2 === 0 ? <VisaMark /> : <MastercardMark compact />
-                  : <Banknote />}
+                {c.metodo_pago === "tarjeta" ? <CreditCard /> : <Banknote />}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{c.barbero_nombre}</p>
                 <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
                   {format(new Date(c.inicio), "d 'de' MMMM, yyyy", { locale: es })} ·{" "}
-                  {c.metodo_pago === "tarjeta" ? `${index % 2 === 0 ? "Visa" : "Mastercard"} ····${index % 2 === 0 ? "5521" : "1084"}` : "Efectivo en barbería"}
+                  {c.metodo_pago === "tarjeta" ? "Tarjeta en línea" : "Efectivo en barbería"}
                 </p>
               </div>
               <div className="text-right">
@@ -126,7 +124,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_MODE } from "@/lib/demo";
+import { MODO_LOCAL } from "@/lib/modo";
 
 // POST /api/bookings — bloquea un slot por 10 minutos para iniciar checkout.
 // Defensas en capas: rate limit (middleware) → Turnstile → sesión → RPC
@@ -8,7 +8,7 @@ import { DEMO_MODE } from "@/lib/demo";
 
 async function verifyTurnstile(token: string | undefined, ip: string) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return DEMO_MODE; // sin llave solo se permite en demo
+  if (!secret) return MODO_LOCAL; // sin llave solo se permite en modo local
   if (!token) return false;
 
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -35,13 +35,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (DEMO_MODE) {
-    // Sin backend real: simula el bloqueo del slot para la demo pública.
+  if (MODO_LOCAL) {
+    // Sin Supabase: simula el bloqueo del slot; la cita se guarda en el navegador.
     return NextResponse.json({
-      cita_id: `demo-${crypto.randomUUID()}`,
+      cita_id: `local-${crypto.randomUUID()}`,
       estado: "bloqueada",
       bloqueo_expira_en: new Date(Date.now() + 10 * 60_000).toISOString(),
-      demo: true,
+      local: true,
     });
   }
 

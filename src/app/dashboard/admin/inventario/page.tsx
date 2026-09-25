@@ -12,9 +12,9 @@ import {
   moneda,
   numero,
 } from "@/components/panel/ModuleUI";
-import { useDemoStore, type ProductoDemo } from "@/lib/demo-store";
+import { useBarberia, type Producto } from "@/lib/store";
 
-const CATEGORIAS: ProductoDemo["categoria"][] = ["Cuidado", "Peinado", "Afeitado", "Consumible"];
+const CATEGORIAS: Producto["categoria"][] = ["Cuidado", "Peinado", "Afeitado", "Consumible"];
 
 /**
  * Inventario de producto y consumible. La alerta de reposición no es un
@@ -22,12 +22,12 @@ const CATEGORIAS: ProductoDemo["categoria"][] = ["Cuidado", "Peinado", "Afeitado
  * jornada.
  */
 export default function InventarioPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, productos } = store;
   const [abierto, setAbierto] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
-    categoria: "Cuidado" as ProductoDemo["categoria"],
+    categoria: "Cuidado" as Producto["categoria"],
     existencias: 10,
     minimo: 5,
     costo: 100,
@@ -104,7 +104,7 @@ export default function InventarioPage() {
             </label>
             <label className="text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
               Categoría
-              <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value as ProductoDemo["categoria"] })} className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm">
+              <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value as Producto["categoria"] })} className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm">
                 {CATEGORIAS.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}

@@ -1,22 +1,22 @@
-import type { RolDemo, SesionDemo } from "@/lib/demo-store";
+import type { Rol, Sesion } from "@/lib/store";
 
 /** Destino de cada rol tras iniciar sesión. */
-export const DESTINO_POR_ROL: Record<RolDemo, string> = {
+export const DESTINO_POR_ROL: Record<Rol, string> = {
   cliente: "/cuenta",
   barbero: "/dashboard/barbero",
   admin: "/dashboard/admin",
 };
 
 /** Prefijos de ruta que sólo puede visitar cada rol. */
-export const RUTAS_PROTEGIDAS: { prefijo: string; roles: RolDemo[] }[] = [
+export const RUTAS_PROTEGIDAS: { prefijo: string; roles: Rol[] }[] = [
   { prefijo: "/dashboard/admin", roles: ["admin"] },
   { prefijo: "/dashboard/barbero", roles: ["barbero", "admin"] },
   { prefijo: "/cuenta", roles: ["cliente", "barbero", "admin"] },
 ];
 
-const ROLES_VALIDOS: RolDemo[] = ["cliente", "barbero", "admin"];
+const ROLES_VALIDOS: Rol[] = ["cliente", "barbero", "admin"];
 
-export function esRolValido(valor: unknown): valor is RolDemo {
+export function esRolValido(valor: unknown): valor is Rol {
   return typeof valor === "string" && (ROLES_VALIDOS as string[]).includes(valor);
 }
 
@@ -30,7 +30,7 @@ export function esRolValido(valor: unknown): valor is RolDemo {
 export function resolverRol(usuario: {
   app_metadata?: Record<string, unknown> | null;
   user_metadata?: Record<string, unknown> | null;
-}): RolDemo {
+}): Rol {
   const deApp = usuario.app_metadata?.rol ?? usuario.app_metadata?.role;
   if (esRolValido(deApp)) return deApp;
   const deUser = usuario.user_metadata?.rol ?? usuario.user_metadata?.role;
@@ -39,7 +39,7 @@ export function resolverRol(usuario: {
 }
 
 /** Etiqueta legible bajo el nombre en el panel. */
-export function subtituloDeRol(rol: RolDemo): string {
+export function subtituloDeRol(rol: Rol): string {
   if (rol === "admin") return "Administrador";
   if (rol === "barbero") return "Barbero";
   return "Cliente";
@@ -51,7 +51,7 @@ export function sesionDesdeUsuario(usuario: {
   email?: string | null;
   app_metadata?: Record<string, unknown> | null;
   user_metadata?: Record<string, unknown> | null;
-}): SesionDemo {
+}): Sesion {
   const rol = resolverRol(usuario);
   const meta = usuario.user_metadata ?? {};
   const nombre =

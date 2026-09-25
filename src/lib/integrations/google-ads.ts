@@ -1,5 +1,5 @@
 import { fechaISO, tokenDeRefresco } from "./google-auth";
-import { adsDemo } from "./demo";
+import { adsVacio } from "./vacio";
 import { ratio, type Campana, type EstadoCampana, type ResumenAds } from "./tipos";
 
 // ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ async function consultar(query: string, token: string, customerId: string): Prom
 
 export async function obtenerAds(): Promise<ResumenAds> {
   if (!adsConfigurado()) {
-    return adsDemo(
+    return adsVacio(
       "Sin credenciales de Google Ads. Define GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CUSTOMER_ID y las de OAuth para ver campañas reales."
     );
   }
@@ -177,7 +177,7 @@ export async function obtenerAds(): Promise<ResumenAds> {
       })),
     };
   } catch (error) {
-    return adsDemo(
+    return adsVacio(
       `No se pudo leer Google Ads: ${error instanceof Error ? error.message : "error desconocido"}`
     );
   }

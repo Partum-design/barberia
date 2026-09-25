@@ -12,7 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * sin ganar nada.
  *
  * Devuelve `null` cuando el proyecto no tiene credenciales configuradas, que es
- * la señal que usa el resto de la app para entrar en modo demostración en vez
+ * la señal que usa el resto de la app para trabajar en modo local en vez
  * de reventar con un error de configuración.
  */
 

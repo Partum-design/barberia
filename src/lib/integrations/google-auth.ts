@@ -20,7 +20,7 @@ const ENDPOINT_TOKEN = "https://oauth2.googleapis.com/token";
 type TokenCacheado = { token: string; expiraEn: number };
 const cache = new Map<string, TokenCacheado>();
 
-function base64url(entrada: Buffer | string) {
+export function base64url(entrada: Buffer | string) {
   return Buffer.from(entrada)
     .toString("base64")
     .replace(/\+/g, "-")
@@ -44,8 +44,17 @@ function guardar(clave: string, token: string, segundos: number) {
  * línea viajan escapados como `\n`. Sin esta normalización, `createSign` falla
  * con un error de PEM inválido que no dice nada útil.
  */
-function normalizarClave(clave: string) {
+export function normalizarClave(clave: string) {
   return clave.includes("\\n") ? clave.replace(/\\n/g, "\n") : clave;
+}
+
+/** Firma RS256 de un JWT arbitrario con la clave de una cuenta de servicio. */
+export function firmarJWT(cuerpo: Record<string, unknown>, clavePrivada: string) {
+  const cabecera = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const carga = base64url(JSON.stringify(cuerpo));
+  const firmador = createSign("RSA-SHA256");
+  firmador.update(`${cabecera}.${carga}`);
+  return `${cabecera}.${carga}.${base64url(firmador.sign(normalizarClave(clavePrivada)))}`;
 }
 
 /** Token de acceso para una cuenta de servicio (flujo JWT bearer). */
@@ -59,21 +68,10 @@ export async function tokenDeCuentaDeServicio(
   if (cacheado) return cacheado;
 
   const ahora = Math.floor(Date.now() / 1000);
-  const cabecera = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const cuerpo = base64url(
-    JSON.stringify({
-      iss: email,
-      scope,
-      aud: ENDPOINT_TOKEN,
-      iat: ahora,
-      exp: ahora + 3600,
-    })
+  const jwt = firmarJWT(
+    { iss: email, scope, aud: ENDPOINT_TOKEN, iat: ahora, exp: ahora + 3600 },
+    clavePrivada
   );
-
-  const firmador = createSign("RSA-SHA256");
-  firmador.update(`${cabecera}.${cuerpo}`);
-  const firma = base64url(firmador.sign(normalizarClave(clavePrivada)));
-  const jwt = `${cabecera}.${cuerpo}.${firma}`;
 
   const res = await fetch(ENDPOINT_TOKEN, {
     method: "POST",

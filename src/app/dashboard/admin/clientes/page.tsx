@@ -24,7 +24,7 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { calcularLealtad, resumirClientes, useDemoStore } from "@/lib/demo-store";
+import { calcularLealtad, resumirClientes, useBarberia } from "@/lib/store";
 
 type Filtro = "todos" | "riesgo" | "vip" | "proximos";
 
@@ -37,8 +37,8 @@ const fecha = (iso: string | null) =>
  * verdad sobre cuánto ha gastado alguien o cuándo vino por última vez.
  */
 export default function ClientesPage() {
-  const store = useDemoStore();
-  const { listo, sesion, citas, recompensasConfig } = store;
+  const store = useBarberia();
+  const { listo, sesion, citas, recompensasConfig, tarjetas } = store;
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState("");
 
@@ -127,7 +127,13 @@ export default function ClientesPage() {
         ) : (
           <div className="grid gap-2">
             {visibles.map((c) => {
-              const lealtad = calcularLealtad(citas, c.id, recompensasConfig.citas_requeridas);
+              const tarjeta = tarjetas.find((t) => t.cliente_id === c.id);
+              const lealtad = calcularLealtad(
+                citas,
+                c.id,
+                recompensasConfig.citas_requeridas,
+                tarjeta?.sellos_extra ?? 0
+              );
               return (
                 <article key={c.id} className="client-row">
                   <span className="client-avatar">{c.nombre.charAt(0)}</span>
@@ -157,7 +163,7 @@ export default function ClientesPage() {
                       ticket {moneda.format(c.ticketMedio)}
                     </p>
                     <p className="mt-1 text-[0.62rem]" style={{ color: "var(--gold)" }}>
-                      lealtad {lealtad.progreso}/{lealtad.requerido}
+                      {tarjeta ? `${tarjeta.numero} · ` : ""}lealtad {lealtad.progreso}/{lealtad.requerido}
                     </p>
                   </div>
                 </article>

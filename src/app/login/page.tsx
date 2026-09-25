@@ -20,9 +20,13 @@ import {
 import { GoogleMark } from "@/components/payments/BrandMarks";
 import { authDisponible, getSupabaseBrowser } from "@/lib/supabase/client";
 import { DESTINO_POR_ROL } from "@/lib/auth/roles";
-import { CUENTAS_DEMO, useDemoStore, type RolDemo } from "@/lib/demo-store";
+import { SESION_ADMIN_LOCAL, useBarberia, type Rol, type Sesion } from "@/lib/store";
+import { Marca } from "@/components/shell/Marca";
 
 type Modo = "entrar" | "crear" | "enlace";
+
+const SIN_SUPABASE =
+  "El acceso con Google y correo se activa al conectar Supabase. Mientras tanto usa el acceso local de abajo.";
 
 const TEXTOS: Record<Modo, { titulo: string; lead: string; accion: string }> = {
   entrar: {
@@ -53,7 +57,7 @@ export default function LoginPage() {
 function Acceso() {
   const router = useRouter();
   const params = useSearchParams();
-  const { login } = useDemoStore();
+  const { entrarLocal, barberos, clientes, registrarCliente, listo } = useBarberia();
 
   const siguiente = params.get("next");
   const [modo, setModo] = useState<Modo>("entrar");
@@ -68,7 +72,7 @@ function Acceso() {
   const texto = TEXTOS[modo];
 
   /** Destino tras autenticarse: respeta el `next` que puso el middleware. */
-  const destino = (rol: RolDemo) =>
+  const destino = (rol: Rol) =>
     siguiente && siguiente.startsWith("/") ? siguiente : DESTINO_POR_ROL[rol];
 
   async function entrarConGoogle() {
@@ -76,9 +80,7 @@ function Acceso() {
     setAviso(null);
     const supabase = getSupabaseBrowser();
     if (!supabase) {
-      // Sin Supabase configurado el botón sigue siendo útil: abre la demo,
-      // dejando claro en pantalla que no es una sesión real.
-      entrarDemo("cliente");
+      setError(SIN_SUPABASE);
       return;
     }
     setCargando("google");
@@ -108,7 +110,7 @@ function Acceso() {
 
     const supabase = getSupabaseBrowser();
     if (!supabase) {
-      entrarDemo("cliente");
+      setError(SIN_SUPABASE);
       return;
     }
 
@@ -149,7 +151,7 @@ function Acceso() {
         password: clave,
       });
       if (err) throw err;
-      const rol = (data.user?.app_metadata?.rol ?? data.user?.user_metadata?.rol) as RolDemo | undefined;
+      const rol = (data.user?.app_metadata?.rol ?? data.user?.user_metadata?.rol) as Rol | undefined;
       router.push(destino(rol ?? "cliente"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos completar el acceso.");
@@ -158,28 +160,10 @@ function Acceso() {
     }
   }
 
-  function entrarDemo(rol: RolDemo) {
-    login(rol);
-    router.push(destino(rol));
+  function entrar(sesion: Sesion) {
+    entrarLocal(sesion);
+    router.push(destino(sesion.rol));
   }
-
-  const cuentas: { rol: RolDemo; icon: React.ReactNode; desc: string }[] = [
-    {
-      rol: "cliente",
-      icon: <User className="h-6 w-6" />,
-      desc: "Consulta tus citas, agenda nuevas y revisa tu programa de recompensas.",
-    },
-    {
-      rol: "barbero",
-      icon: <Scissors className="h-6 w-6" />,
-      desc: "Revisa tu agenda del día, atiende a domicilio y marca citas como asistidas.",
-    },
-    {
-      rol: "admin",
-      icon: <ShieldCheck className="h-6 w-6" />,
-      desc: "Supervisa ingresos, marketing, equipo, inventario y caja de la barbería.",
-    },
-  ];
 
   return (
     <main className="login-page">
@@ -190,9 +174,7 @@ function Acceso() {
             <span className="login-brand-mark">
               <Scissors className="h-4 w-4" />
             </span>
-            <span>
-              Hair<strong>cut</strong>
-            </span>
+            <Marca />
           </Link>
           <div className="login-story-copy">
             <p className="login-kicker">Barbershop</p>
@@ -214,7 +196,7 @@ function Acceso() {
             <span />{" "}
             {authDisponible
               ? "Sesión cifrada · cookies HttpOnly y renovación automática"
-              : "Modo demostración · los datos viven en este navegador"}
+              : "Modo local · los datos viven en este navegador"}
           </p>
         </section>
 
@@ -348,38 +330,182 @@ function Acceso() {
             )}
           </div>
 
-          {/* Acceso rápido a los tres paneles de la demo */}
-          <div className="login-divider">
-            <span />o entra a la demo como<span />
-          </div>
-          <div className="login-role-list">
-            {cuentas.map((c, i) => {
-              const cuenta = CUENTAS_DEMO[c.rol];
-              return (
-                <button
-                  key={c.rol}
-                  onClick={() => entrarDemo(c.rol)}
-                  className={`login-role anim-in anim-d${i + 1}`}
-                >
-                  <span className={`login-role-icon role-${c.rol}`}>{c.icon}</span>
-                  <span className="min-w-0 flex-1">
-                    <strong>{cuenta.nombre}</strong>
-                    <small>{cuenta.subtitulo}</small>
-                    <span className="login-role-copy">{c.desc}</span>
-                  </span>
-                  <ArrowRight className="login-role-arrow" />
-                </button>
-              );
-            })}
-          </div>
+          {!authDisponible && listo && (
+            <AccesoLocal
+              barberos={barberos.filter((b) => b.activo).map((b) => ({ id: b.id, nombre: b.nombre, subtitulo: b.especialidad }))}
+              clientes={clientes.map((c) => ({ id: c.id, nombre: c.nombre, subtitulo: c.telefono || "Cliente" }))}
+              onEntrar={entrar}
+              onRegistrarCliente={(nombre, telefono) => {
+                const cliente = registrarCliente({ nombre, telefono, email: "" });
+                entrar({ rol: "cliente", id: cliente.id, nombre: cliente.nombre, subtitulo: "Cliente" });
+              }}
+            />
+          )}
 
-          <p className="login-footnote">
-            {authDisponible
-              ? "El acceso real usa Supabase Auth con OAuth de Google (PKCE), verificación de correo y sesión en cookies HttpOnly."
-              : "Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY para activar el acceso real con Google; mientras tanto, estos accesos abren la demo."}
-          </p>
+          {authDisponible && (
+            <p className="login-footnote">
+              Acceso con Supabase Auth: OAuth de Google (PKCE), verificación de correo y sesión en
+              cookies HttpOnly.
+            </p>
+          )}
         </section>
       </div>
     </main>
+  );
+}
+
+type Perfil = { id: string; nombre: string; subtitulo: string };
+
+/**
+ * Acceso mientras el proyecto no está conectado a Supabase. No hay cuentas de
+ * ejemplo: se entra como administración para configurar el negocio, o como
+ * uno de los barberos y clientes que ya se dieron de alta.
+ */
+function AccesoLocal({
+  barberos,
+  clientes,
+  onEntrar,
+  onRegistrarCliente,
+}: {
+  barberos: Perfil[];
+  clientes: Perfil[];
+  onEntrar: (s: Sesion) => void;
+  onRegistrarCliente: (nombre: string, telefono: string) => void;
+}) {
+  const [abierto, setAbierto] = useState<null | "barbero" | "cliente">(null);
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+
+  return (
+    <>
+      <div className="login-divider">
+        <span />acceso local<span />
+      </div>
+      <div className="login-role-list">
+        <button onClick={() => onEntrar(SESION_ADMIN_LOCAL)} className="login-role anim-in anim-d1">
+          <span className="login-role-icon role-admin"><ShieldCheck className="h-6 w-6" /></span>
+          <span className="min-w-0 flex-1">
+            <strong>Administración</strong>
+            <small>Configura el negocio</small>
+            <span className="login-role-copy">Datos de la portada, servicios, equipo, clientes y tarjetas de lealtad.</span>
+          </span>
+          <ArrowRight className="login-role-arrow" />
+        </button>
+
+        <button
+          onClick={() => setAbierto(abierto === "barbero" ? null : "barbero")}
+          className="login-role anim-in anim-d2"
+          aria-expanded={abierto === "barbero"}
+        >
+          <span className="login-role-icon role-barbero"><Scissors className="h-6 w-6" /></span>
+          <span className="min-w-0 flex-1">
+            <strong>Barbero</strong>
+            <small>{barberos.length} en el equipo</small>
+            <span className="login-role-copy">Agenda del día, fichas de clientes y horarios.</span>
+          </span>
+          <ArrowRight className="login-role-arrow" />
+        </button>
+        {abierto === "barbero" && (
+          <ListaPerfiles
+            vacio="Aún no hay barberos. Dalos de alta desde Administración → Equipo."
+            perfiles={barberos}
+            onElegir={(p) => onEntrar({ rol: "barbero", ...p })}
+          />
+        )}
+
+        <button
+          onClick={() => setAbierto(abierto === "cliente" ? null : "cliente")}
+          className="login-role anim-in anim-d3"
+          aria-expanded={abierto === "cliente"}
+        >
+          <span className="login-role-icon role-cliente"><User className="h-6 w-6" /></span>
+          <span className="min-w-0 flex-1">
+            <strong>Cliente</strong>
+            <small>{clientes.length} registrados</small>
+            <span className="login-role-copy">Reservas, pagos y tarjeta de lealtad con Google Wallet.</span>
+          </span>
+          <ArrowRight className="login-role-arrow" />
+        </button>
+        {abierto === "cliente" && (
+          <div className="space-y-3 rounded-2xl p-3 ring-1 ring-white/10">
+            {clientes.length > 0 && (
+              <ListaPerfiles vacio="" perfiles={clientes} onElegir={(p) => onEntrar({ rol: "cliente", ...p, subtitulo: "Cliente" })} />
+            )}
+            <form
+              className="grid gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (nombre.trim().length < 2) return;
+                onRegistrarCliente(nombre.trim(), telefono.trim());
+              }}
+            >
+              <p className="text-xs" style={{ color: "var(--ink-muted)" }}>Registrarme como cliente nuevo</p>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Nombre completo"
+                className="rounded-xl border border-white/15 bg-transparent px-3 py-2 text-sm"
+                required
+              />
+              <input
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Teléfono (opcional)"
+                type="tel"
+                className="rounded-xl border border-white/15 bg-transparent px-3 py-2 text-sm"
+              />
+              <button type="submit" className="btn-gold rounded-xl py-2 text-sm">
+                Crear mi tarjeta y entrar
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+      <p className="login-footnote">
+        Este acceso sólo existe mientras no está conectado Supabase. Al definir
+        NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY se desactiva y entra el acceso
+        real con Google y correo.
+      </p>
+    </>
+  );
+}
+
+function ListaPerfiles({
+  perfiles,
+  vacio,
+  onElegir,
+}: {
+  perfiles: Perfil[];
+  vacio: string;
+  onElegir: (p: Perfil) => void;
+}) {
+  if (perfiles.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-white/15 px-4 py-3 text-xs" style={{ color: "var(--ink-muted)" }}>
+        {vacio}
+      </p>
+    );
+  }
+  return (
+    <ul className="grid gap-1.5">
+      {perfiles.map((p) => (
+        <li key={p.id}>
+          <button
+            type="button"
+            onClick={() => onElegir(p)}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-white/5"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">
+              {p.nombre.charAt(0)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{p.nombre}</span>
+              <span className="block truncate text-xs" style={{ color: "var(--ink-muted)" }}>{p.subtitulo}</span>
+            </span>
+            <ArrowRight className="h-4 w-4 opacity-50" />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

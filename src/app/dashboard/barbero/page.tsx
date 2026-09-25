@@ -8,23 +8,23 @@ import { Banknote, CalendarDays, CheckCircle2, CreditCard, Home, MapPin, Users }
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
 // Nodo Barbero: agenda con datos locales reales (marcar asistida funciona
 // y alimenta el programa de lealtad del cliente).
 export default function DashboardBarberoPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, citas, sesion } = store;
   const [vista, setVista] = useState<"hoy" | "semana">("hoy");
 
   const propias = useMemo(
     () =>
       citas
-        .filter((c) => c.barbero_id === "bar-1" && c.estado !== "cancelada")
+        .filter((c) => c.barbero_id === sesion?.id && c.estado !== "cancelada")
         .sort((a, b) => a.inicio.localeCompare(b.inicio)),
-    [citas]
+    [citas, sesion]
   );
   const futurasOHoy = propias.filter(
     (c) => isToday(new Date(c.inicio)) || new Date(c.inicio).getTime() > Date.now()
@@ -190,7 +190,7 @@ function SinSesion({ rol }: { rol: string }) {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

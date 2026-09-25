@@ -1,5 +1,5 @@
 import { fechaISO, tokenDeCuentaDeServicio } from "./google-auth";
-import { analyticsDemo } from "./demo";
+import { analyticsVacio } from "./vacio";
 import { ratio, type ResumenAnalytics } from "./tipos";
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ export function analyticsConfigurado() {
 
 export async function obtenerAnalytics(): Promise<ResumenAnalytics> {
   if (!analyticsConfigurado()) {
-    return analyticsDemo(
+    return analyticsVacio(
       "Sin credenciales de Google Analytics. Define GA4_PROPERTY_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL y GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY para ver datos reales."
     );
   }
@@ -151,9 +151,9 @@ export async function obtenerAnalytics(): Promise<ResumenAnalytics> {
       })),
     };
   } catch (error) {
-    // Una credencial caducada no debe tumbar el panel entero: se cae al juego
-    // de demostración y se dice en pantalla exactamente qué pasó.
-    return analyticsDemo(
+    // Una credencial caducada no debe tumbar el panel entero: se muestra en
+    // cero y se dice en pantalla exactamente qué pasó.
+    return analyticsVacio(
       `No se pudo leer Google Analytics: ${error instanceof Error ? error.message : "error desconocido"}`
     );
   }

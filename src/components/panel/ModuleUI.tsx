@@ -62,7 +62,7 @@ export function DataSourceNote({ origen, aviso }: { origen: OrigenDatos; aviso?:
     <p className={`data-source-note ${vivo ? "is-live" : ""}`}>
       {vivo ? <Radio /> : <CircleAlert />}
       <span>
-        <b>{vivo ? "Datos en vivo" : "Datos de demostración"}</b>
+        <b>{vivo ? "Datos en vivo" : "Sin conexión"}</b>
         {" · "}
         {aviso ??
           "Conectado a la cuenta configurada; las cifras se actualizan cada cinco minutos."}

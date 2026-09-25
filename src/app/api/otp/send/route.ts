@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEMO_MODE } from "@/lib/demo";
+import { MODO_LOCAL } from "@/lib/modo";
 
 // POST /api/otp/send — envía un código de verificación por SMS/WhatsApp
-// usando Twilio Verify. En demo devuelve éxito sin enviar nada.
+// usando Twilio Verify. En modo local devuelve éxito sin enviar nada.
 export async function POST(req: NextRequest) {
   const { telefono, canal } = (await req.json().catch(() => ({}))) as {
     telefono?: string;
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (DEMO_MODE || !process.env.TWILIO_ACCOUNT_SID) {
-    return NextResponse.json({ enviado: true, demo: true });
+  if (MODO_LOCAL || !process.env.TWILIO_ACCOUNT_SID) {
+    return NextResponse.json({ enviado: true, local: true });
   }
 
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID } = process.env;

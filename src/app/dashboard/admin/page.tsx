@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Banknote, CalendarCheck, CreditCard, Gift, TrendingUp, Users } from "lucide-react";
+import { Banknote, CalendarCheck, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { useDemoStore } from "@/lib/demo-store";
+import { nombreDelNegocio, useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 // Nodo Administrador: métricas calculadas en vivo desde el almacén local —
 // atender o agendar citas en los otros paneles cambia estos números.
 export default function DashboardAdminPage() {
-  const store = useDemoStore();
-  const { listo, citas, sesion, barberos, recompensasConfig } = store;
+  const store = useBarberia();
+  const { listo, citas, sesion, barberos, recompensasConfig, barberiaConfig, servicios, clientes } = store;
 
   const stats = useMemo(() => {
     const vivas = citas.filter((c) => c.estado !== "cancelada");
@@ -56,7 +56,7 @@ export default function DashboardAdminPage() {
           href="/login"
           className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
         >
-          Entrar a la demo
+          Iniciar sesión
         </Link>
       </main>
     );
@@ -66,7 +66,7 @@ export default function DashboardAdminPage() {
     <PanelShell sesion={sesion} activo="Panel" onLogout={store.logout}>
       <PanelHero
         kicker="Panel de administración"
-        title="Barbería Partum"
+        title={nombreDelNegocio(barberiaConfig)}
         lead="Los números se actualizan en vivo con la actividad de clientes y barberos."
       />
 
@@ -119,6 +119,13 @@ export default function DashboardAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {stats.porBarbero.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+                      Aún no hay barberos dados de alta.
+                    </td>
+                  </tr>
+                )}
                 {stats.porBarbero.map((m) => (
                   <tr key={m.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5">
                     <td className="py-3">
@@ -205,25 +212,55 @@ export default function DashboardAdminPage() {
             </Link>
           </section>
 
-          <section
-            className="anim-in anim-d5 rounded-3xl p-5 text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
-            style={{ background: "var(--card)" }}
-          >
-            <h3 className="mb-2 font-semibold">Demo interactiva</h3>
-            <p style={{ color: "var(--ink-muted)" }}>
-              Agenda una cita como cliente o márcala asistida como barbero y verás
-              estos indicadores moverse.
-            </p>
-            <button
-              onClick={store.reiniciarDemo}
-              className="mt-3 rounded-full border border-slate-200 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
-              style={{ color: "var(--ink-muted)" }}
-            >
-              Restablecer datos de la demo
-            </button>
-          </section>
+          <PrimerosPasos
+            pasos={[
+              { hecho: Boolean(barberiaConfig.nombre.trim() && barberiaConfig.direccion.trim()), label: "Datos del negocio", nota: "Nombre, dirección, horario y redes para la portada", href: "/dashboard/admin/configuracion" },
+              { hecho: servicios.length > 0, label: "Servicios y precios", nota: "El menú que ve el cliente en la portada", href: "/dashboard/admin/servicios" },
+              { hecho: barberos.length > 0, label: "Equipo de barberos", nota: "Cada barbero con su especialidad y precio", href: "/dashboard/admin/equipo" },
+              { hecho: clientes.length > 0, label: "Primer cliente con tarjeta", nota: "Emite su tarjeta de lealtad y vincúlala a Google Wallet", href: "/dashboard/admin/lealtad" },
+            ]}
+          />
         </div>
       </div>
     </PanelShell>
+  );
+}
+
+function PrimerosPasos({
+  pasos,
+}: {
+  pasos: { hecho: boolean; label: string; nota: string; href: string }[];
+}) {
+  const hechos = pasos.filter((p) => p.hecho).length;
+  if (hechos === pasos.length) return null;
+  return (
+    <section
+      className="anim-in anim-d5 rounded-3xl p-5 text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
+      style={{ background: "var(--card)" }}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-semibold">Primeros pasos</h3>
+        <span className="text-xs" style={{ color: "var(--ink-muted)" }}>
+          {hechos} de {pasos.length}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {pasos.map((p) => (
+          <li key={p.label}>
+            <Link href={p.href} className="flex items-start gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-white/5">
+              {p.hecho ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--ink-faint)" }} />
+              )}
+              <span>
+                <span className={`block font-medium ${p.hecho ? "line-through opacity-60" : ""}`}>{p.label}</span>
+                <span className="block text-xs" style={{ color: "var(--ink-muted)" }}>{p.nota}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

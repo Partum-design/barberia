@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { Marca } from "@/components/shell/Marca";
 
 // Display grotesk para titulares de producto
 const outfit = Outfit({
@@ -16,7 +17,7 @@ const jakarta = Plus_Jakarta_Sans({
   variable: "--font-plex",
 });
 
-// Serif editorial de alto contraste: logotipo HAIRCUT y titulares de marketing.
+// Serif editorial de alto contraste: logotipo y titulares de la portada.
 // Sustituye a Cormorant — más peso en el trazo, mejor a tamaños de letrero.
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -38,10 +39,13 @@ const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
 });
 
+const NOMBRE = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería";
+
 export const metadata: Metadata = {
-  title: "HAIRCUT · Barbershop",
+  title: NOMBRE,
   description:
-    "Tu estilo, nuestra pasión. Reserva tu cita en segundos y gestiona toda la barbería —agenda, pagos, marketing y clientes— desde un solo lugar.",
+    process.env.NEXT_PUBLIC_DESCRIPCION_NEGOCIO ||
+    `${NOMBRE}: servicios, equipo, horario y reservas en línea. Suma sellos en tu tarjeta de lealtad con cada visita.`,
 };
 
 export const viewport: Viewport = {
@@ -61,8 +65,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="grain-layer" aria-hidden />
         {children}
         <footer className="site-footer">
-          <span>HAIRCUT Barbershop</span>
-          <span>Sistema de barbería conectada · Partum Design</span>
+          <Marca />
+          <span>Sitio y sistema por Partum Design</span>
         </footer>
       </body>
     </html>

@@ -25,9 +25,9 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { useDemoStore, type GastoDemo } from "@/lib/demo-store";
+import { useBarberia, type Gasto } from "@/lib/store";
 
-const CATEGORIAS: GastoDemo["categoria"][] = [
+const CATEGORIAS: Gasto["categoria"][] = [
   "Renta",
   "Insumos",
   "Nómina",
@@ -44,10 +44,10 @@ const DIAS = 28;
  * importa al cerrar el mes: qué quedó.
  */
 export default function CajaPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, citas, gastos, servicios } = store;
   const [abierto, setAbierto] = useState(false);
-  const [form, setForm] = useState({ concepto: "", categoria: "Insumos" as GastoDemo["categoria"], monto: 0 });
+  const [form, setForm] = useState({ concepto: "", categoria: "Insumos" as Gasto["categoria"], monto: 0 });
 
   const desde = useMemo(() => Date.now() - DIAS * 86_400_000, []);
 
@@ -228,7 +228,7 @@ export default function CajaPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={form.categoria}
-                    onChange={(e) => setForm({ ...form, categoria: e.target.value as GastoDemo["categoria"] })}
+                    onChange={(e) => setForm({ ...form, categoria: e.target.value as Gasto["categoria"] })}
                     className="rounded-lg border px-2.5 py-2 text-sm"
                   >
                     {CATEGORIAS.map((c) => (

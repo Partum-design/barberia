@@ -28,18 +28,29 @@ const REQUISITOS: Record<string, string[]> = {
   "mercado-pago": ["MERCADOPAGO_ACCESS_TOKEN", "NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY"],
   "google-auth": ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
   "google-calendar": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  "google-wallet": [
+    "GOOGLE_WALLET_ISSUER_ID",
+    "GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL",
+    "GOOGLE_WALLET_PRIVATE_KEY",
+  ],
 };
+
+// Wallet puede reutilizar la cuenta de servicio de GA4 en lugar de la suya.
+const ALTERNATIVAS: Record<string, string> = {
+  GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL: "GOOGLE_SERVICE_ACCOUNT_EMAIL",
+  GOOGLE_WALLET_PRIVATE_KEY: "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+};
+
+const definida = (nombre: string) =>
+  Boolean(process.env[nombre] || (ALTERNATIVAS[nombre] && process.env[ALTERNATIVAS[nombre]]));
 
 export async function GET() {
   const estado = Object.fromEntries(
     Object.entries(REQUISITOS).map(([id, variables]) => [
       id,
       {
-        variables: variables.map((nombre) => ({
-          nombre,
-          definida: Boolean(process.env[nombre]),
-        })),
-        conectada: variables.every((nombre) => Boolean(process.env[nombre])),
+        variables: variables.map((nombre) => ({ nombre, definida: definida(nombre) })),
+        conectada: variables.every(definida),
       },
     ])
   );

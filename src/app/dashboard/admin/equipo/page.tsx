@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Home, Plus, ShieldCheck, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -19,7 +19,7 @@ const formInicial = {
 
 // Nodo Administrador: alta y gestión del equipo de barberos de la barbería.
 export default function EquipoBarberoPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, barberos, citas } = store;
   const [mostrarForm, setMostrarForm] = useState(false);
   const [form, setForm] = useState(formInicial);
@@ -72,7 +72,7 @@ export default function EquipoBarberoPage() {
             <input
               value={form.nombre}
               onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              placeholder="Nombre (ej. Iván Rosales)"
+              placeholder="Nombre completo"
               className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
             />
             <input
@@ -195,7 +195,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

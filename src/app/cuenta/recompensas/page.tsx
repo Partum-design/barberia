@@ -6,16 +6,22 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, Gift, Sparkles, User } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { calcularLealtad, useDemoStore } from "@/lib/demo-store";
+import { calcularLealtad, useBarberia } from "@/lib/store";
 
 // Nodo Cliente: detalle del programa de lealtad — progreso, historial de
 // citas que suman puntos y canje de recompensas ganadas.
 export default function RecompensasPage() {
-  const store = useDemoStore();
-  const { listo, citas, sesion, recompensasConfig, canjes } = store;
-  const clienteId = "cli-1";
+  const store = useBarberia();
+  const { listo, citas, sesion, recompensasConfig, canjes, tarjetas } = store;
+  const clienteId = sesion?.id ?? "";
+  const tarjeta = tarjetas.find((t) => t.cliente_id === clienteId);
 
-  const lealtad = calcularLealtad(citas, clienteId, recompensasConfig.citas_requeridas);
+  const lealtad = calcularLealtad(
+    citas,
+    clienteId,
+    recompensasConfig.citas_requeridas,
+    tarjeta?.sellos_extra ?? 0
+  );
   const canjeadas = canjes[clienteId] ?? 0;
   const disponibles = Math.max(0, lealtad.recompensasGanadas - canjeadas);
 
@@ -24,7 +30,7 @@ export default function RecompensasPage() {
       citas
         .filter((c) => c.cliente_id === clienteId && c.estado === "asistida")
         .sort((a, b) => b.inicio.localeCompare(a.inicio)),
-    [citas]
+    [citas, clienteId]
   );
 
   if (!listo) return null;
@@ -146,7 +152,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

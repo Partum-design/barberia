@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Check, Home, Save, Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 const DURACIONES = [15, 20, 30, 45, 60];
 
 // Nodo Barbero: datos del perfil que ve el cliente al elegir barbero
 // (nombre, especialidad, precio, duración, domicilio, biografía).
 export default function ConfiguracionBarberoPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, barberos } = store;
   const barbero = barberos.find((m) => m.id === sesion?.id) ?? null;
 
@@ -193,7 +193,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

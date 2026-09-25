@@ -11,18 +11,18 @@ import {
   moneda,
   numero,
 } from "@/components/panel/ModuleUI";
-import { useDemoStore, type ServicioDemo } from "@/lib/demo-store";
+import { useBarberia, type Servicio } from "@/lib/store";
 
-const CATEGORIAS: ServicioDemo["categoria"][] = ["Corte", "Barba", "Color", "Ritual", "Paquete"];
+const CATEGORIAS: Servicio["categoria"][] = ["Corte", "Barba", "Color", "Ritual", "Paquete"];
 
 /** Catálogo de servicios: precio, duración y comisión del barbero. */
 export default function ServiciosPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, servicios } = store;
   const [abierto, setAbierto] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
-    categoria: "Corte" as ServicioDemo["categoria"],
+    categoria: "Corte" as Servicio["categoria"],
     precio: 250,
     duracion_min: 30,
     comision_pct: 45,
@@ -92,7 +92,7 @@ export default function ServiciosPage() {
               Categoría
               <select
                 value={form.categoria}
-                onChange={(e) => setForm({ ...form, categoria: e.target.value as ServicioDemo["categoria"] })}
+                onChange={(e) => setForm({ ...form, categoria: e.target.value as Servicio["categoria"] })}
                 className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm"
               >
                 {CATEGORIAS.map((c) => (

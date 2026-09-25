@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarDays, Check, Circle, CreditCard, Loader2, Megaphone, Plug } from "lucide-react";
+import { CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Megaphone, Plug } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Metric, ModulePanel, SinAcceso } from "@/components/panel/ModuleUI";
 import {
@@ -12,7 +12,7 @@ import {
   MetaMark,
   StripeMark,
 } from "@/components/payments/BrandMarks";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 type EstadoIntegracion = {
   variables: { nombre: string; definida: boolean }[];
@@ -77,6 +77,13 @@ const CATALOGO: Catalogo[] = [
     logo: <CalendarDays className="h-5 w-5" style={{ color: "var(--gold)" }} />,
     grupo: "Operación",
   },
+  {
+    id: "google-wallet",
+    nombre: "Google Wallet",
+    descripcion: "Tarjeta de lealtad de cada cliente en su teléfono, con QR y sellos que se actualizan solos. Puede reutilizar la cuenta de servicio de GA4.",
+    logo: <IdCard className="h-5 w-5" style={{ color: "var(--gold)" }} />,
+    grupo: "Operación",
+  },
 ];
 
 /**
@@ -85,7 +92,7 @@ const CATALOGO: Catalogo[] = [
  * definir: es la diferencia entre "no conectado" y saber qué hacer al respecto.
  */
 export default function IntegracionesPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion } = store;
   const [estado, setEstado] = useState<Record<string, EstadoIntegracion> | null>(null);
 

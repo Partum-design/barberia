@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { addDays, format, setHours, setMinutes } from "date-fns";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Banknote,
@@ -14,11 +14,12 @@ import {
   MapPin,
   ShieldCheck,
   Smartphone,
+  UserRound,
 } from "lucide-react";
-import { calcularLealtad, useDemoStore, type MetodoPago } from "@/lib/demo-store";
+import { DIAS_SEMANA, calcularLealtad, useBarberia, type MetodoPago } from "@/lib/store";
 import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
 
-type Barbero = {
+type BarberoOpcion = {
   id: string;
   nombre: string;
   especialidad: string;
@@ -32,12 +33,13 @@ type Paso = "barbero" | "horario" | "otp" | "pago" | "confirmada";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
-export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: boolean }) {
-  const store = useDemoStore();
+export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; local: boolean }) {
+  const store = useBarberia();
   const [paso, setPaso] = useState<Paso>("barbero");
-  const [barbero, setBarbero] = useState<Barbero | null>(null);
+  const [barbero, setBarbero] = useState<BarberoOpcion | null>(null);
   const [slot, setSlot] = useState<Date | null>(null);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">("presencial");
+  const [direccion, setDireccion] = useState("");
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("tarjeta");
   const [procesador, setProcesador] = useState<"stripe" | "mercado-pago">("stripe");
   const [telefono, setTelefono] = useState("");
@@ -65,20 +67,61 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
     return () => clearInterval(t);
   }, [expiraEn]);
 
-  // Slots de ejemplo: próximos 3 días hábiles, 9:00–13:00
+  // Horarios libres de los próximos 7 días: salen de la disponibilidad
+  // semanal que el barbero configuró y descartan los que ya tienen cita.
+  const { horarioDeBarbero, citas } = store;
   const slots = useMemo(() => {
     if (!barbero) return [];
+    const horario = horarioDeBarbero(barbero.id);
+    const ocupadas = citas
+      .filter((c) => c.barbero_id === barbero.id && c.estado !== "cancelada")
+      .map((c) => [new Date(c.inicio).getTime(), new Date(c.fin).getTime()] as const);
+    const duracion = barbero.duracion_cita_min * 60_000;
+    const ahora = Date.now();
     const out: Date[] = [];
-    for (let d = 1; d <= 3; d++) {
+
+    for (let d = 0; d < 7; d++) {
       const dia = addDays(new Date(), d);
-      if ([0, 6].includes(dia.getDay())) continue;
-      for (let h = 9; h < 13; h++) {
-        out.push(setMinutes(setHours(dia, h), 0));
-        if (barbero.duracion_cita_min <= 30) out.push(setMinutes(setHours(dia, h), 30));
+      // getDay(): 0 = domingo; DIAS_SEMANA empieza en lunes.
+      const bloque = horario[DIAS_SEMANA[(dia.getDay() + 6) % 7].id];
+      if (!bloque?.activo) continue;
+      const [hi, mi] = bloque.inicio.split(":").map(Number);
+      const [hf, mf] = bloque.fin.split(":").map(Number);
+      const inicio = new Date(dia);
+      inicio.setHours(hi, mi, 0, 0);
+      const fin = new Date(dia);
+      fin.setHours(hf, mf, 0, 0);
+
+      for (let t = inicio.getTime(); t + duracion <= fin.getTime(); t += duracion) {
+        if (t <= ahora) continue;
+        const choca = ocupadas.some(([a, b]) => t < b && t + duracion > a);
+        if (!choca) out.push(new Date(t));
       }
     }
     return out;
-  }, [barbero]);
+  }, [barbero, horarioDeBarbero, citas]);
+
+  const esCliente = store.sesion?.rol === "cliente";
+
+  if (!esCliente) {
+    return (
+      <div className="booking-flow">
+        <div className="rounded-2xl p-8 text-center shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
+          <UserRound className="mx-auto mb-3 h-10 w-10 text-accent-500" />
+          <h2 className="text-lg font-semibold">Inicia sesión para reservar</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: "var(--ink-muted)" }}>
+            Así tu cita queda a tu nombre y cada visita suma sellos en tu tarjeta de lealtad.
+          </p>
+          <Link
+            href="/login?next=/reservar"
+            className="card-hover mt-5 inline-flex rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+          >
+            Entrar o crear cuenta
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   async function enviarOtp() {
     setError("");
@@ -140,6 +183,12 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
       )}
 
       {/* Paso 1: elegir barbero */}
+      {paso === "barbero" && barberos.length === 0 && (
+        <div className="rounded-2xl p-8 text-center text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)", color: "var(--ink-muted)" }}>
+          Todavía no hay barberos con agenda abierta. Vuelve pronto o llámanos para apartar tu lugar.
+        </div>
+      )}
+
       {paso === "barbero" && (
         <div className="space-y-3">
           {barberos.map((m) => (
@@ -175,6 +224,11 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
           <p className="mb-4 text-sm">
             Disponibilidad de <span className="font-medium">{barbero.nombre}</span>
           </p>
+          {slots.length === 0 && (
+            <p className="rounded-xl border border-dashed border-brand-500/30 p-5 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+              No hay horarios libres en los próximos 7 días.
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {slots.map((s) => (
               <button
@@ -201,7 +255,7 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
           </div>
           <p className="mb-4 text-sm" style={{ color: "var(--ink-muted)" }}>
             Para proteger la agenda contra bots, confirma tu número por WhatsApp o SMS.
-            {demo && " (Demo: cualquier número válido; código 000000)"}
+            {local && " (Modo local: cualquier número válido; código 000000)"}
           </p>
           <div className="space-y-3">
             <input
@@ -259,6 +313,14 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
                 </button>
               ))}
             </div>
+          )}
+          {modalidad === "domicilio" && (
+            <input
+              value={direccion}
+              onChange={(e) => setDireccion(e.target.value)}
+              placeholder="Dirección completa del domicilio"
+              className="mb-4 w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
+            />
           )}
           <dl className="mb-5 space-y-2 text-sm">
             <Fila k="Barbero" v={barbero.nombre} />
@@ -320,9 +382,10 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
           )}
 
           <button
+            disabled={modalidad === "domicilio" && direccion.trim().length < 8}
             onClick={() => {
-              // En la demo el pago crea la cita en el almacén local: aparece
-              // al instante en la cuenta del cliente y en la agenda del barbero.
+              // El pago crea la cita en el almacén: aparece al instante en la
+              // cuenta del cliente y en la agenda del barbero.
               const fin = new Date(slot.getTime() + barbero.duracion_cita_min * 60_000);
               store.crearCita({
                 barbero_id: barbero.id,
@@ -330,13 +393,14 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
                 fin: fin.toISOString(),
                 modalidad,
                 metodo_pago: metodoPago,
+                direccion_domicilio: direccion.trim(),
               });
               setPaso("confirmada");
             }}
-            className="card-hover w-full rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white"
+            className="card-hover w-full rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white disabled:opacity-40"
           >
             {metodoPago === "tarjeta"
-              ? demo
+              ? local
                 ? `Simular pago con ${procesador === "stripe" ? "Stripe" : "Mercado Pago"}`
                 : `Pagar con ${procesador === "stripe" ? "Stripe" : "Mercado Pago"}`
               : "Confirmar cita — pago en efectivo"}
@@ -346,7 +410,14 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
 
       {/* Paso 5: confirmación */}
       {paso === "confirmada" && barbero && slot && (() => {
-        const lealtad = calcularLealtad(store.citas, "cli-1", store.recompensasConfig.citas_requeridas);
+        const clienteId = store.sesion?.id ?? "";
+        const tarjeta = store.tarjetas.find((t) => t.cliente_id === clienteId);
+        const lealtad = calcularLealtad(
+          store.citas,
+          clienteId,
+          store.recompensasConfig.citas_requeridas,
+          tarjeta?.sellos_extra ?? 0
+        );
         return (
           <div className="anim-pop rounded-2xl p-8 text-center shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
             <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-accent-500" />
@@ -363,14 +434,20 @@ export function FlujoReserva({ barberos, demo }: { barberos: Barbero[]; demo: bo
             )}
             <p className="badge mx-auto mt-4 badge-gold px-4 py-1.5 text-xs">
               <Gift className="h-3.5 w-3.5" />
-              Lealtad: {lealtad.progreso} de {lealtad.requerido} citas asistidas — te faltan {lealtad.faltan} para tu recompensa
+              Tarjeta de lealtad: {lealtad.progreso} de {lealtad.requerido} sellos — te faltan {lealtad.faltan} para tu recompensa
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
-                href={store.sesion?.rol === "cliente" ? "/cuenta" : "/login"}
+                href="/cuenta"
                 className="card-hover rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md"
               >
                 Ver en mi cuenta
+              </Link>
+              <Link
+                href="/cuenta/tarjeta"
+                className="rounded-full border border-accent-500/40 px-5 py-2.5 text-sm font-medium text-accent-600"
+              >
+                Mi tarjeta de lealtad
               </Link>
               <Link
                 href="/"

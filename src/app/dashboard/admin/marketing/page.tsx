@@ -44,7 +44,7 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 import type { ResumenAds, ResumenAnalytics } from "@/lib/integrations/tipos";
 
 type Pestana = "audiencia" | "campanas" | "atribucion";
@@ -74,11 +74,11 @@ const diaCorto = (iso: string) => {
  * que une ambas con las citas reales de la barbería.
  *
  * Las dos fuentes se piden en paralelo a rutas de servidor; si alguna no tiene
- * credenciales, devuelve su juego de demostración marcado como tal y el panel
- * se ve exactamente igual. Nunca se queda en blanco.
+ * credenciales, devuelve sus métricas en cero con un aviso de qué falta
+ * conectar. Nunca muestra cifras inventadas.
  */
 export default function MarketingPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, citas } = store;
   const [pestana, setPestana] = useState<Pestana>("audiencia");
   const [analytics, setAnalytics] = useState<ResumenAnalytics | null>(null);

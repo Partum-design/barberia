@@ -8,18 +8,20 @@ import { Banknote, CalendarPlus, CreditCard, Gift, Home, MapPin, Sparkles } from
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { calcularLealtad, useDemoStore } from "@/lib/demo-store";
+import { calcularLealtad, useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
 // Nodo Cliente: su cuenta con citas, historial y programa de recompensas.
 export default function CuentaPage() {
-  const store = useDemoStore();
-  const { listo, citas, sesion, recompensasConfig } = store;
+  const store = useBarberia();
+  const { listo, citas, sesion, recompensasConfig, tarjetas } = store;
+  const clienteId = sesion?.id ?? "";
+  const tarjeta = tarjetas.find((t) => t.cliente_id === clienteId);
 
   const mias = useMemo(
-    () => citas.filter((c) => c.cliente_id === "cli-1"),
-    [citas]
+    () => citas.filter((c) => c.cliente_id === clienteId),
+    [citas, clienteId]
   );
   const ahora = Date.now();
   const proximas = mias
@@ -28,7 +30,12 @@ export default function CuentaPage() {
   const historial = mias
     .filter((c) => c.estado !== "confirmada" || new Date(c.fin).getTime() < ahora)
     .sort((a, b) => b.inicio.localeCompare(a.inicio));
-  const lealtad = calcularLealtad(citas, "cli-1", recompensasConfig.citas_requeridas);
+  const lealtad = calcularLealtad(
+    citas,
+    clienteId,
+    recompensasConfig.citas_requeridas,
+    tarjeta?.sellos_extra ?? 0
+  );
 
   if (!listo) return null;
 
@@ -237,7 +244,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

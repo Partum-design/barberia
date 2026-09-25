@@ -14,10 +14,10 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock3, Home, MapPin } from "lucide-react";
-import type { CitaDemo } from "@/lib/demo-store";
+import type { Cita } from "@/lib/store";
 
 type CalendarOverviewProps = {
-  citas: CitaDemo[];
+  citas: Cita[];
   perspective: "cliente" | "barbero" | "admin";
   title?: string;
 };

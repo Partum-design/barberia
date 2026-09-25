@@ -6,12 +6,12 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ClipboardList, FileText, Scissors, Search } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 // Nodo Barbero: ficha básica por cliente — historial de servicios y
-// preferencias de corte capturadas tras cada visita. Vive en el almacén local de la demo.
+// preferencias de corte capturadas tras cada visita.
 export default function FichasPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, citas, sesion, fichas } = store;
   const [busqueda, setBusqueda] = useState("");
   const [clienteId, setClienteId] = useState<string | null>(null);
@@ -214,7 +214,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

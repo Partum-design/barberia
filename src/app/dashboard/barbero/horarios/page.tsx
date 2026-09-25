@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { CalendarClock, Check, Clock3, Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { DIAS_SEMANA, useDemoStore } from "@/lib/demo-store";
+import { DIAS_SEMANA, useBarberia } from "@/lib/store";
 
 // Nodo Barbero: disponibilidad semanal. Los bloques activos son los que
-// alimentan los horarios que ve el cliente al agendar (en la demo, la
-// franja 9–13h de FlujoReserva; en producción, esta tabla sería la fuente).
+// alimentan los horarios que ve el cliente al agendar en FlujoReserva.
 export default function HorariosPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion } = store;
 
   if (!listo) return null;
@@ -112,7 +111,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

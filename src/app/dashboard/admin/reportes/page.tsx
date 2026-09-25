@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { Banknote, CalendarCheck, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
-import { useDemoStore } from "@/lib/demo-store";
+import { useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 const mxnCompact = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", notation: "compact", maximumFractionDigits: 1 });
@@ -60,7 +60,7 @@ function TooltipCard({ active, payload, label, formatter }: { active?: boolean; 
 
 // Nodo Administrador: reportes financieros y operativos de la barbería.
 export default function ReportesPage() {
-  const store = useDemoStore();
+  const store = useBarberia();
   const { listo, sesion, citas, barberos } = store;
   const esOscuro = useEsDark();
   const cat = esOscuro ? CATEGORICAL_DARK : CATEGORICAL_LIGHT;
@@ -211,7 +211,7 @@ function SinSesion() {
         href="/login"
         className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
       >
-        Entrar a la demo
+        Iniciar sesión
       </Link>
     </main>
   );

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   Clock3,
+  IdCard,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -20,11 +21,12 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import type { RolDemo, SesionDemo } from "@/lib/demo-store";
+import type { Rol, Sesion } from "@/lib/store";
+import { Marca } from "@/components/shell/Marca";
 
 type NavItem = { label: string; corto?: string; href: string; icon: React.ReactNode };
 
-const NAV: Record<RolDemo, NavItem[]> = {
+const NAV: Record<Rol, NavItem[]> = {
   barbero: [
     { label: "Mi agenda", href: "/dashboard/barbero", icon: <CalendarDays className="h-4 w-4" /> },
     { label: "Fichas", href: "/dashboard/barbero/fichas", icon: <ClipboardList className="h-4 w-4" /> },
@@ -35,6 +37,7 @@ const NAV: Record<RolDemo, NavItem[]> = {
     { label: "Panel", href: "/dashboard/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
     { label: "Marketing", href: "/dashboard/admin/marketing", icon: <Megaphone className="h-4 w-4" /> },
     { label: "Clientes", href: "/dashboard/admin/clientes", icon: <Users className="h-4 w-4" /> },
+    { label: "Tarjetas de lealtad", corto: "Lealtad", href: "/dashboard/admin/lealtad", icon: <IdCard className="h-4 w-4" /> },
     { label: "Equipo de barberos", corto: "Equipo", href: "/dashboard/admin/equipo", icon: <Scissors className="h-4 w-4" /> },
     { label: "Servicios", href: "/dashboard/admin/servicios", icon: <Tags className="h-4 w-4" /> },
     { label: "Inventario", href: "/dashboard/admin/inventario", icon: <Boxes className="h-4 w-4" /> },
@@ -46,6 +49,7 @@ const NAV: Record<RolDemo, NavItem[]> = {
   cliente: [
     { label: "Mi cuenta", href: "/cuenta", icon: <LayoutDashboard className="h-4 w-4" /> },
     { label: "Agendar cita", corto: "Agendar", href: "/reservar", icon: <CalendarDays className="h-4 w-4" /> },
+    { label: "Mi tarjeta", href: "/cuenta/tarjeta", icon: <IdCard className="h-4 w-4" /> },
     { label: "Pagos", href: "/cuenta/pagos", icon: <CreditCard className="h-4 w-4" /> },
     { label: "Recompensas", href: "/cuenta/recompensas", icon: <Sparkles className="h-4 w-4" /> },
   ],
@@ -58,7 +62,7 @@ export function PanelShell({
   onLogout,
   children,
 }: {
-  sesion: SesionDemo;
+  sesion: Sesion;
   activo: string;
   onLogout: () => void;
   children: React.ReactNode;
@@ -76,11 +80,9 @@ export function PanelShell({
             <Scissors className="h-4 w-4" />
           </span>
           <span className="leading-none">
-            <span className="block text-sm font-semibold tracking-[0.28em] text-white" style={{ fontFamily: "var(--font-serif)" }}>
-              HAIRCUT
-            </span>
+            <Marca className="block max-w-[10rem] truncate text-sm font-semibold uppercase tracking-[0.2em] text-white" />
             <span className="block text-[9px] uppercase tracking-[0.3em] text-white/40">
-              Barbershop
+              Panel de gestión
             </span>
           </span>
         </Link>
@@ -124,7 +126,7 @@ export function PanelShell({
         <header className="app-mobile-header anim-in">
           <Link href="/" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white" style={{ fontFamily: "var(--font-serif)" }}>
             <span className="app-mobile-mark"><Scissors className="h-3.5 w-3.5" /></span>
-            HAIRCUT
+            <Marca className="max-w-[12rem] truncate uppercase" />
           </Link>
           <button
             onClick={() => {

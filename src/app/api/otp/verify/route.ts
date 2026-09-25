@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_MODE } from "@/lib/demo";
+import { MODO_LOCAL } from "@/lib/modo";
 
 // POST /api/otp/verify — comprueba el código y marca telefono_verificado.
-// En demo acepta el código 000000.
+// En modo local acepta el código 000000.
 export async function POST(req: NextRequest) {
   const { telefono, codigo } = (await req.json().catch(() => ({}))) as {
     telefono?: string;
@@ -15,11 +15,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan teléfono o código" }, { status: 400 });
   }
 
-  if (DEMO_MODE || !process.env.TWILIO_ACCOUNT_SID) {
+  if (MODO_LOCAL || !process.env.TWILIO_ACCOUNT_SID) {
     const ok = codigo === "000000";
     return ok
-      ? NextResponse.json({ verificado: true, demo: true })
-      : NextResponse.json({ error: "Código incorrecto (demo: usa 000000)" }, { status: 400 });
+      ? NextResponse.json({ verificado: true, local: true })
+      : NextResponse.json({ error: "Código incorrecto (modo local: usa 000000)" }, { status: 400 });
   }
 
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID } = process.env;

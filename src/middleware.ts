@@ -11,7 +11,7 @@ import { DESTINO_POR_ROL, RUTAS_PROTEGIDAS, resolverRol } from "@/lib/auth/roles
 //   2. Refresco de la sesión de Supabase y guarda de las rutas privadas.
 //
 // El segundo sólo se activa si el proyecto tiene credenciales de Supabase. Sin
-// ellas la app corre en modo demostración, donde la sesión vive en
+// ellas la app corre en modo local, donde la sesión vive en
 // `localStorage` y el servidor no puede —ni debe— opinar sobre ella.
 // ---------------------------------------------------------------------------
 

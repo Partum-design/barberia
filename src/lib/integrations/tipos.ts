@@ -1,13 +1,13 @@
 // ---------------------------------------------------------------------------
 // Contrato único de las integraciones de marketing.
 //
-// Tanto los adaptadores en vivo (GA4, Google Ads) como el juego de datos de
-// demostración devuelven exactamente estas formas. La interfaz nunca sabe de
-// dónde vienen los números: sólo lee `origen` para decir en pantalla si está
-// mirando datos reales o una demostración.
+// Tanto los adaptadores en vivo (GA4, Google Ads) como la respuesta vacía de
+// una integración sin conectar devuelven exactamente estas formas. La interfaz
+// sólo lee `origen` para decir en pantalla si está mirando datos reales o si
+// todavía falta conectar la cuenta.
 // ---------------------------------------------------------------------------
 
-export type OrigenDatos = "vivo" | "demostracion";
+export type OrigenDatos = "vivo" | "sin_conexion";
 
 export type Rango = { desde: string; hasta: string };
 
@@ -29,7 +29,7 @@ export type ResumenAnalytics = {
   canales: { nombre: string; sesiones: number; conversiones: number }[];
   paginas: { ruta: string; vistas: number; duracionMediaSeg: number }[];
   dispositivos: { nombre: string; sesiones: number }[];
-  /** Motivo por el que se está sirviendo la demostración, si aplica */
+  /** Motivo por el que no hay datos en vivo, si aplica */
   aviso?: string;
 };
 

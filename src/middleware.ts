@@ -133,6 +133,7 @@ export const config = {
   matcher: [
     "/api/bookings/:path*",
     "/api/search/:path*",
+    "/api/auth/registro",
     "/dashboard/:path*",
     "/cuenta/:path*",
     "/login",

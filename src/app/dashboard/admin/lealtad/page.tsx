@@ -217,7 +217,7 @@ export default function LealtadAdminPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            store.canjearRecompensa(t.cliente_id, f.lealtad.recompensasGanadas);
+                            store.canjearRecompensa(t.cliente_id);
                             sincronizar(t, f.titular, { ...canjes, [t.cliente_id]: f.canjeadas + 1 });
                           }}
                           className="rounded-full border border-accent-500/40 px-3 py-1 text-xs font-medium text-accent-600"

@@ -1,4 +1,4 @@
-import type { Rol, Sesion } from "@/lib/store";
+import type { Rol, Sesion } from "@/lib/datos/modelo";
 
 /** Destino de cada rol tras iniciar sesión. */
 export const DESTINO_POR_ROL: Record<Rol, string> = {
@@ -23,19 +23,16 @@ export function esRolValido(valor: unknown): valor is Rol {
 /**
  * Resuelve el rol de un usuario autenticado.
  *
- * El orden importa: `app_metadata` lo escribe el servidor y el usuario no puede
- * tocarlo, así que manda sobre `user_metadata`, que sí es editable desde el
- * cliente. Sin nada de eso, el rol por defecto es el menos privilegiado.
+ * Sólo cuenta `app_metadata`: lo escribe el servidor con la llave service_role
+ * y el usuario no puede tocarlo. `user_metadata` lo edita el propio usuario
+ * desde el navegador, así que fiarse de él permitiría autoproclamarse admin.
+ * Sin rol asignado, el usuario es cliente.
  */
 export function resolverRol(usuario: {
   app_metadata?: Record<string, unknown> | null;
-  user_metadata?: Record<string, unknown> | null;
 }): Rol {
-  const deApp = usuario.app_metadata?.rol ?? usuario.app_metadata?.role;
-  if (esRolValido(deApp)) return deApp;
-  const deUser = usuario.user_metadata?.rol ?? usuario.user_metadata?.role;
-  if (esRolValido(deUser)) return deUser;
-  return "cliente";
+  const deApp = usuario.app_metadata?.rol;
+  return esRolValido(deApp) ? deApp : "cliente";
 }
 
 /** Etiqueta legible bajo el nombre en el panel. */

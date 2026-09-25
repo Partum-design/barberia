@@ -23,6 +23,7 @@ import {
 import { Reveal } from "@/components/marketing/Reveal";
 import { ThreePulse } from "@/components/marketing/ThreePulse";
 import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual";
+import { horarioConPersonal } from "@/lib/datos/disponibilidad";
 import {
   DIAS_SEMANA,
   nombreDelNegocio,
@@ -71,7 +72,7 @@ function estadoHoy(horario: BarberiaConfig["horario"], ahora: Date) {
  * decir. Nada de lo que se ve aquí es texto de ejemplo.
  */
 export function SitioNegocio() {
-  const { listo, barberiaConfig: negocio, servicios, barberos, recompensasConfig } = useBarberia();
+  const { listo, barberiaConfig: negocio, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [ahora, setAhora] = useState<Date | null>(null);
 
@@ -92,8 +93,14 @@ export function SitioNegocio() {
     [activos]
   );
 
-  const tieneHorario = DIAS_SEMANA.some((d) => negocio.horario[d.id]?.activo);
-  const hoy = ahora && tieneHorario ? estadoHoy(negocio.horario, ahora) : null;
+  // Se publica el horario en que hay personal: un día sin barberos trabajando
+  // aparece cerrado aunque el local tenga horario capturado.
+  const horario = useMemo(
+    () => horarioConPersonal(negocio, barberos, horarioDeBarbero),
+    [negocio, barberos, horarioDeBarbero]
+  );
+  const tieneHorario = DIAS_SEMANA.some((d) => horario[d.id].activo);
+  const hoy = ahora && tieneHorario ? estadoHoy(horario, ahora) : null;
   const anios =
     negocio.anio_fundacion && /^\d{4}$/.test(negocio.anio_fundacion)
       ? new Date().getFullYear() - Number(negocio.anio_fundacion)
@@ -343,7 +350,7 @@ export function SitioNegocio() {
             {tieneHorario ? (
               <ul className="biz-hours">
                 {DIAS_SEMANA.map((d) => {
-                  const b = negocio.horario[d.id];
+                  const b = horario[d.id];
                   return (
                     <li key={d.id} className={hoy?.dia === d.id ? "is-today" : ""}>
                       <span>{d.label}</span>
@@ -395,7 +402,7 @@ export function SitioNegocio() {
             Tu próximo corte, a un clic.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-white/70">
-            Elige barbero y horario, paga como prefieras y suma un sello en tu tarjeta.
+            Elige barbero y horario, paga en la barbería y suma un sello en tu tarjeta.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/reservar" className="btn-gold card-hover rounded-full px-6 py-3 font-semibold shadow-lg">

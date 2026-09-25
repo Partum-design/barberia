@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Home, Plus, ShieldCheck, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Home, KeyRound, Loader2, Plus, ShieldCheck, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { useBarberia } from "@/lib/store";
 
@@ -10,6 +10,8 @@ const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" 
 
 const formInicial = {
   nombre: "",
+  email: "",
+  password: "",
   especialidad: "",
   precio_servicio: 800,
   duracion_cita_min: 30,
@@ -17,12 +19,43 @@ const formInicial = {
   biografia: "",
 };
 
+type Cuenta = { id: string; email: string; nombre: string; rol: "admin" | "barbero" | "cliente"; ultimo_acceso: string | null };
+
+async function llamar(metodo: "GET" | "POST" | "PATCH", body?: unknown) {
+  const res = await fetch("/api/admin/usuarios", {
+    method: metodo,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const cuerpo = (await res.json().catch(() => ({}))) as { error?: string; usuarios?: Cuenta[] };
+  if (!res.ok) throw new Error(cuerpo.error ?? "No se pudo completar la acción.");
+  return cuerpo;
+}
+
 // Nodo Administrador: alta y gestión del equipo de barberos de la barbería.
+// Cada alta crea también la cuenta con la que el barbero inicia sesión.
 export default function EquipoBarberoPage() {
   const store = useBarberia();
   const { listo, sesion, barberos, citas } = store;
   const [mostrarForm, setMostrarForm] = useState(false);
   const [form, setForm] = useState(formInicial);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [cuentas, setCuentas] = useState<Cuenta[]>([]);
+  const esAdmin = sesion?.rol === "admin";
+
+  const cargarCuentas = useCallback(async () => {
+    try {
+      setCuentas((await llamar("GET")).usuarios ?? []);
+    } catch {
+      /* la lista es informativa; los errores se ven al actuar */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (esAdmin) void cargarCuentas();
+  }, [esAdmin, cargarCuentas]);
 
   const conStats = useMemo(
     () =>
@@ -39,11 +72,44 @@ export default function EquipoBarberoPage() {
     return <SinSesion />;
   }
 
-  function darDeAlta() {
+  const correoDe = (id: string) => cuentas.find((c) => c.id === id)?.email;
+
+  async function darDeAlta() {
     if (!form.nombre.trim() || !form.especialidad.trim()) return;
-    store.agregarBarbero({ ...form, nombre: form.nombre.trim(), especialidad: form.especialidad.trim() });
-    setForm(formInicial);
-    setMostrarForm(false);
+    setGuardando(true);
+    setError(null);
+    setAviso(null);
+    try {
+      const { email, password, ...perfil } = form;
+      await llamar("POST", {
+        tipo: "barbero",
+        nombre: form.nombre.trim(),
+        email,
+        password,
+        barbero: { ...perfil, especialidad: form.especialidad.trim() },
+      });
+      await Promise.all([store.recargar(), cargarCuentas()]);
+      setAviso(`Listo: ${form.nombre.trim()} ya puede entrar con ${email.trim()} y la contraseña que le asignaste.`);
+      setForm(formInicial);
+      setMostrarForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo dar de alta.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function cambiarClave(id: string, nombre: string) {
+    const password = window.prompt(`Nueva contraseña para ${nombre} (mínimo 8 caracteres):`);
+    if (!password) return;
+    setError(null);
+    setAviso(null);
+    try {
+      await llamar("PATCH", { id, password });
+      setAviso(`Contraseña de ${nombre} actualizada.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cambiar la contraseña.");
+    }
   }
 
   return (
@@ -65,6 +131,17 @@ export default function EquipoBarberoPage() {
         </button>
       </header>
 
+      {error && (
+        <p className="mb-4 rounded-xl px-4 py-3 text-sm ring-1 ring-red-500/30" style={{ color: "var(--ox, #b4533c)" }} role="alert">
+          {error}
+        </p>
+      )}
+      {aviso && (
+        <p className="mb-4 rounded-xl px-4 py-3 text-sm ring-1 ring-emerald-500/30" role="status">
+          {aviso}
+        </p>
+      )}
+
       {mostrarForm && (
         <section className="anim-pop mb-6 rounded-3xl p-6 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
           <h2 className="mb-4 font-semibold">Nuevo barbero</h2>
@@ -79,6 +156,22 @@ export default function EquipoBarberoPage() {
               value={form.especialidad}
               onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
               placeholder="Especialidad (ej. Fades y diseño de barba)"
+              className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
+            />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="Correo para iniciar sesión"
+              autoComplete="off"
+              className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
+            />
+            <input
+              type="text"
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              placeholder="Contraseña inicial (mín. 8 caracteres)"
+              autoComplete="new-password"
               className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
             />
             <input
@@ -135,10 +228,17 @@ export default function EquipoBarberoPage() {
           </div>
           <button
             onClick={darDeAlta}
-            disabled={!form.nombre.trim() || !form.especialidad.trim()}
-            className="card-hover mt-4 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            disabled={
+              guardando ||
+              !form.nombre.trim() ||
+              !form.especialidad.trim() ||
+              !form.email.includes("@") ||
+              form.password.length < 8
+            }
+            className="card-hover mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
           >
-            Guardar barbero
+            {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
+            Crear barbero y su acceso
           </button>
         </section>
       )}
@@ -169,6 +269,17 @@ export default function EquipoBarberoPage() {
                 <dd className="font-semibold">{mxn.format(m.ingresos)}</dd>
               </div>
             </dl>
+            <p className="mb-3 truncate text-xs" style={{ color: "var(--ink-muted)" }}>
+              {correoDe(m.id) ?? "Sin cuenta de acceso"}
+            </p>
+            {correoDe(m.id) && (
+              <button
+                onClick={() => cambiarClave(m.id, m.nombre)}
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
+              >
+                <KeyRound className="h-4 w-4" /> Cambiar contraseña
+              </button>
+            )}
             <button
               onClick={() => store.toggleActivoBarbero(m.id)}
               className={`w-full rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
@@ -182,7 +293,99 @@ export default function EquipoBarberoPage() {
           </article>
         ))}
       </section>
+
+      <Administradores
+        cuentas={cuentas.filter((c) => c.rol === "admin")}
+        miId={sesion.id}
+        onCreada={cargarCuentas}
+        onCambiarClave={cambiarClave}
+      />
     </PanelShell>
+  );
+}
+
+/** Cuentas con acceso total al panel de administración. */
+function Administradores({
+  cuentas,
+  miId,
+  onCreada,
+  onCambiarClave,
+}: {
+  cuentas: Cuenta[];
+  miId: string;
+  onCreada: () => Promise<void>;
+  onCambiarClave: (id: string, nombre: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [form, setForm] = useState({ nombre: "", email: "", password: "" });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function crear(e: React.FormEvent) {
+    e.preventDefault();
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamar("POST", { tipo: "admin", ...form });
+      await onCreada();
+      setForm({ nombre: "", email: "", password: "" });
+      setAbierto(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo crear la cuenta.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  const campo = "rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15";
+
+  return (
+    <section className="anim-in anim-d2 mt-8 rounded-3xl p-6 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Administradores</h2>
+          <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
+            Tienen acceso completo: equipo, caja, clientes y configuración.
+          </p>
+        </div>
+        <button
+          onClick={() => setAbierto((v) => !v)}
+          className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium dark:border-white/10"
+        >
+          {abierto ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+          {abierto ? "Cancelar" : "Nuevo administrador"}
+        </button>
+      </div>
+
+      {abierto && (
+        <form onSubmit={crear} className="mb-4 grid gap-3 sm:grid-cols-3">
+          <input className={campo} placeholder="Nombre" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} required minLength={2} />
+          <input className={campo} type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required autoComplete="off" />
+          <input className={campo} type="text" placeholder="Contraseña (mín. 8)" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required minLength={8} autoComplete="new-password" />
+          {error && <p className="text-sm sm:col-span-3" style={{ color: "var(--ox, #b4533c)" }}>{error}</p>}
+          <button type="submit" disabled={guardando} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-3 sm:justify-self-start">
+            {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
+            Crear administrador
+          </button>
+        </form>
+      )}
+
+      <ul className="divide-y divide-slate-200/70 dark:divide-white/10">
+        {cuentas.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+            <span className="min-w-0">
+              <span className="block truncate font-medium">
+                {c.nombre} {c.id === miId && <span className="text-xs" style={{ color: "var(--ink-muted)" }}>(tú)</span>}
+              </span>
+              <span className="block truncate text-xs" style={{ color: "var(--ink-muted)" }}>{c.email}</span>
+            </span>
+            <button onClick={() => onCambiarClave(c.id, c.nombre)} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+              <KeyRound className="h-3.5 w-3.5" /> Cambiar contraseña
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

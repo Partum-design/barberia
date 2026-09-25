@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Building2, Check, Clock3, Gift, Globe, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { Building2, Check, Clock3, Gift, Globe, Save, ShieldCheck } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { DIAS_SEMANA, useBarberia, type BarberiaConfig, type DiaSemana } from "@/lib/store";
-import { MODO_LOCAL } from "@/lib/modo";
 
 const CAMPO =
   "w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15";
@@ -19,7 +18,6 @@ export default function ConfiguracionAdminPage() {
   const [barberia, setBarberia] = useState(barberiaConfig);
   const [recompensas, setRecompensas] = useState(recompensasConfig);
   const [guardado, setGuardado] = useState(false);
-  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
 
   useEffect(() => setBarberia(barberiaConfig), [barberiaConfig]);
   useEffect(() => setRecompensas(recompensasConfig), [recompensasConfig]);
@@ -203,24 +201,6 @@ export default function ConfiguracionAdminPage() {
             </>
           )}
         </button>
-        {MODO_LOCAL && (
-          <button
-            onClick={() => {
-              if (!confirmarBorrado) {
-                setConfirmarBorrado(true);
-                setTimeout(() => setConfirmarBorrado(false), 4000);
-                return;
-              }
-              store.borrarDatosLocales();
-              setConfirmarBorrado(false);
-            }}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
-            style={{ color: confirmarBorrado ? "var(--ox, #b4533c)" : "var(--ink-muted)" }}
-          >
-            <Trash2 className="h-4 w-4" />
-            {confirmarBorrado ? "Pulsa otra vez para borrar todo" : "Borrar datos de este navegador"}
-          </button>
-        )}
       </div>
     </PanelShell>
   );

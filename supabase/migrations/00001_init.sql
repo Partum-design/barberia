@@ -9,6 +9,7 @@
 -- Extensiones -----------------------------------------------------------------
 create extension if not exists "pgcrypto";      -- gen_random_uuid()
 create extension if not exists "pg_trgm";       -- búsqueda difusa de barberos
+create extension if not exists "btree_gist";    -- exclusión con uuid en citas
 
 -- ============================================================================
 -- 1. TIPOS ENUMERADOS
@@ -119,9 +120,6 @@ create index idx_citas_cliente on public.citas (cliente_id);
 create index idx_citas_barberia on public.citas (barberia_id);
 create index idx_citas_expiracion on public.citas (bloqueo_expira_en)
   where estado = 'bloqueada';
-
--- Extensión requerida por la restricción de exclusión con uuid
-create extension if not exists btree_gist;
 
 -- Pagos -------------------------------------------------------------------
 create table public.pagos (

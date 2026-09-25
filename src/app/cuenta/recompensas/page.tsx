@@ -84,7 +84,7 @@ export default function RecompensasPage() {
               </div>
               <button
                 disabled={disponibles === 0}
-                onClick={() => store.canjearRecompensa(clienteId, lealtad.recompensasGanadas)}
+                onClick={() => store.canjearRecompensa(clienteId)}
                 className="card-hover rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 disabled:opacity-40"
               >
                 Canjear recompensa

@@ -1,105 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { addDays, format } from "date-fns";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  Banknote,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  Gift,
-  Home,
-  MapPin,
-  ShieldCheck,
-  Smartphone,
-  UserRound,
-} from "lucide-react";
-import { DIAS_SEMANA, calcularLealtad, useBarberia, type MetodoPago } from "@/lib/store";
-import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
+import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
+import { calcularLealtad, useBarberia, type Barbero } from "@/lib/store";
+import { slotsDisponibles } from "@/lib/datos/disponibilidad";
 
-type BarberoOpcion = {
-  id: string;
-  nombre: string;
-  especialidad: string;
-  precio_servicio: number;
-  duracion_cita_min: number;
-  acepta_domicilio: boolean;
-  biografia: string;
-};
-
-type Paso = "barbero" | "horario" | "otp" | "pago" | "confirmada";
+type Paso = "barbero" | "horario" | "confirmar" | "confirmada";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
-export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; local: boolean }) {
+/**
+ * Reserva en tres pasos: barbero, horario y confirmación. Sólo se ofrecen
+ * barberos con horarios libres en la semana y sólo horas con personal (ver
+ * lib/datos/disponibilidad). De momento el pago es en efectivo en la barbería.
+ */
+export function FlujoReserva() {
   const store = useBarberia();
+  const { barberos, citas, barberiaConfig, horarioDeBarbero } = store;
   const [paso, setPaso] = useState<Paso>("barbero");
-  const [barbero, setBarbero] = useState<BarberoOpcion | null>(null);
+  const [barbero, setBarbero] = useState<Barbero | null>(null);
   const [slot, setSlot] = useState<Date | null>(null);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">("presencial");
   const [direccion, setDireccion] = useState("");
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>("tarjeta");
-  const [procesador, setProcesador] = useState<"stripe" | "mercado-pago">("stripe");
-  const [telefono, setTelefono] = useState("");
-  const [codigo, setCodigo] = useState("");
-  const [otpEnviado, setOtpEnviado] = useState(false);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [expiraEn, setExpiraEn] = useState<Date | null>(null);
-  const [restante, setRestante] = useState("10:00");
 
-  // Cuenta regresiva del bloqueo del slot (10 minutos)
-  useEffect(() => {
-    if (!expiraEn) return;
-    const t = setInterval(() => {
-      const ms = expiraEn.getTime() - Date.now();
-      if (ms <= 0) {
-        setRestante("00:00");
-        clearInterval(t);
-        return;
-      }
-      const m = Math.floor(ms / 60_000);
-      const s = Math.floor((ms % 60_000) / 1000);
-      setRestante(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    }, 1000);
-    return () => clearInterval(t);
-  }, [expiraEn]);
-
-  // Horarios libres de los próximos 7 días: salen de la disponibilidad
-  // semanal que el barbero configuró y descartan los que ya tienen cita.
-  const { horarioDeBarbero, citas } = store;
-  const slots = useMemo(() => {
-    if (!barbero) return [];
-    const horario = horarioDeBarbero(barbero.id);
-    const ocupadas = citas
-      .filter((c) => c.barbero_id === barbero.id && c.estado !== "cancelada")
-      .map((c) => [new Date(c.inicio).getTime(), new Date(c.fin).getTime()] as const);
-    const duracion = barbero.duracion_cita_min * 60_000;
-    const ahora = Date.now();
-    const out: Date[] = [];
-
-    for (let d = 0; d < 7; d++) {
-      const dia = addDays(new Date(), d);
-      // getDay(): 0 = domingo; DIAS_SEMANA empieza en lunes.
-      const bloque = horario[DIAS_SEMANA[(dia.getDay() + 6) % 7].id];
-      if (!bloque?.activo) continue;
-      const [hi, mi] = bloque.inicio.split(":").map(Number);
-      const [hf, mf] = bloque.fin.split(":").map(Number);
-      const inicio = new Date(dia);
-      inicio.setHours(hi, mi, 0, 0);
-      const fin = new Date(dia);
-      fin.setHours(hf, mf, 0, 0);
-
-      for (let t = inicio.getTime(); t + duracion <= fin.getTime(); t += duracion) {
-        if (t <= ahora) continue;
-        const choca = ocupadas.some(([a, b]) => t < b && t + duracion > a);
-        if (!choca) out.push(new Date(t));
-      }
-    }
-    return out;
-  }, [barbero, horarioDeBarbero, citas]);
+  // Horarios libres de los próximos 7 días por barbero activo.
+  const disponibles = useMemo(
+    () =>
+      barberos
+        .filter((b) => b.activo)
+        .map((b) => ({
+          barbero: b,
+          slots: slotsDisponibles({ barbero: b, horario: horarioDeBarbero(b.id), barberia: barberiaConfig, citas }),
+        }))
+        .filter((x) => x.slots.length > 0),
+    [barberos, citas, barberiaConfig, horarioDeBarbero]
+  );
+  const slots = disponibles.find((x) => x.barbero.id === barbero?.id)?.slots ?? [];
 
   const esCliente = store.sesion?.rol === "cliente";
 
@@ -123,53 +64,25 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
     );
   }
 
-  async function enviarOtp() {
-    setError("");
-    setCargando(true);
-    const res = await fetch("/api/otp/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefono, canal: "whatsapp" }),
-    });
-    const data = await res.json();
-    setCargando(false);
-    if (!res.ok) return setError(data.error ?? "Error al enviar el código");
-    setOtpEnviado(true);
-  }
-
-  async function verificarOtpYReservar() {
+  async function confirmar() {
     if (!barbero || !slot) return;
     setError("");
     setCargando(true);
-
-    const verif = await fetch("/api/otp/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefono, codigo }),
+    const { error: err } = await store.crearCita({
+      barbero_id: barbero.id,
+      inicio: slot.toISOString(),
+      modalidad,
+      direccion_domicilio: direccion.trim(),
     });
-    const vdata = await verif.json();
-    if (!verif.ok) {
-      setCargando(false);
-      return setError(vdata.error ?? "Código incorrecto");
-    }
-
-    const fin = new Date(slot.getTime() + barbero.duracion_cita_min * 60_000);
-    const res = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barbero_id: barbero.id,
-        inicio: slot.toISOString(),
-        fin: fin.toISOString(),
-        modalidad,
-      }),
-    });
-    const data = await res.json();
     setCargando(false);
-    if (!res.ok) return setError(data.error ?? "No fue posible reservar");
-
-    setExpiraEn(new Date(data.bloqueo_expira_en));
-    setPaso("pago");
+    if (err) {
+      setError(err);
+      // Si el horario se ocupó, se vuelve a elegir con la disponibilidad fresca.
+      setSlot(null);
+      setPaso("horario");
+      return;
+    }
+    setPaso("confirmada");
   }
 
   return (
@@ -183,18 +96,18 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
       )}
 
       {/* Paso 1: elegir barbero */}
-      {paso === "barbero" && barberos.length === 0 && (
+      {paso === "barbero" && disponibles.length === 0 && (
         <div className="rounded-2xl p-8 text-center text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)", color: "var(--ink-muted)" }}>
-          Todavía no hay barberos con agenda abierta. Vuelve pronto o llámanos para apartar tu lugar.
+          No hay barberos con horarios disponibles esta semana. Vuelve pronto o llámanos para apartar tu lugar.
         </div>
       )}
 
       {paso === "barbero" && (
         <div className="space-y-3">
-          {barberos.map((m) => (
+          {disponibles.map(({ barbero: m, slots: libres }) => (
             <button
               key={m.id}
-              onClick={() => { setBarbero(m); setPaso("horario"); }}
+              onClick={() => { setBarbero(m); setModalidad("presencial"); setError(""); setPaso("horario"); }}
               className="flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-sm ring-1 ring-slate-900/5 transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-accent-500/50 dark:ring-white/10"
               style={{ background: "var(--card)" }}
             >
@@ -211,6 +124,9 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
                     </span>
                   )}
                 </p>
+                <p className="text-xs capitalize" style={{ color: "var(--ink-muted)" }}>
+                  Próximo: {format(libres[0], "EEE d MMM, HH:mm", { locale: es })}
+                </p>
               </div>
               <span className="font-semibold text-brand-600">{mxn.format(m.precio_servicio)}</span>
             </button>
@@ -221,9 +137,14 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
       {/* Paso 2: elegir horario */}
       {paso === "horario" && barbero && (
         <div className="rounded-2xl p-5 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <p className="mb-4 text-sm">
-            Disponibilidad de <span className="font-medium">{barbero.nombre}</span>
-          </p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-sm">
+              Disponibilidad de <span className="font-medium">{barbero.nombre}</span>
+            </p>
+            <button onClick={() => { setPaso("barbero"); setError(""); }} className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+              ← Cambiar barbero
+            </button>
+          </div>
           {slots.length === 0 && (
             <p className="rounded-xl border border-dashed border-brand-500/30 p-5 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
               No hay horarios libres en los próximos 7 días.
@@ -233,7 +154,7 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
             {slots.map((s) => (
               <button
                 key={s.toISOString()}
-                onClick={() => { setSlot(s); setPaso("otp"); }}
+                onClick={() => { setSlot(s); setError(""); setPaso("confirmar"); }}
                 className="rounded-xl border border-brand-500/25 px-2 py-2.5 text-center text-sm transition-colors hover:border-accent-500 hover:bg-accent-100/50 dark:hover:bg-accent-500/10"
               >
                 <span className="block text-[11px] capitalize" style={{ color: "var(--ink-muted)" }}>
@@ -246,55 +167,14 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
         </div>
       )}
 
-      {/* Paso 3: verificación OTP */}
-      {paso === "otp" && (
+      {/* Paso 3: confirmar (pago en efectivo) */}
+      {paso === "confirmar" && barbero && slot && (
         <div className="rounded-2xl p-6 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <div className="mb-4 flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-accent-500" />
-            <h2 className="font-semibold">Verifica tu teléfono</h2>
-          </div>
-          <p className="mb-4 text-sm" style={{ color: "var(--ink-muted)" }}>
-            Para proteger la agenda contra bots, confirma tu número por WhatsApp o SMS.
-            {local && " (Modo local: cualquier número válido; código 000000)"}
-          </p>
-          <div className="space-y-3">
-            <input
-              type="tel"
-              placeholder="+52 1 55 1234 5678"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value.replace(/[^+\d]/g, ""))}
-              className="w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
-            />
-            {otpEnviado && (
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Código de 6 dígitos"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm tracking-[0.4em] outline-none focus:border-accent-500 dark:border-white/15"
-              />
-            )}
-            <button
-              disabled={cargando || (otpEnviado ? codigo.length !== 6 : telefono.length < 11)}
-              onClick={otpEnviado ? verificarOtpYReservar : enviarOtp}
-              className="w-full rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white transition-opacity disabled:opacity-40"
-            >
-              {cargando ? "Procesando…" : otpEnviado ? "Verificar y apartar horario" : "Enviar código"}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="font-semibold">Confirma tu cita</h2>
+            <button onClick={() => setPaso("horario")} className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+              ← Cambiar horario
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Paso 4: pago con slot bloqueado */}
-      {paso === "pago" && barbero && slot && (
-        <div className="rounded-2xl p-6 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Confirma tu pago</h2>
-            <span className="font-num flex items-center gap-1.5 rounded-full bg-ink-900 px-3 py-1 text-sm font-medium text-mint-raw">
-              <Clock className="h-4 w-4" /> {restante}
-            </span>
           </div>
           {barbero.acepta_domicilio && (
             <div className="mb-4 flex gap-2">
@@ -326,89 +206,27 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
             <Fila k="Barbero" v={barbero.nombre} />
             <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
             <Fila k="Modalidad" v={modalidad === "presencial" ? "En barbería" : "A domicilio"} />
+            <Fila k="Pago" v="Efectivo en la barbería" />
             <Fila k="Total" v={mxn.format(barbero.precio_servicio)} destacado />
           </dl>
 
-          <p className="mb-2 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-            Método de pago
+          <p className="mb-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-100">
+            <Banknote className="mt-0.5 h-4 w-4 shrink-0" />
+            Tu horario queda apartado al confirmar. Paga el total en efectivo al llegar a tu cita.
           </p>
-          <div className="mb-4 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setMetodoPago("tarjeta")}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-medium transition-colors ${
-                metodoPago === "tarjeta"
-                  ? "border-accent-500 bg-accent-100/50 text-accent-600 dark:bg-accent-500/10"
-                  : "border-slate-200 dark:border-white/10"
-              }`}
-            >
-              <CreditCard className="h-4 w-4" />
-              Tarjeta en línea
-            </button>
-            <button
-              onClick={() => setMetodoPago("efectivo")}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-medium transition-colors ${
-                metodoPago === "efectivo"
-                  ? "border-accent-500 bg-accent-100/50 text-accent-600 dark:bg-accent-500/10"
-                  : "border-slate-200 dark:border-white/10"
-              }`}
-            >
-              <Banknote className="h-4 w-4" />
-              Efectivo en barbería
-            </button>
-          </div>
-
-          {metodoPago === "tarjeta" && (
-            <div className="booking-provider-picker">
-              <p>Procesador seguro</p>
-              <div role="radiogroup" aria-label="Procesador de pago">
-                <button type="button" role="radio" aria-checked={procesador === "stripe"} onClick={() => setProcesador("stripe")} className={procesador === "stripe" ? "is-active" : ""}><StripeMark /></button>
-                <button type="button" role="radio" aria-checked={procesador === "mercado-pago"} onClick={() => setProcesador("mercado-pago")} className={procesador === "mercado-pago" ? "is-active" : ""}><MercadoPagoMark /></button>
-              </div>
-            </div>
-          )}
-
-          {metodoPago === "tarjeta" ? (
-            <p className="mb-4 flex items-start gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" />
-              Tu horario está apartado por 10 minutos. Si el pago no se completa, se libera
-              automáticamente para otros clientes.
-            </p>
-          ) : (
-            <p className="mb-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-100">
-              <Banknote className="mt-0.5 h-4 w-4 shrink-0" />
-              Tu horario queda apartado ahora mismo. Paga el total en recepción al llegar a
-              tu cita — si no te presentas, el horario se libera para otros clientes.
-            </p>
-          )}
 
           <button
-            disabled={modalidad === "domicilio" && direccion.trim().length < 8}
-            onClick={() => {
-              // El pago crea la cita en el almacén: aparece al instante en la
-              // cuenta del cliente y en la agenda del barbero.
-              const fin = new Date(slot.getTime() + barbero.duracion_cita_min * 60_000);
-              store.crearCita({
-                barbero_id: barbero.id,
-                inicio: slot.toISOString(),
-                fin: fin.toISOString(),
-                modalidad,
-                metodo_pago: metodoPago,
-                direccion_domicilio: direccion.trim(),
-              });
-              setPaso("confirmada");
-            }}
-            className="card-hover w-full rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white disabled:opacity-40"
+            disabled={cargando || (modalidad === "domicilio" && direccion.trim().length < 8)}
+            onClick={confirmar}
+            className="card-hover flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white disabled:opacity-40"
           >
-            {metodoPago === "tarjeta"
-              ? local
-                ? `Simular pago con ${procesador === "stripe" ? "Stripe" : "Mercado Pago"}`
-                : `Pagar con ${procesador === "stripe" ? "Stripe" : "Mercado Pago"}`
-              : "Confirmar cita — pago en efectivo"}
+            {cargando && <Loader2 className="h-4 w-4 animate-spin" />}
+            Confirmar cita — pago en efectivo
           </button>
         </div>
       )}
 
-      {/* Paso 5: confirmación */}
+      {/* Paso 4: confirmación */}
       {paso === "confirmada" && barbero && slot && (() => {
         const clienteId = store.sesion?.id ?? "";
         const tarjeta = store.tarjetas.find((t) => t.cliente_id === clienteId);
@@ -425,13 +243,10 @@ export function FlujoReserva({ barberos, local }: { barberos: BarberoOpcion[]; l
             <p className="mt-1 text-sm capitalize" style={{ color: "var(--ink-muted)" }}>
               {barbero.nombre} · {format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
             </p>
-            {metodoPago === "efectivo" && (
-              <p className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">
-                <Banknote className="h-4 w-4 shrink-0" />
-                Recuerda llevar {mxn.format(barbero.precio_servicio)} en efectivo el día de tu
-                cita
-              </p>
-            )}
+            <p className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">
+              <Banknote className="h-4 w-4 shrink-0" />
+              Recuerda llevar {mxn.format(barbero.precio_servicio)} en efectivo el día de tu cita
+            </p>
             <p className="badge mx-auto mt-4 badge-gold px-4 py-1.5 text-xs">
               <Gift className="h-3.5 w-3.5" />
               Tarjeta de lealtad: {lealtad.progreso} de {lealtad.requerido} sellos — te faltan {lealtad.faltan} para tu recompensa
@@ -468,8 +283,7 @@ function Stepper({ actual }: { actual: Paso }) {
   const pasos: { id: Paso; label: string }[] = [
     { id: "barbero", label: "Barbero" },
     { id: "horario", label: "Horario" },
-    { id: "otp", label: "Verificación" },
-    { id: "pago", label: "Pago" },
+    { id: "confirmar", label: "Confirmar" },
   ];
   const idx = pasos.findIndex((p) => p.id === actual);
   const activo = actual === "confirmada" ? pasos.length : idx;

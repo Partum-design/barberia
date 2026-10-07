@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Banknote, CalendarCheck, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, Users } from "lucide-react";
+import { Banknote, CalendarCheck, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, UserPlus, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
@@ -69,6 +69,11 @@ export default function DashboardAdminPage() {
         kicker="Panel de administración"
         title={nombreDelNegocio(barberiaConfig)}
         lead="Los números se actualizan en vivo con la actividad de clientes y barberos."
+        actions={
+          <Link href="/dashboard/admin/usuarios" className="btn-gold px-5 py-2.5 text-sm">
+            <UserPlus className="h-4 w-4" /> Crear usuario
+          </Link>
+        }
       />
 
       {/* KPIs pastel estilo referencia */}

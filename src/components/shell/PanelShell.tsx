@@ -18,6 +18,7 @@ import {
   Settings,
   Sparkles,
   Tags,
+  UserCog,
   Users,
   Wallet,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const NAV: Record<Rol, NavItem[]> = {
     { label: "Marketing", href: "/dashboard/admin/marketing", icon: <Megaphone className="h-4 w-4" /> },
     { label: "Clientes", href: "/dashboard/admin/clientes", icon: <Users className="h-4 w-4" /> },
     { label: "Tarjetas de lealtad", corto: "Lealtad", href: "/dashboard/admin/lealtad", icon: <IdCard className="h-4 w-4" /> },
+    { label: "Usuarios", href: "/dashboard/admin/usuarios", icon: <UserCog className="h-4 w-4" /> },
     { label: "Equipo de barberos", corto: "Equipo", href: "/dashboard/admin/equipo", icon: <Scissors className="h-4 w-4" /> },
     { label: "Disponibilidad", corto: "Horarios", href: "/dashboard/admin/disponibilidad", icon: <Clock3 className="h-4 w-4" /> },
     { label: "Servicios", href: "/dashboard/admin/servicios", icon: <Tags className="h-4 w-4" /> },

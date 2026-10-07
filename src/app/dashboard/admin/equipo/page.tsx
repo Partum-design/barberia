@@ -297,6 +297,7 @@ export default function EquipoBarberoPage() {
       <Administradores
         cuentas={cuentas.filter((c) => c.rol === "admin")}
         miId={sesion.id}
+        principal={Boolean(sesion.principal)}
         onCreada={cargarCuentas}
         onCambiarClave={cambiarClave}
       />
@@ -308,11 +309,13 @@ export default function EquipoBarberoPage() {
 function Administradores({
   cuentas,
   miId,
+  principal,
   onCreada,
   onCambiarClave,
 }: {
   cuentas: Cuenta[];
   miId: string;
+  principal: boolean;
   onCreada: () => Promise<void>;
   onCambiarClave: (id: string, nombre: string) => void;
 }) {
@@ -348,16 +351,22 @@ function Administradores({
             Tienen acceso completo: equipo, caja, clientes y configuración.
           </p>
         </div>
-        <button
-          onClick={() => setAbierto((v) => !v)}
-          className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium dark:border-white/10"
-        >
-          {abierto ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-          {abierto ? "Cancelar" : "Nuevo administrador"}
-        </button>
+        {principal ? (
+          <button
+            onClick={() => setAbierto((v) => !v)}
+            className="flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium dark:border-white/10"
+          >
+            {abierto ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+            {abierto ? "Cancelar" : "Nuevo administrador"}
+          </button>
+        ) : (
+          <span className="text-xs" style={{ color: "var(--ink-muted)" }}>
+            Sólo el administrador principal gestiona administradores.
+          </span>
+        )}
       </div>
 
-      {abierto && (
+      {principal && abierto && (
         <form onSubmit={crear} className="mb-4 grid gap-3 sm:grid-cols-3">
           <input className={campo} placeholder="Nombre" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} required minLength={2} />
           <input className={campo} type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required autoComplete="off" />
@@ -379,9 +388,11 @@ function Administradores({
               </span>
               <span className="block truncate text-xs" style={{ color: "var(--ink-muted)" }}>{c.email}</span>
             </span>
-            <button onClick={() => onCambiarClave(c.id, c.nombre)} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-              <KeyRound className="h-3.5 w-3.5" /> Cambiar contraseña
-            </button>
+            {(principal || c.id === miId) && (
+              <button onClick={() => onCambiarClave(c.id, c.nombre)} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+                <KeyRound className="h-3.5 w-3.5" /> Cambiar contraseña
+              </button>
+            )}
           </li>
         ))}
       </ul>

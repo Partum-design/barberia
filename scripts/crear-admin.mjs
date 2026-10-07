@@ -62,11 +62,16 @@ if (!nombre || !email.includes("@") || password.length < 8) {
 }
 
 const headers = { apikey: llave, Authorization: `Bearer ${llave}`, "Content-Type": "application/json" };
+
+// Esta herramienta da de alta al dueño: es el administrador principal, el
+// único que puede crear o eliminar a otros administradores desde el panel.
+const appMetadata = { rol: "admin", principal: true };
+
 const cuerpo = {
   email,
   password,
   email_confirm: true,
-  app_metadata: { rol: "admin" },
+  app_metadata: appMetadata,
   user_metadata: { full_name: nombre },
 };
 
@@ -83,7 +88,7 @@ if (res.status === 422 || res.status === 409) {
   res = await fetch(`${url}/auth/v1/admin/users/${usuario.id}`, {
     method: "PUT",
     headers,
-    body: JSON.stringify({ password, app_metadata: { rol: "admin" }, user_metadata: { full_name: nombre } }),
+    body: JSON.stringify({ password, app_metadata: appMetadata, user_metadata: { full_name: nombre } }),
   });
 }
 
@@ -91,4 +96,4 @@ if (!res.ok) {
   console.error("No se pudo crear la cuenta:", await res.text());
   process.exit(1);
 }
-console.log(`Listo: ${email} ya puede entrar como administrador en /login`);
+console.log(`Listo: ${email} ya puede entrar como administrador principal en /login`);

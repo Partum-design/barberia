@@ -18,6 +18,8 @@ export type Sesion = {
   id: string;
   nombre: string;
   subtitulo: string;
+  /** Administrador principal (dueño): el único que gestiona a otros administradores. */
+  principal?: boolean;
 };
 
 export type Cita = {

@@ -35,6 +35,14 @@ export function resolverRol(usuario: {
   return esRolValido(deApp) ? deApp : "cliente";
 }
 
+/**
+ * Administrador principal: el dueño de la cuenta. Igual que el rol, vive en
+ * `app_metadata` (sólo lo escribe el servidor).
+ */
+export function esPrincipal(usuario: { app_metadata?: Record<string, unknown> | null }): boolean {
+  return resolverRol(usuario) === "admin" && usuario.app_metadata?.principal === true;
+}
+
 /** Etiqueta legible bajo el nombre en el panel. */
 export function subtituloDeRol(rol: Rol): string {
   if (rol === "admin") return "Administrador";
@@ -61,10 +69,13 @@ export function sesionDesdeUsuario(usuario: {
   return {
     rol,
     id: usuario.id,
+    principal: esPrincipal(usuario),
     nombre,
     subtitulo:
       typeof meta.especialidad === "string" && meta.especialidad
         ? meta.especialidad
-        : subtituloDeRol(rol),
+        : esPrincipal(usuario)
+          ? "Administrador principal"
+          : subtituloDeRol(rol),
   };
 }

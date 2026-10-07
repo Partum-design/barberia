@@ -45,6 +45,16 @@ function mensajeDeError(mensaje: string) {
   return mensaje;
 }
 
+/** Borra las cookies de sesión de Supabase (incluidas las partidas en trozos). */
+function borrarCookiesDeSesion() {
+  for (const par of document.cookie.split(";")) {
+    const nombre = par.split("=")[0].trim();
+    if (nombre.startsWith("sb-")) {
+      document.cookie = `${nombre}=; Max-Age=0; path=/`;
+    }
+  }
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={<main className="login-page" />}>
@@ -91,6 +101,12 @@ function Acceso() {
 
     setCargando(true);
     try {
+      // Una sesión vieja guardada en el navegador (cookies de otro proyecto o
+      // vencidas) hace que el servidor rechace la nueva y regrese aquí sin
+      // avisar. Se limpia antes de entrar.
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      borrarCookiesDeSesion();
+
       if (modo === "crear") {
         const res = await fetch("/api/auth/registro", {
           method: "POST",
@@ -106,9 +122,18 @@ function Acceso() {
         password: clave,
       });
       if (err) throw err;
+
+      // Confirma que el servidor ve la sesión antes de salir de esta pantalla.
+      const res = await fetch("/api/auth/sesion", { cache: "no-store", credentials: "same-origin" });
+      const { rol } = (await res.json().catch(() => ({ rol: null }))) as { rol: Rol | null };
+      if (!rol) {
+        throw new Error(
+          "Tu contraseña es correcta, pero el navegador no guardó la sesión. Permite las cookies para este sitio (o sal del modo incógnito) y vuelve a intentar."
+        );
+      }
       // Recarga completa: el middleware y los paneles leen la sesión nueva
       // desde las cookies en la primera petición.
-      window.location.assign(destino(resolverRol(data.user)));
+      window.location.assign(destino(rol ?? resolverRol(data.user)));
     } catch (err) {
       setError(mensajeDeError(err instanceof Error ? err.message : "No pudimos completar el acceso."));
       setCargando(false);

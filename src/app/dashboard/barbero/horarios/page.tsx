@@ -5,6 +5,7 @@ import { Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EditorHorario } from "@/components/panel/EditorHorario";
 import { useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 // Nodo Barbero: disponibilidad semanal. Los bloques activos son los que
 // alimentan los horarios que ve el cliente al agendar en FlujoReserva.
@@ -13,6 +14,8 @@ export default function HorariosPage() {
   const { listo, sesion } = store;
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 
   if (!sesion || sesion.rol !== "barbero") {
     return <SinSesion />;

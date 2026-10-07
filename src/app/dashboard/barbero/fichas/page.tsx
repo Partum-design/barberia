@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { ClipboardList, FileText, Scissors, Search } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 // Nodo Barbero: ficha básica por cliente — historial de servicios y
 // preferencias de corte capturadas tras cada visita.
@@ -51,6 +52,8 @@ export default function FichasPage() {
   );
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 
   if (!sesion || sesion.rol !== "barbero") {
     return <SinSesion />;

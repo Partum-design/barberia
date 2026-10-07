@@ -384,3 +384,155 @@ body {
 .alta-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
 .alta-btn-sec { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.65rem 1.1rem; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 999px; font-size: 0.88rem; font-weight: 600; transition: border-color 200ms, color 200ms; }
 .alta-btn-sec:hover { border-color: var(--cm-orange); color: var(--cm-orange); }
+
+/* ==========================================================================
+   Teléfono: navegación con "Más", textos legibles y toques cómodos
+   ========================================================================== */
+html { -webkit-tap-highlight-color: transparent; }
+
+.app-mobile-a11y {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(247, 147, 30, 0.45);
+  color: var(--cm-orange);
+}
+
+/* Barra inferior: cinco botones fijos, grandes y con etiqueta legible */
+.app-mobile-nav {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  overflow: visible !important;
+  padding: 0.45rem !important;
+  bottom: max(0.6rem, env(safe-area-inset-bottom)) !important;
+}
+.app-mobile-item {
+  min-height: 3.4rem;
+  justify-content: center;
+  gap: 0.3rem !important;
+  font-size: 0.72rem !important;
+  border-radius: 0.9rem !important;
+  color: rgba(246, 238, 228, 0.7) !important;
+}
+.app-mobile-item svg { width: 1.3rem !important; height: 1.3rem !important; }
+.app-mobile-item:active { transform: scale(0.94); }
+
+/* Hoja "Más" */
+.app-sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; }
+.app-sheet-fondo { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); animation: cm-fade 200ms ease; }
+.app-sheet-panel {
+  position: relative;
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 0.6rem 1rem calc(1.2rem + env(safe-area-inset-bottom));
+  border-top: 3px solid var(--cm-orange);
+  border-radius: 1.6rem 1.6rem 0 0;
+  background: linear-gradient(180deg, rgba(12, 8, 6, 0.85), #0c0806 40%), var(--cm-brick) 0 0 / 120px 60px;
+  animation: cm-sheet 320ms cubic-bezier(.2, .9, .3, 1);
+}
+.app-sheet-asa { display: block; width: 3rem; height: 0.3rem; margin: 0 auto 0.9rem; border-radius: 99px; background: rgba(255, 255, 255, 0.25); }
+.app-sheet-head { display: flex; align-items: center; gap: 0.8rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(247, 147, 30, 0.2); }
+.app-sheet-head .app-user-avatar { width: 2.8rem; height: 2.8rem; display: grid; place-items: center; font-size: 1.3rem; }
+.app-sheet-cerrar { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.15); color: rgba(246, 238, 228, 0.8); }
+.app-sheet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.app-sheet-item {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 0.9rem 0.4rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform 150ms, background 150ms;
+}
+.app-sheet-item:active { transform: scale(0.95); }
+.app-sheet-icono { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1.5px solid var(--cm-orange); color: var(--cm-orange); }
+.app-sheet-icono svg { width: 1.2rem !important; height: 1.2rem !important; }
+.app-sheet-item.is-active { border-color: var(--cm-orange); background: rgba(247, 147, 30, 0.14); }
+.app-sheet-item.is-active .app-sheet-icono { background: var(--cm-orange); color: var(--cm-ink-dark); }
+.app-sheet-extra { display: grid; gap: 0.4rem; margin-top: 1rem; }
+.app-sheet-extra > * { display: flex; align-items: center; gap: 0.7rem; min-height: 3rem; padding: 0 1rem; border-radius: 0.9rem; font-size: 0.95rem; font-weight: 600; background: rgba(255, 255, 255, 0.04); text-align: left; }
+.app-sheet-extra svg { color: var(--cm-orange); }
+.app-sheet-extra .is-danger { color: #f0a59c; }
+.app-sheet-extra .is-danger svg { color: #f0a59c; }
+@keyframes cm-sheet { from { transform: translateY(100%); } to { transform: none; } }
+
+@media (max-width: 1023px) {
+  /* El botón flotante de accesibilidad vive en el encabezado del panel */
+  body:has(.app-shell) .a11y-fab { display: none; }
+  body:has(.app-shell) .a11y-panel { bottom: calc(6rem + env(safe-area-inset-bottom)) !important; }
+
+  .app-shell { padding: 0.6rem 0.75rem 0 !important; }
+  .app-mobile-header { position: sticky; top: 0.5rem; z-index: 40; backdrop-filter: blur(12px); }
+  .app-page { padding-bottom: 7.5rem !important; }
+
+  /* Cabecera de rol compacta: sin el poste 3D */
+  .panel-hero { padding: 1.2rem 1.1rem 1.4rem !important; }
+  .panel-hero-stage { display: none !important; }
+  .panel-hero-title { font-size: clamp(2.1rem, 9vw, 2.8rem) !important; }
+}
+
+@media (max-width: 640px) {
+  /* iOS hace zoom en campos con letra menor a 16px */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Tamaños mínimos legibles */
+  .app-page :is(.text-xs, small, [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"]) { font-size: 0.8rem !important; line-height: 1.45; }
+  .app-page .metric-card > span:first-child,
+  .app-page .metric-card small,
+  .app-page .module-panel-head span,
+  .app-page .kpi-card span,
+  .app-page .badge { font-size: 0.78rem !important; }
+  .app-page > header p { font-size: 0.95rem; }
+  .kicker, .panel-hero-kicker { font-size: 0.85rem !important; }
+
+  /* Toques cómodos */
+  .app-page :is(button, a.btn-gold, .module-tabs button) { min-height: 2.75rem; }
+  .module-tabs { overflow-x: auto; scroll-snap-type: x mandatory; }
+  .module-tabs button { flex-shrink: 0; padding-inline: 1rem !important; scroll-snap-align: start; }
+
+  /* Tarjetas de métricas a dos columnas con aire */
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.6rem !important; }
+  .metric-card { padding: 0.9rem 0.85rem !important; }
+  .metric-card strong { font-size: 1.8rem !important; }
+  .module-panel { padding: 1rem !important; }
+  .module-panel-head { flex-direction: column; align-items: stretch !important; }
+  .module-panel-head input { max-width: none !important; }
+
+  /* Formulario de alta: acciones al alcance del pulgar */
+  .alta { padding: 1rem 0.9rem 1.2rem !important; border-radius: 1.1rem; }
+  .alta-tipos { grid-template-columns: 1fr; }
+  .alta-tipo { grid-template-columns: auto 1fr; column-gap: 0.8rem; align-items: center; }
+  .alta-tipo-icono { grid-row: span 2; margin: 0; }
+  .alta-tipo ul { grid-column: 1 / -1; }
+  .alta-tipo:not(.is-active) ul { display: none; }
+  .alta-resumen .btn-gold { position: sticky; bottom: calc(5.5rem + env(safe-area-inset-bottom)); z-index: 5; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
+}
+
+/* ── Ajustes generales tras la revisión de escritorio y teléfono ──────── */
+/* Las rejillas no deben crecer por contenido ancho (gráficas, tablas) */
+.app-page .grid > *,
+.app-page [class*="grid-cols"] > * { min-width: 0; }
+.module-panel, .chart-frame { min-width: 0; max-width: 100%; }
+.app-page table { display: block; max-width: 100%; overflow-x: auto; }
+
+/* El foco programático en títulos (para lectores de pantalla) no lleva marco */
+[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
+h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
+
+/* En el panel, accesibilidad vive en la barra lateral y en el encabezado */
+body:has(.app-shell) .a11y-fab { display: none; }
+@media (min-width: 1024px) {
+  body:has(.app-shell) .a11y-panel { left: 17.5rem !important; right: auto !important; bottom: 1.5rem !important; }
+}
+.app-user-card .app-logout + .app-logout { margin-top: 0.25rem; }
+.module-split > *, .module-split { min-width: 0; }
+@media (max-width: 1099px) { .module-split { grid-template-columns: minmax(0, 1fr); } }
+:is(h1, h2)[tabindex="-1"]:focus-visible { outline: none !important; }

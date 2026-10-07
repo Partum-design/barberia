@@ -152,7 +152,7 @@ function Acceso() {
             <Marca />
           </Link>
           <div className="login-story-copy">
-            <p className="login-kicker">Barbershop</p>
+            <p className="login-kicker">Barbería</p>
             <h1>Bienvenido de vuelta.</h1>
             <p>Inicia sesión para continuar gestionando tus citas, tus pagos y tu estilo.</p>
           </div>

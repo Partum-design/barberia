@@ -8,6 +8,7 @@ import { Banknote, Check, CreditCard, ShieldCheck } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
 import { useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -27,6 +28,8 @@ export default function PagosPage() {
   );
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "cliente") return <OtroRol rol={sesion.rol} para="clientes" />;
 
   if (!sesion || sesion.rol !== "cliente") {
     return <SinSesion />;

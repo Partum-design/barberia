@@ -9,6 +9,7 @@ import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
 import { useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -43,6 +44,8 @@ export default function DashboardBarberoPage() {
   };
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 
   if (!sesion || sesion.rol !== "barbero") {
     return <SinSesion rol="barbero" />;

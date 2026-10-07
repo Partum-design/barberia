@@ -184,3 +184,24 @@ export function SinAcceso({ mensaje = "Inicia sesión para ver este módulo" }: 
     </main>
   );
 }
+
+/**
+ * Pantalla para quien ya inició sesión pero abrió una sección de otro tipo de
+ * cuenta (p. ej. un administrador en "Mi cuenta" de cliente): en lugar de
+ * pedirle que inicie sesión otra vez, le dice dónde está y lo lleva a su panel.
+ */
+export function OtroRol({ rol, para }: { rol: "cliente" | "barbero" | "admin"; para: string }) {
+  const destino = rol === "admin" ? "/dashboard/admin" : rol === "barbero" ? "/dashboard/barbero" : "/cuenta";
+  const soy = rol === "admin" ? "administrador" : rol === "barbero" ? "barbero" : "cliente";
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+      <p className="kicker anim-in">Sección para {para}</p>
+      <p className="anim-in max-w-md text-lg font-semibold">
+        Esta sección es para {para}. Entraste como {soy}.
+      </p>
+      <a href={destino} className="btn-gold anim-in anim-d1 mt-2 px-6 py-3 text-sm">
+        Ir a mi panel
+      </a>
+    </main>
+  );
+}

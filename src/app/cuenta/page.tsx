@@ -9,6 +9,7 @@ import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
 import { calcularLealtad, useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -38,6 +39,8 @@ export default function CuentaPage() {
   );
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "cliente") return <OtroRol rol={sesion.rol} para="clientes" />;
 
   if (!sesion || sesion.rol !== "cliente") {
     return <SinSesion />;

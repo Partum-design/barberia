@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { CheckCircle2, Gift, Sparkles, User } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { calcularLealtad, useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 // Nodo Cliente: detalle del programa de lealtad — progreso, historial de
 // citas que suman puntos y canje de recompensas ganadas.
@@ -34,6 +35,8 @@ export default function RecompensasPage() {
   );
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "cliente") return <OtroRol rol={sesion.rol} para="clientes" />;
 
   if (!sesion || sesion.rol !== "cliente") {
     return <SinSesion />;

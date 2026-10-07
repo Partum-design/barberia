@@ -11,6 +11,7 @@ import { BotonGoogleWallet } from "@/components/lealtad/BotonGoogleWallet";
 import { estadoTarjeta, solicitarPase } from "@/lib/lealtad";
 import { nombreDelNegocio, useBarberia } from "@/lib/store";
 import { WALLET_VISIBLE } from "@/lib/modo";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 // Nodo Cliente: su tarjeta de lealtad, con QR para el mostrador y el botón
 // para llevarla en Google Wallet.
@@ -55,6 +56,8 @@ export default function MiTarjetaPage() {
   );
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "cliente") return <OtroRol rol={sesion.rol} para="clientes" />;
 
   if (!sesion || sesion.rol !== "cliente") {
     return (

@@ -70,6 +70,13 @@ export function Accesibilidad() {
     };
   }, []);
 
+  // Otros botones (el menú móvil del panel) lo abren con este evento.
+  useEffect(() => {
+    const abrir = () => setAbierto(true);
+    window.addEventListener("accesibilidad:abrir", abrir);
+    return () => window.removeEventListener("accesibilidad:abrir", abrir);
+  }, []);
+
   // Escape cierra el panel y devuelve el foco al botón.
   useEffect(() => {
     if (!abierto) return;

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Check, Home, Save, Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { useBarberia } from "@/lib/store";
+import { OtroRol } from "@/components/panel/ModuleUI";
 
 const DURACIONES = [15, 20, 30, 45, 60];
 
@@ -37,6 +38,8 @@ export default function ConfiguracionBarberoPage() {
   }, [barbero?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!listo) return null;
+
+  if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 
   if (!sesion || sesion.rol !== "barbero" || !barbero) {
     return <SinSesion />;

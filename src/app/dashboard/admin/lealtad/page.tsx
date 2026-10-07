@@ -149,7 +149,7 @@ export default function LealtadAdminPage() {
           {visibles.length === 0 ? (
             <EmptyState icono={<IdCard />}>
               {filas.length === 0
-                ? "Aún no hay tarjetas. Emite la primera con el formulario de la derecha."
+                ? "Aún no hay tarjetas. Emite la primera con el formulario «Emitir tarjeta»."
                 : "Ninguna tarjeta coincide con la búsqueda."}
             </EmptyState>
           ) : (

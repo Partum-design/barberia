@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Tema CortMart para el producto (panel, login, reserva y cuenta).
+   Misma piel que la portada: muro de ladrillo, luz de foco, naranja de
+   letrero y rotulación Anton. Se carga después de globals.css y sólo
+   sobrescribe la piel; ningún componente cambia de contrato.
+   ========================================================================== */
+
+:root {
+  --font-display: var(--font-cm), "Bebas Neue", Impact, sans-serif;
+  --cm-orange: #f7931e;
+  --cm-orange-hot: #ff7a12;
+  --cm-orange-deep: #c25e0a;
+  --cm-ink-dark: #120802;
+  --cm-sign: var(--font-cm), "Bebas Neue", Impact, sans-serif;
+  --cm-brick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%23080403'/%3E%3Crect x='2' y='2' width='56' height='26' fill='%23200e07'/%3E%3Crect x='62' y='2' width='56' height='26' fill='%23261108'/%3E%3Crect x='-28' y='32' width='56' height='26' fill='%23241007'/%3E%3Crect x='32' y='32' width='56' height='26' fill='%231d0d06'/%3E%3Crect x='92' y='32' width='56' height='26' fill='%23241007'/%3E%3C/svg%3E");
+  --bg: #0c0806;
+  --card: #150d08;
+  --surface-1: #0c0806;
+  --surface-2: #120a06;
+  --surface-3: #1a100a;
+  --surface-4: #22150c;
+  --line: rgba(247, 147, 30, 0.12);
+  --line-strong: rgba(247, 147, 30, 0.24);
+  --glow-brass: 0 0 0 1px rgba(247, 147, 30, 0.25), 0 18px 44px -22px rgba(255, 122, 18, 0.5);
+}
+.dark { --bg: #0c0806; --card: #150d08; --line: rgba(247, 147, 30, 0.12); }
+
+/* Fondo: ladrillo apagado bajo una viñeta, con luz cálida de foco arriba */
+body {
+  background:
+    radial-gradient(ellipse 70% 45% at 85% -10%, rgba(255, 122, 18, 0.16), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 0% 105%, rgba(247, 147, 30, 0.08), transparent 60%),
+    radial-gradient(130% 100% at 50% 40%, rgba(12, 8, 6, 0.55) 0%, rgba(12, 8, 6, 0.94) 75%),
+    var(--cm-brick) 0 0 / 120px 60px,
+    #0c0806;
+  background-attachment: fixed;
+}
+
+/* ── Titulares en rotulación de letrero ─────────────────────────────── */
+.app-page > header h1,
+.panel-hero-title,
+.login-story-copy h1,
+.login-access h2,
+.booking-hero-copy h1 {
+  font-family: var(--cm-sign);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.app-page > header h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); }
+.app-page h2.font-display,
+.app-page h3.font-display,
+.module-panel-head p:first-child {
+  font-family: var(--cm-sign);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.module-panel-head p:first-child { font-size: 1.2rem; color: var(--cm-orange); }
+
+/* Cifras grandes en condensada */
+.metric-card strong,
+.kpi-card .font-num.text-2xl {
+  font-family: var(--cm-sign);
+  font-weight: 400;
+  font-size: 2.1rem;
+  letter-spacing: 0.02em;
+  color: var(--cm-orange);
+}
+
+/* Kickers: guion naranja como en la portada */
+.app-page > header .kicker::before,
+.panel-hero-kicker::before {
+  height: 2px;
+  width: 1.6rem;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--cm-orange);
+}
+.app-page > header::after { height: 3px; width: 7rem; background: linear-gradient(90deg, var(--cm-orange), transparent); }
+
+/* ── Botón principal: placa naranja con esquinas cortadas ───────────── */
+.btn-gold {
+  border-radius: 0;
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  background: linear-gradient(180deg, #ffab3d 0%, var(--cm-orange) 55%, var(--cm-orange-deep) 100%);
+  color: var(--cm-ink-dark);
+  font-family: var(--cm-sign);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+.btn-gold:hover { box-shadow: none; filter: brightness(1.08); transform: translateY(-2px); }
+
+/* ── Barra lateral: muro de ladrillo con filo naranja ───────────────── */
+.app-sidebar {
+  border: 1px solid rgba(247, 147, 30, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 122, 18, 0.22), transparent 55%),
+    linear-gradient(180deg, rgba(12, 8, 6, 0.55), rgba(12, 8, 6, 0.92) 70%),
+    var(--cm-brick) 0 0 / 120px 60px;
+}
+.app-sidebar::after {
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  right: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--cm-orange), transparent);
+  opacity: 0.55;
+}
+.app-brand-mark,
+.app-mobile-mark,
+.login-brand-mark {
+  border-radius: 0 !important;
+  background: var(--cm-orange) !important;
+  color: var(--cm-ink-dark) !important;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.app-brand-mark { width: 2.5rem; height: 2.5rem; }
+.app-brand-pulse { display: none; }
+.app-brand .block:first-child,
+.app-mobile-header a > span:last-child {
+  font-family: var(--cm-sign) !important;
+  font-weight: 400 !important;
+  font-size: 1.15rem !important;
+  letter-spacing: 0.05em !important;
+}
+.app-nav-item {
+  border-radius: 0.55rem;
+  font-weight: 500;
+  transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+}
+.app-nav-item.is-active {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+  background: linear-gradient(180deg, #ffab3d, var(--cm-orange) 55%, var(--cm-orange-deep));
+  color: var(--cm-ink-dark);
+  font-family: var(--cm-sign);
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+.app-nav-item:hover:not(.is-active) { background: rgba(247, 147, 30, 0.1); color: #fff; }
+.app-user-card { border-color: rgba(247, 147, 30, 0.2); background: rgba(12, 8, 6, 0.7); }
+.app-user-avatar {
+  border-radius: 50% !important;
+  background: var(--cm-orange) !important;
+  color: var(--cm-ink-dark) !important;
+  font-family: var(--cm-sign);
+  font-weight: 400 !important;
+}
+.app-mobile-header {
+  border-color: rgba(247, 147, 30, 0.22);
+  background: linear-gradient(180deg, rgba(12, 8, 6, 0.6), rgba(12, 8, 6, 0.92)), var(--cm-brick) 0 0 / 120px 60px;
+}
+.app-mobile-nav { border-color: rgba(247, 147, 30, 0.25); background: rgba(12, 8, 6, 0.94); }
+.app-mobile-item.is-active { background: linear-gradient(180deg, #ffab3d, var(--cm-orange)); color: var(--cm-ink-dark); }
+
+/* ── Cabecera de cada rol: escena de ladrillo con brillo de foco ────── */
+.panel-hero {
+  border: 1px solid rgba(247, 147, 30, 0.3);
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(255, 122, 18, 0.3), transparent 50%),
+    linear-gradient(100deg, rgba(12, 8, 6, 0.95) 30%, rgba(12, 8, 6, 0.55)),
+    var(--cm-brick) 0 0 / 120px 60px;
+}
+.panel-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--cm-orange), var(--cm-orange-hot) 50%, transparent);
+}
+.panel-hero-title {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  animation: cm-panel-in 900ms cubic-bezier(.2, 1.2, .3, 1) both;
+}
+.panel-hero-title.shimmer-text {
+  background-image: linear-gradient(100deg, var(--cm-orange) 0%, #ffe2bd 18%, var(--cm-orange) 36%, var(--cm-orange-deep) 100%);
+}
+.panel-hero-lead { font-size: 0.95rem; color: rgba(246, 238, 228, 0.75); }
+
+/* ── Tarjetas y paneles de módulo ───────────────────────────────────── */
+.kpi-card,
+.metric-card,
+.module-panel {
+  border-color: rgba(247, 147, 30, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)), #130b07;
+}
+.kpi-card,
+.metric-card {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+.kpi-card::before { height: 4px; }
+.kpi-card:hover,
+.metric-card:hover { border-color: var(--cm-orange); background: linear-gradient(180deg, rgba(247, 147, 30, 0.08), rgba(247, 147, 30, 0.02)), #130b07; }
+.kpi-card-icon { border-radius: 50%; border: 1.5px solid currentColor; }
+.module-panel { border-radius: 1.1rem; }
+.module-tabs button.is-active {
+  background: var(--cm-orange) !important;
+  color: var(--cm-ink-dark) !important;
+  font-weight: 700;
+}
+.badge-gold { background: rgba(247, 147, 30, 0.16); color: #ffab3d; }
+
+/* Campos de formulario del panel */
+.app-page :is(input, select, textarea):focus {
+  border-color: var(--cm-orange) !important;
+  box-shadow: 0 0 0 3px rgba(247, 147, 30, 0.18) !important;
+  outline: none;
+}
+
+/* ── Login: mismo muro y rotulación que la portada ──────────────────── */
+.login-shell { border-color: rgba(247, 147, 30, 0.25); border-radius: 1.4rem; }
+.login-story {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 122, 18, 0.28), transparent 55%),
+    linear-gradient(180deg, rgba(12, 8, 6, 0.4), rgba(12, 8, 6, 0.92)),
+    url("/negocio/cortmart-interior.jpg") 35% 50% / cover;
+}
+.login-story-copy h1 { font-size: clamp(2.8rem, 8vw, 5rem); color: var(--cm-orange); text-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }
+.login-brand { font-family: var(--cm-sign); font-weight: 400; letter-spacing: 0.1em; font-size: 1.3rem; }
+.login-access { background: #100906; }
+
+@keyframes cm-panel-in {
+  from { opacity: 0; transform: translateY(30%) skewY(3deg); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Anton sólo tiene un peso: evita la negrita sintética */
+.font-display { font-weight: 400 !important; letter-spacing: 0.02em; }
+
+/* Subtítulos de tarjetas en rotulación: versales con aire */
+.app-page .font-display {
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+}
+
+/* Logotipo del login en la misma rotulación */
+.login-brand span { font-family: var(--cm-sign) !important; font-weight: 400 !important; letter-spacing: 0.08em; }
+
+/* Accesibilidad a la derecha: a la izquierda tapaba el usuario del panel
+   y el pie de la portada */
+.a11y-fab { left: auto; right: 1rem; background: #120a06; }
+.a11y-panel { left: auto !important; right: 1rem !important; }
+
+.site-footer span:first-child { font-family: var(--cm-sign); font-weight: 400; color: var(--cm-orange); }
+.site-footer a { color: var(--cm-orange); font-weight: 700; }
+.site-footer a:hover { color: #ffc067; }
+
+/* Encabezados del panel (usan la display global): Anton sin negrita falsa */
+:is(h1, h2, h3):not(.font-num) {
+  font-weight: 400 !important;
+  letter-spacing: 0.03em !important;
+}
+.app-page :is(h2, h3) { text-transform: uppercase; }
+
+/* En la portada, el pie deja sitio al botón de accesibilidad */
+@media (min-width: 641px) { .cm .cm-footer { padding-right: 13rem; } }

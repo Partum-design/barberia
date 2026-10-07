@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import { Anton, Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import "./tema-cortmart.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 
@@ -34,13 +35,16 @@ const bebas = Bebas_Neue({
   variable: "--font-bebas",
 });
 
+// Rotulación de letrero de CortMart: titulares de portada y panel
+const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-cm" });
+
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["500", "600"],
   variable: "--font-plex-mono",
 });
 
-const NOMBRE = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería";
+const NOMBRE = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería CortMart";
 
 export const metadata: Metadata = {
   title: NOMBRE,
@@ -50,7 +54,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0806",
+  themeColor: "#0c0806",
   colorScheme: "dark",
 };
 
@@ -59,7 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="es"
       suppressHydrationWarning
-      className={`dark ${outfit.variable} ${jakarta.variable} ${playfair.variable} ${bebas.variable} ${plexMono.variable}`}
+      className={`dark ${outfit.variable} ${jakarta.variable} ${playfair.variable} ${bebas.variable} ${plexMono.variable} ${anton.variable}`}
     >
       <head>
         {/* Aplica las opciones de accesibilidad guardadas antes de pintar */}
@@ -77,7 +81,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Accesibilidad />
         <footer className="site-footer">
           <Marca />
-          <span>Sitio y sistema por Partum Design</span>
+          <span>
+            Desarrollado por{" "}
+            <a href="https://partumdesign.com.mx" target="_blank" rel="noopener noreferrer">
+              Partum Design
+            </a>
+          </span>
         </footer>
       </body>
     </html>

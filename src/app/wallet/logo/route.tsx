@@ -31,7 +31,7 @@ export function GET() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#e6c576",
+            color: "#f7931e",
             fontSize: 300,
             fontWeight: 700,
           }}

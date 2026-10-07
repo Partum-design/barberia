@@ -209,7 +209,7 @@ export default function LealtadAdminPage() {
                     </div>
 
                     {f.disponibles > 0 && (
-                      <div className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ background: "rgb(230 197 118 / 0.08)" }}>
+                      <div className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2" style={{ background: "rgb(247 147 30 / 0.08)" }}>
                         <span className="text-xs" style={{ color: "var(--gold)" }}>
                           <Gift className="mr-1 inline h-3.5 w-3.5" />
                           {f.disponibles} recompensa{f.disponibles === 1 ? "" : "s"} de {recompensasConfig.valor_descuento}% por canjear

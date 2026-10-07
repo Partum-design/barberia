@@ -134,7 +134,7 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={3.1}
-          color="#e6c576"
+          color="#f7931e"
           position={[-4.2, 0.6, 2.2]}
           rotation={[0, Math.PI / 2.4, 0]}
           scale={[6, 4, 1]}
@@ -180,7 +180,7 @@ function RigDeLuz() {
         />
       </Environment>
       <directionalLight position={[3, 5, 4]} intensity={0.9} color="#fff4dd" />
-      <directionalLight position={[-4, -1, 3]} intensity={0.35} color="#e6c576" />
+      <directionalLight position={[-4, -1, 3]} intensity={0.35} color="#f7931e" />
     </>
   );
 }

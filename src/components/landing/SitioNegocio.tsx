@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Anton } from "next/font/google";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -13,6 +12,7 @@ import {
   Facebook,
   Gift,
   Instagram,
+  LockKeyhole,
   Mail,
   MapPin,
   Menu,
@@ -34,9 +34,6 @@ import { horarioConPersonal } from "@/lib/datos/disponibilidad";
 import { PERFIL } from "@/lib/negocio/perfil";
 import { DIAS_SEMANA, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
 import "./cortmart.css";
-
-// Rotulación pesada de letrero para los titulares de la portada
-const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-cm" });
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -249,7 +246,7 @@ export function SitioNegocio() {
   const siguiente = (resena + 1) % r.length;
 
   return (
-    <main ref={raiz} className={`cm ${anton.variable} overflow-x-hidden`}>
+    <main ref={raiz} className="cm overflow-x-hidden">
       {/* ── Navegación ──────────────────────────────────────────── */}
       <header className={`cm-nav ${scrolled ? "is-scrolled" : ""}`}>
         <Link href="/" className="cm-logo" aria-label={nombre}>
@@ -679,6 +676,27 @@ export function SitioNegocio() {
           </div>
         </Reveal>
       </section>
+      {/* ── Pie ─────────────────────────────────────────────────── */}
+      <footer className="cm-footer">
+        <div className="cm-footer-brand">
+          <span className="cm-logo-mark">
+            <Scissors />
+          </span>
+          <span>
+            <b>{nombre}</b>
+            <small>{PERFIL.zona}</small>
+          </span>
+        </div>
+        <p className="cm-footer-credit">
+          Desarrollado por{" "}
+          <a href="https://partumdesign.com.mx" target="_blank" rel="noopener noreferrer">
+            Partum Design
+          </a>
+        </p>
+        <Link href="/login" className="cm-admin-link">
+          <LockKeyhole /> Administración
+        </Link>
+      </footer>
       {!listo && <span className="sr-only">Cargando información del negocio…</span>}
     </main>
   );

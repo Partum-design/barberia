@@ -242,7 +242,7 @@ export function normalizarEstado(parcial: Partial<Estado>): Estado {
  * Nombre comercial para logotipos y títulos. Cae a la variable de entorno y,
  * si tampoco existe, a un genérico: nunca a una marca de ejemplo.
  */
-export const NOMBRE_POR_DEFECTO = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería";
+export const NOMBRE_POR_DEFECTO = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería CortMart";
 
 export function nombreDelNegocio(cfg: Pick<BarberiaConfig, "nombre">) {
   return cfg.nombre.trim() || NOMBRE_POR_DEFECTO;

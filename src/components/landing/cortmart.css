@@ -706,3 +706,38 @@
 @media (prefers-reduced-motion: reduce) {
   .cm-kenburns, .cm-float, .cm-deco, .cm-marquee-track, .cm-barber-avatar, .cm-barber-avatar span, .cm-loyalty-card, .cm-about-badge { animation: none !important; }
 }
+
+/* ── Pie ─────────────────────────────────────────────────────────── */
+.cm-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding: 1.6rem clamp(1rem, 5vw, 4rem) 1.8rem;
+  border-top: 3px solid var(--cm-orange);
+  background: #080504;
+}
+.cm-footer-brand { display: flex; align-items: center; gap: 0.7rem; }
+.cm-footer-brand b { display: block; font-family: var(--cm-display); font-weight: 400; font-size: 1.3rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.cm-footer-brand small { display: block; font-size: 0.8rem; color: var(--cm-mute); }
+.cm-footer-credit { font-size: 0.95rem; color: var(--cm-mute); }
+.cm-footer-credit a { color: var(--cm-orange); font-weight: 700; transition: color 200ms; }
+.cm-footer-credit a:hover { color: #ffc067; }
+.cm-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--cm-mute);
+  border: 1px solid rgb(247 147 30 / 0.35);
+  border-radius: 999px;
+  transition: color 200ms, border-color 200ms, background 200ms;
+}
+.cm-admin-link svg { width: 0.9rem; height: 0.9rem; }
+.cm-admin-link:hover { color: #120802; background: var(--cm-orange); border-color: var(--cm-orange); }
+@media (max-width: 640px) { .cm-footer { flex-direction: column; text-align: center; padding-bottom: 5rem; } }
+
+/* La portada trae su propio pie: oculta el genérico del layout */
+body:has(.cm) .site-footer { display: none; }

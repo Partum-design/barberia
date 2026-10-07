@@ -49,8 +49,8 @@ import type { ResumenAds, ResumenAnalytics } from "@/lib/integrations/tipos";
 
 type Pestana = "audiencia" | "campanas" | "atribucion";
 
-const ORO = "#e6c576";
-const ORO_HONDO = "#b7924d";
+const ORO = "#f7931e";
+const ORO_HONDO = "#c25e0a";
 const OXBLOOD = "#b0453a";
 const VERDE = "#5cc08d";
 
@@ -293,7 +293,7 @@ function Campanas({ datos }: { datos: ResumenAds }) {
               <XAxis dataKey="etiqueta" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={28} />
               <YAxis yAxisId="izq" tickLine={false} axisLine={false} width={50} tickFormatter={compacto} />
               <YAxis yAxisId="der" orientation="right" tickLine={false} axisLine={false} width={34} tickFormatter={compacto} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(230,197,118,0.06)" }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(247, 147, 30,0.06)" }} />
               <Legend wrapperStyle={{ fontSize: "0.65rem", color: "var(--ink-muted)" }} />
               <Bar yAxisId="izq" dataKey="costo" name="Inversión" fill={ORO_HONDO} radius={[4, 4, 0, 0]} maxBarSize={16} />
               <Line yAxisId="der" type="monotone" dataKey="conversiones" name="Conversiones" stroke={VERDE} strokeWidth={2} dot={false} />
@@ -356,7 +356,7 @@ function Campanas({ datos }: { datos: ResumenAds }) {
                 <CartesianGrid horizontal={false} />
                 <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={compacto} />
                 <YAxis type="category" dataKey="termino" width={148} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(230,197,118,0.06)" }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(247, 147, 30,0.06)" }} />
                 <Bar dataKey="clics" name="Clics" radius={[0, 4, 4, 0]} maxBarSize={14}>
                   {datos.terminos.map((_, i) => (
                     <Cell key={i} fill={i === 0 ? ORO : ORO_HONDO} />

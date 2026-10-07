@@ -1,8 +1,19 @@
+import type { Metadata } from "next";
 import { SitioNegocio } from "@/components/landing/SitioNegocio";
+import { PERFIL } from "@/lib/negocio/perfil";
 
-// Portada pública de la barbería: información del negocio, servicios,
-// equipo, tarjeta de lealtad y ubicación. El contenido lo captura el
-// administrador en el panel.
+export const metadata: Metadata = {
+  title: `${PERFIL.nombre} · ${PERFIL.zona}`,
+  description: `${PERFIL.nombre} en ${PERFIL.direccion}. Cortes, degradados y barba. ${PERFIL.calificacion.toFixed(1)} estrellas en Google. Reserva en línea.`,
+  openGraph: {
+    title: PERFIL.nombre,
+    description: PERFIL.eslogan,
+    images: [PERFIL.fotos.interior],
+  },
+};
+
+// Portada pública de Barbería CortMart. Lo que el administrador captura en
+// el panel tiene prioridad; la ficha de Google Maps (PERFIL) rellena huecos.
 export default function PaginaInicio() {
   return <SitioNegocio />;
 }

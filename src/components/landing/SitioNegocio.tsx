@@ -1,10 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Anton } from "next/font/google";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarCheck,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Facebook,
   Gift,
@@ -15,26 +19,26 @@ import {
   MessageCircle,
   Navigation,
   Phone,
+  Quote,
   Scissors,
   Smartphone,
   Sparkles,
+  Star,
+  TrainFront,
   X,
 } from "lucide-react";
 import { Reveal } from "@/components/marketing/Reveal";
-import { ThreePulse } from "@/components/marketing/ThreePulse";
 import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual";
+import { Brocha, Maquina, Navaja, Navajazo, Peine, Tijeras } from "@/components/landing/Iconos";
 import { horarioConPersonal } from "@/lib/datos/disponibilidad";
-import {
-  DIAS_SEMANA,
-  nombreDelNegocio,
-  useBarberia,
-  type BarberiaConfig,
-  type Servicio,
-} from "@/lib/store";
+import { PERFIL } from "@/lib/negocio/perfil";
+import { DIAS_SEMANA, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
+import "./cortmart.css";
+
+// Rotulación pesada de letrero para los titulares de la portada
+const anton = Anton({ subsets: ["latin"], weight: "400", variable: "--font-cm" });
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
-
-const ORDEN_CATEGORIAS: Servicio["categoria"][] = ["Corte", "Barba", "Ritual", "Color", "Paquete"];
 
 /** Sólo dígitos y "+", como piden `tel:` y wa.me. */
 const soloDigitos = (v: string) => v.replace(/[^\d+]/g, "");
@@ -50,6 +54,14 @@ function enlaceRed(red: "instagram" | "facebook" | "tiktok", valor: string) {
   return `https://www.tiktok.com/@${usuario}`;
 }
 
+/** "20:00" → "8 p.m." */
+function hora12(h: string) {
+  const [hh, mm] = h.split(":").map(Number);
+  const sufijo = hh >= 12 ? "p.m." : "a.m.";
+  const h12 = hh % 12 || 12;
+  return mm ? `${h12}:${String(mm).padStart(2, "0")} ${sufijo}` : `${h12} ${sufijo}`;
+}
+
 /** Abierto/cerrado ahora mismo según el horario publicado. */
 function estadoHoy(horario: BarberiaConfig["horario"], ahora: Date) {
   const dia = DIAS_SEMANA[(ahora.getDay() + 6) % 7];
@@ -58,23 +70,77 @@ function estadoHoy(horario: BarberiaConfig["horario"], ahora: Date) {
   const minutos = ahora.getHours() * 60 + ahora.getMinutes();
   const [hi, mi] = bloque.inicio.split(":").map(Number);
   const [hf, mf] = bloque.fin.split(":").map(Number);
-  const abre = hi * 60 + mi;
-  const cierra = hf * 60 + mf;
-  if (minutos < abre) return { abierto: false, dia: dia.id, texto: `Abrimos hoy a las ${bloque.inicio}` };
-  if (minutos >= cierra) return { abierto: false, dia: dia.id, texto: "Ya cerramos por hoy" };
-  return { abierto: true, dia: dia.id, texto: `Abierto · cerramos a las ${bloque.fin}` };
+  if (minutos < hi * 60 + mi) return { abierto: false, dia: dia.id, texto: `Abrimos hoy a las ${hora12(bloque.inicio)}` };
+  if (minutos >= hf * 60 + mf) return { abierto: false, dia: dia.id, texto: "Ya cerramos por hoy" };
+  return { abierto: true, dia: dia.id, texto: `Abierto · cerramos a las ${hora12(bloque.fin)}` };
+}
+
+const ICONO_CATEGORIA: Record<Servicio["categoria"], (p: { className?: string }) => React.ReactElement> = {
+  Corte: Tijeras,
+  Barba: Navaja,
+  Ritual: Brocha,
+  Color: Navajazo,
+  Paquete: Maquina,
+};
+
+/** Lo que se ofrece mientras el panel no tenga servicios capturados. */
+const SERVICIOS_BASE = [
+  { icono: Tijeras, nombre: "Corte de cabello", texto: "Clásico o moderno, a tijera y máquina, con el acabado que pides." },
+  { icono: Maquina, nombre: "Degradados", texto: "Fades limpios y transiciones parejas, del bajo al alto." },
+  { icono: Navaja, nombre: "Arreglo de barba", texto: "Perfilado, rebajado y línea marcada a navaja." },
+  { icono: Peine, nombre: "Perfilado y diseño", texto: "Contornos, líneas y detalles que marcan la diferencia." },
+  { icono: Brocha, nombre: "Corte + barba", texto: "El servicio completo para salir impecable de una vez." },
+  { icono: Navajazo, nombre: "Peinado y estilo", texto: "Te dejamos listo para la ocasión, con el producto ideal." },
+];
+
+const MARQUESINA = ["Cortes", "Degradados", "Barba", "Navaja", "Perfilado", "Estilo", "Tarjeta de lealtad"];
+
+/** Número que sube desde 0 cuando entra en pantalla. */
+function Contador({ valor, decimales = 0 }: { valor: number; decimales?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      const inicio = performance.now();
+      const paso = (t: number) => {
+        const p = Math.min(1, (t - inicio) / 1400);
+        setN(valor * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(paso);
+      };
+      requestAnimationFrame(paso);
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [valor]);
+  return <span ref={ref}>{n.toFixed(decimales)}</span>;
+}
+
+function Estrellas({ className = "" }: { className?: string }) {
+  return (
+    <span className={`cm-stars ${className}`} aria-label="5 de 5 estrellas">
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star key={i} style={{ animationDelay: `${i * 90}ms` }} />
+      ))}
+    </span>
+  );
 }
 
 /**
- * Sitio público de la barbería. Todo el contenido sale de lo que el
- * administrador captura en el panel —datos del negocio, servicios, equipo y
- * programa de lealtad—, y cada sección se oculta mientras no tenga nada que
- * decir. Nada de lo que se ve aquí es texto de ejemplo.
+ * Sitio público de Barbería CortMart. Los datos del negocio salen del panel
+ * del administrador y, mientras no estén capturados, de su ficha pública de
+ * Google Maps (`PERFIL`).
  */
 export function SitioNegocio() {
-  const { listo, barberiaConfig: negocio, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
+  const { listo, barberiaConfig: cfg, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [ahora, setAhora] = useState<Date | null>(null);
+  const [resena, setResena] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const raiz = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setAhora(new Date());
@@ -82,84 +148,142 @@ export function SitioNegocio() {
     return () => clearInterval(t);
   }, []);
 
-  const nombre = nombreDelNegocio(negocio);
-  const activos = useMemo(() => servicios.filter((s) => s.activo), [servicios]);
-  const equipo = useMemo(() => barberos.filter((b) => b.activo), [barberos]);
-  const porCategoria = useMemo(
-    () =>
-      ORDEN_CATEGORIAS.map((cat) => ({ cat, items: activos.filter((s) => s.categoria === cat) })).filter(
-        (g) => g.items.length > 0
-      ),
-    [activos]
-  );
+  // Reseñas en carrusel automático
+  useEffect(() => {
+    const t = setInterval(() => setResena((i) => (i + 1) % PERFIL.resenas.length), 6000);
+    return () => clearInterval(t);
+  }, [resena]);
 
-  // Se publica el horario en que hay personal: un día sin barberos trabajando
-  // aparece cerrado aunque el local tenga horario capturado.
-  const horario = useMemo(
-    () => horarioConPersonal(negocio, barberos, horarioDeBarbero),
-    [negocio, barberos, horarioDeBarbero]
+  // Parallax: cada [data-parallax] recibe su avance en pantalla (-1…1) en --p
+  useEffect(() => {
+    const el = raiz.current;
+    if (!el) return;
+    let raf = 0;
+    const capas = Array.from(el.querySelectorAll<HTMLElement>("[data-parallax]"));
+    const pintar = () => {
+      raf = 0;
+      const vh = window.innerHeight;
+      for (const c of capas) {
+        const r = c.getBoundingClientRect();
+        const p = (r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2);
+        c.style.setProperty("--p", Math.max(-1, Math.min(1, p)).toFixed(3));
+      }
+      setScrolled(window.scrollY > 40);
+    };
+    const pedir = () => {
+      if (!raf) raf = requestAnimationFrame(pintar);
+    };
+    pintar();
+    window.addEventListener("scroll", pedir, { passive: true });
+    window.addEventListener("resize", pedir);
+    return () => {
+      window.removeEventListener("scroll", pedir);
+      window.removeEventListener("resize", pedir);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // El puntero mueve las herramientas flotantes de la portada
+  const moverPuntero = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== "mouse") return;
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+    e.currentTarget.style.setProperty("--my", ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+  };
+
+  // Lo capturado en el panel manda; la ficha de Google Maps rellena huecos.
+  const nombre = cfg.nombre.trim() || PERFIL.nombre;
+  const eslogan = cfg.eslogan.trim() || PERFIL.eslogan;
+  const descripcion = cfg.descripcion.trim() || PERFIL.descripcion;
+  const direccion = cfg.direccion.trim() || PERFIL.direccion;
+  const telefono = cfg.telefono.trim() || PERFIL.telefono;
+  const mapa = cfg.mapa_url.trim() || PERFIL.mapa_url;
+
+  const activos = useMemo(() => servicios.filter((s) => s.activo), [servicios]);
+  const equipoPanel = useMemo(() => barberos.filter((b) => b.activo), [barberos]);
+
+  const horarioPanel = useMemo(
+    () => horarioConPersonal(cfg, barberos, horarioDeBarbero),
+    [cfg, barberos, horarioDeBarbero]
   );
-  const tieneHorario = DIAS_SEMANA.some((d) => horario[d.id].activo);
-  const hoy = ahora && tieneHorario ? estadoHoy(horario, ahora) : null;
-  const anios =
-    negocio.anio_fundacion && /^\d{4}$/.test(negocio.anio_fundacion)
-      ? new Date().getFullYear() - Number(negocio.anio_fundacion)
-      : null;
+  const horario = DIAS_SEMANA.some((d) => horarioPanel[d.id].activo) ? horarioPanel : PERFIL.horario;
+  const hoy = ahora ? estadoHoy(horario, ahora) : null;
 
   const redes = [
-    { id: "instagram" as const, icono: <Instagram />, url: enlaceRed("instagram", negocio.instagram), label: "Instagram" },
-    { id: "facebook" as const, icono: <Facebook />, url: enlaceRed("facebook", negocio.facebook), label: "Facebook" },
-    { id: "tiktok" as const, icono: <Sparkles />, url: enlaceRed("tiktok", negocio.tiktok), label: "TikTok" },
+    { id: "instagram" as const, icono: <Instagram />, url: enlaceRed("instagram", cfg.instagram), label: "Instagram" },
+    { id: "facebook" as const, icono: <Facebook />, url: enlaceRed("facebook", cfg.facebook), label: "Facebook" },
+    { id: "tiktok" as const, icono: <Sparkles />, url: enlaceRed("tiktok", cfg.tiktok), label: "TikTok" },
   ].filter((r) => r.url);
 
-  const whatsapp = negocio.whatsapp
-    ? `https://wa.me/${soloDigitos(negocio.whatsapp).replace(/^\+/, "")}?text=${encodeURIComponent(`Hola ${nombre}, quiero información para agendar.`)}`
+  const whatsapp = cfg.whatsapp
+    ? `https://wa.me/${soloDigitos(cfg.whatsapp).replace(/^\+/, "")}?text=${encodeURIComponent(`Hola ${nombre}, quiero información para agendar.`)}`
     : null;
-  const mapa =
-    negocio.mapa_url ||
-    (negocio.direccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(negocio.direccion)}` : null);
+
+  const tarjetasServicio =
+    activos.length > 0
+      ? activos.slice(0, 6).map((s) => ({
+          icono: ICONO_CATEGORIA[s.categoria] ?? Tijeras,
+          nombre: s.nombre,
+          texto: `${s.categoria} · ${s.duracion_min} min`,
+          precio: s.precio,
+        }))
+      : SERVICIOS_BASE.map((s) => ({ ...s, precio: null as number | null }));
+
+  const equipo =
+    equipoPanel.length > 0
+      ? equipoPanel.map((b) => ({ nombre: b.nombre, rol: b.especialidad || "Barbero", nota: b.biografia }))
+      : PERFIL.equipo.map((b) => ({ ...b }));
 
   const enlaces = [
-    { href: "#nosotros", label: "Nosotros", visible: Boolean(negocio.descripcion) },
-    { href: "#servicios", label: "Servicios", visible: activos.length > 0 },
-    { href: "#equipo", label: "Equipo", visible: equipo.length > 0 },
-    { href: "#lealtad", label: "Lealtad", visible: true },
-    { href: "#visitanos", label: "Visítanos", visible: true },
-  ].filter((e) => e.visible);
+    { href: "#servicios", label: "Servicios" },
+    { href: "#lugar", label: "El lugar" },
+    { href: "#equipo", label: "Equipo" },
+    { href: "#resenas", label: "Reseñas" },
+    { href: "#lealtad", label: "Lealtad" },
+    { href: "#visitanos", label: "Visítanos" },
+  ];
+
+  const letras = PERFIL.marca.toUpperCase().split("");
+  const r = PERFIL.resenas;
+  const anterior = (resena - 1 + r.length) % r.length;
+  const siguiente = (resena + 1) % r.length;
 
   return (
-    <main className="landing-page biz overflow-x-hidden">
-      {/* ── Portada ─────────────────────────────────────────────── */}
-      <section className="landing-hero biz-hero">
-        <nav className="landing-nav">
-          <Link href="/" className="landing-logo min-w-0">
-            <span className="landing-logo-mark shrink-0">
-              <Scissors className="h-4 w-4" />
-            </span>
-            <span className="biz-logo-text">{nombre}</span>
-          </Link>
-          <div className="landing-nav-links">
-            {enlaces.map((e) => (
-              <a key={e.href} href={e.href} className="biz-nav-link">
-                {e.label}
-              </a>
-            ))}
-            <Link href="/reservar" className="landing-nav-cta">
-              Reservar <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <button
-              type="button"
-              className="biz-menu-button"
-              onClick={() => setMenuAbierto((v) => !v)}
-              aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
-              aria-expanded={menuAbierto}
-            >
-              {menuAbierto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+    <main ref={raiz} className={`cm ${anton.variable} overflow-x-hidden`}>
+      {/* ── Navegación ──────────────────────────────────────────── */}
+      <header className={`cm-nav ${scrolled ? "is-scrolled" : ""}`}>
+        <Link href="/" className="cm-logo" aria-label={nombre}>
+          <span className="cm-logo-mark">
+            <Scissors />
+          </span>
+          <span className="cm-logo-text">
+            <b>{PERFIL.marca}</b>
+            <small>Barbería</small>
+          </span>
+        </Link>
+        <nav className="cm-nav-links" aria-label="Secciones">
+          {enlaces.map((e) => (
+            <a key={e.href} href={e.href}>
+              {e.label}
+            </a>
+          ))}
         </nav>
+        <div className="cm-nav-actions">
+          <Link href="/reservar" className="cm-btn cm-btn-sm">
+            Reservar
+          </Link>
+          <button
+            type="button"
+            className="cm-burger"
+            onClick={() => setMenuAbierto((v) => !v)}
+            aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={menuAbierto}
+          >
+            {menuAbierto ? <X /> : <Menu />}
+          </button>
+        </div>
         {menuAbierto && (
-          <div className="biz-mobile-menu">
+          <div className="cm-mobile-menu">
             {enlaces.map((e) => (
               <a key={e.href} href={e.href} onClick={() => setMenuAbierto(false)}>
                 {e.label}
@@ -168,163 +292,304 @@ export function SitioNegocio() {
             <Link href="/login">Mi cuenta</Link>
           </div>
         )}
+      </header>
 
-        <div className="landing-hero-grid">
-          <div className="landing-hero-copy">
-            <p className="anim-in anim-d1 landing-eyebrow">
-              <span /> Barbería{negocio.direccion ? ` · ${negocio.direccion.split(",").slice(-1)[0].trim()}` : ""}
-            </p>
-            <h1 className="anim-in anim-d2 biz-title">
-              {nombre}
-              {negocio.eslogan && (
-                <>
-                  <br />
-                  <span>{negocio.eslogan}</span>
-                </>
-              )}
-            </h1>
-            <div className="anim-in anim-d4 landing-hero-actions">
-              <Link href="/reservar" className="landing-primary-action">
-                <CalendarCheck className="h-4 w-4" /> Reservar cita
-              </Link>
-              {whatsapp ? (
-                <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="landing-secondary-action">
-                  <MessageCircle className="h-4 w-4" /> Escríbenos por WhatsApp
-                </a>
-              ) : negocio.telefono ? (
-                <a href={`tel:${soloDigitos(negocio.telefono)}`} className="landing-secondary-action">
-                  <Phone className="h-4 w-4" /> Llamar
-                </a>
-              ) : null}
-            </div>
-            <div className="anim-in anim-d5 landing-hero-facts">
-              {hoy && (
-                <span className={hoy.abierto ? "biz-open" : ""}>
-                  <Clock3 className="h-3.5 w-3.5" /> {hoy.texto}
-                </span>
-              )}
-              {negocio.direccion && (
-                <span>
-                  <MapPin className="h-3.5 w-3.5" /> {negocio.direccion}
-                </span>
-              )}
-              {anios !== null && anios > 0 && (
-                <span>
-                  <Scissors className="h-3.5 w-3.5" /> {anios} año{anios === 1 ? "" : "s"} en el oficio
-                </span>
-              )}
-            </div>
+      {/* ── Portada ─────────────────────────────────────────────── */}
+      <section className="cm-hero" onPointerMove={moverPuntero}>
+        <div className="cm-hero-photo" aria-hidden>
+          <Image src={PERFIL.fotos.interior} alt="" fill priority sizes="100vw" className="cm-kenburns" />
+        </div>
+        <div className="cm-hero-shade" aria-hidden />
+        <div className="cm-hero-ghost" aria-hidden>
+          BARBERÍA
+        </div>
+
+        <div className="cm-floaters" aria-hidden>
+          <Tijeras className="cm-float f1" />
+          <Navaja className="cm-float f2" />
+          <Brocha className="cm-float f3" />
+          <Peine className="cm-float f4" />
+          <Maquina className="cm-float f5" />
+        </div>
+
+        <div className="cm-hero-inner">
+          <p className="cm-eyebrow cm-in" style={{ animationDelay: "100ms" }}>
+            <span /> Barbería · {PERFIL.zona}
+          </p>
+          <h1 className="cm-hero-title" aria-label={nombre}>
+            {letras.map((l, i) => (
+              <span key={i} className={i >= 4 ? "is-accent" : ""} style={{ animationDelay: `${250 + i * 70}ms` }}>
+                {l}
+              </span>
+            ))}
+          </h1>
+          <p className="cm-hero-tag cm-in" style={{ animationDelay: "900ms" }}>
+            {eslogan}
+          </p>
+
+          <div className="cm-hero-actions cm-in" style={{ animationDelay: "1050ms" }}>
+            <Link href="/reservar" className="cm-btn">
+              <CalendarCheck /> Reservar cita
+            </Link>
+            {whatsapp ? (
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="cm-btn cm-btn-ghost">
+                <MessageCircle /> WhatsApp
+              </a>
+            ) : (
+              <a href={`tel:+52${soloDigitos(telefono)}`} className="cm-btn cm-btn-ghost">
+                <Phone /> {telefono}
+              </a>
+            )}
           </div>
 
-          <div className="landing-product-stage biz-stage anim-pop anim-d3" aria-hidden>
-            <ThreePulse />
+          <div className="cm-hero-facts cm-in" style={{ animationDelay: "1200ms" }}>
+            <a href="#resenas" className="cm-rating">
+              <strong>{PERFIL.calificacion.toFixed(1)}</strong>
+              <span>
+                <Estrellas />
+                <small>{PERFIL.total_resenas} reseñas en Google</small>
+              </span>
+            </a>
+            {hoy && (
+              <span className={`cm-chip ${hoy.abierto ? "is-open" : ""}`}>
+                <i /> {hoy.texto}
+              </span>
+            )}
           </div>
         </div>
 
-        {listo && activos.length > 0 && (
-          <div className="landing-capability-strip">
-            {porCategoria.map((g) => (
-              <span key={g.cat}>{g.cat.toUpperCase()}</span>
-            ))}
-            <span>TARJETA DE LEALTAD</span>
+        <a href="#servicios" className="cm-scroll" aria-label="Ver más">
+          <span />
+        </a>
+      </section>
+
+      {/* ── Marquesina ──────────────────────────────────────────── */}
+      <div className="cm-marquee" aria-hidden>
+        <div className="cm-marquee-track">
+          {[0, 1].map((k) => (
+            <div key={k}>
+              {MARQUESINA.map((m) => (
+                <span key={m}>
+                  {m} <Scissors />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Servicios ───────────────────────────────────────────── */}
+      <section id="servicios" className="cm-section cm-brick">
+        <Reveal className="cm-head">
+          <p className="cm-kicker">Cuidado para caballero</p>
+          <h2 className="cm-h2">Servicios</h2>
+        </Reveal>
+        <div className="cm-services">
+          {tarjetasServicio.map((s, i) => {
+            const Icono = s.icono;
+            return (
+              <Reveal key={s.nombre} delay={i * 90}>
+                <article className={`cm-service ${i === 1 ? "is-featured" : ""}`}>
+                  <span className="cm-service-icon">
+                    <Icono />
+                  </span>
+                  <h3>{s.nombre}</h3>
+                  <p>{s.texto}</p>
+                  {s.precio !== null ? (
+                    <div className="cm-service-price">
+                      <small>Desde</small>
+                      <b>{mxn.format(s.precio)}</b>
+                    </div>
+                  ) : (
+                    <Link href="/reservar" className="cm-service-link">
+                      Agendar <ArrowRight />
+                    </Link>
+                  )}
+                </article>
+              </Reveal>
+            );
+          })}
+        </div>
+        <Brocha className="cm-deco cm-deco-a" />
+        <Tijeras className="cm-deco cm-deco-b" />
+      </section>
+
+      {/* ── El lugar ────────────────────────────────────────────── */}
+      <section id="lugar" className="cm-gallery">
+        <div className="cm-band">
+          <Reveal>
+            <h2 className="cm-h2 cm-h2-dark">El lugar</h2>
+            <p>Ladrillo, luz cálida y tres sillas listas para ti en la colonia Industrial.</p>
+          </Reveal>
+        </div>
+        <div className="cm-gallery-stage" data-parallax>
+          <div className="cm-gallery-ghost" aria-hidden>
+            CORTMART · CORTMART · CORTMART
           </div>
-        )}
+          <div className="cm-frames">
+            <Reveal delay={0} className="cm-frame-wrap">
+              <figure className="cm-frame tilt-l">
+                <Image src={PERFIL.fotos.letrero} alt="Letrero de la barbería sobre muro de ladrillo con lámparas cálidas" fill sizes="(max-width: 768px) 90vw, 30vw" />
+              </figure>
+            </Reveal>
+            <Reveal delay={120} className="cm-frame-wrap is-main">
+              <figure className="cm-frame">
+                <Image src={PERFIL.fotos.interior} alt={`Interior de ${nombre}: sillas de barbero, muro de ladrillo y letrero`} fill sizes="(max-width: 768px) 90vw, 40vw" />
+                <figcaption>
+                  <MapPin /> Av. Euzkaro 152
+                </figcaption>
+              </figure>
+            </Reveal>
+            <Reveal delay={240} className="cm-frame-wrap">
+              <figure className="cm-frame tilt-r">
+                <Image src={PERFIL.fotos.sillas} alt="Tres sillas de barbero con capas de colores" fill sizes="(max-width: 768px) 90vw, 30vw" />
+              </figure>
+            </Reveal>
+          </div>
+        </div>
       </section>
 
       {/* ── Nosotros ────────────────────────────────────────────── */}
-      {negocio.descripcion && (
-        <section id="nosotros" className="biz-section">
-          <Reveal className="biz-about">
-            <p className="kicker" style={{ color: "var(--gold)" }}>Nosotros</p>
-            <h2 className="biz-h2">
-              Sobre {nombre}
-              {anios !== null && anios > 0 && <span className="biz-since"> · desde {negocio.anio_fundacion}</span>}
-            </h2>
-            <p className="biz-about-text">{negocio.descripcion}</p>
-          </Reveal>
-        </section>
-      )}
-
-      {/* ── Servicios ───────────────────────────────────────────── */}
-      {activos.length > 0 && (
-        <section id="servicios" className="biz-section">
-          <Reveal className="biz-section-head">
-            <p className="kicker" style={{ color: "var(--gold)" }}>Servicios</p>
-            <h2 className="biz-h2">Nuestro menú</h2>
-            <p>Precios en pesos mexicanos. Reserva en línea y paga con tarjeta o en efectivo.</p>
-          </Reveal>
-          <div className="biz-menu">
-            {porCategoria.map((g, i) => (
-              <Reveal key={g.cat} delay={i * 80} className="biz-menu-group">
-                <h3>{g.cat}</h3>
-                <ul>
-                  {g.items.map((s) => (
-                    <li key={s.id}>
-                      <span className="biz-menu-name">{s.nombre}</span>
-                      <span className="biz-menu-dots" aria-hidden />
-                      <span className="biz-menu-price">{mxn.format(s.precio)}</span>
-                      <small>{s.duracion_min} min</small>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            ))}
+      <section id="nosotros" className="cm-section cm-about">
+        <Reveal className="cm-about-photo" >
+          <div className="cm-about-img" data-parallax>
+            <Image src={PERFIL.fotos.sala} alt="Sala de espera con sillón de piel y muro verde" fill sizes="(max-width: 768px) 90vw, 40vw" />
           </div>
-          <div className="mt-8 flex justify-center">
-            <Link href="/reservar" className="landing-primary-action">
-              Reservar un servicio <ArrowRight className="h-4 w-4" />
-            </Link>
+          <span className="cm-about-badge">
+            <Scissors /> Desde la silla
+          </span>
+        </Reveal>
+        <Reveal delay={120} className="cm-about-copy">
+          <p className="cm-kicker">Nosotros</p>
+          <h2 className="cm-h2">
+            Sobre <span>{PERFIL.marca}</span>
+          </h2>
+          <p>{descripcion}</p>
+          <div className="cm-stats">
+            <div>
+              <b>
+                <Contador valor={PERFIL.calificacion} decimales={1} />
+              </b>
+              <small>Calificación en Google</small>
+            </div>
+            <div>
+              <b>
+                <Contador valor={PERFIL.total_resenas} />
+              </b>
+              <small>Reseñas de 5 estrellas</small>
+            </div>
+            <div>
+              <b>
+                <Contador valor={DIAS_SEMANA.filter((d) => horario[d.id].activo).length} />
+              </b>
+              <small>Días abiertos a la semana</small>
+            </div>
           </div>
-        </section>
-      )}
+        </Reveal>
+      </section>
 
       {/* ── Equipo ──────────────────────────────────────────────── */}
-      {equipo.length > 0 && (
-        <section id="equipo" className="biz-section">
-          <Reveal className="biz-section-head">
-            <p className="kicker" style={{ color: "var(--gold)" }}>El equipo</p>
-            <h2 className="biz-h2">Quién te atiende</h2>
+      <section id="equipo" className="cm-section cm-brick">
+        <Reveal className="cm-head">
+          <p className="cm-kicker">Manos expertas</p>
+          <h2 className="cm-h2">El equipo</h2>
+        </Reveal>
+        <div className="cm-team">
+          {equipo.map((b, i) => (
+            <Reveal key={b.nombre} delay={i * 110}>
+              <article className="cm-barber">
+                <span className="cm-barber-avatar">
+                  <span>{b.nombre.charAt(0)}</span>
+                </span>
+                <h3>{b.nombre}</h3>
+                <p className="cm-barber-role">{b.rol}</p>
+                {b.nota && <p className="cm-barber-note">{b.nota}</p>}
+                <Link href="/reservar" className="cm-service-link">
+                  Agendar con {b.nombre.split(" ")[0]} <ArrowRight />
+                </Link>
+              </article>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Reseñas ─────────────────────────────────────────────── */}
+      <section id="resenas" className="cm-reviews">
+        <div className="cm-band">
+          <Reveal>
+            <p className="cm-band-kicker">Lo que dicen nuestros clientes</p>
+            <h2 className="cm-h2 cm-h2-dark">Reseñas</h2>
           </Reveal>
-          <div className="biz-team">
-            {equipo.map((b, i) => (
-              <Reveal key={b.id} delay={i * 80}>
-                <article className="biz-barber">
-                  <span className="biz-barber-avatar">{b.nombre.charAt(0)}</span>
-                  <h3>{b.nombre}</h3>
-                  <p className="biz-barber-role">{b.especialidad}</p>
-                  {b.biografia && <p className="biz-barber-bio">{b.biografia}</p>}
-                  <div className="biz-barber-meta">
-                    <span>Desde {mxn.format(b.precio_servicio)}</span>
-                    {b.acepta_domicilio && <span>También a domicilio</span>}
-                  </div>
-                </article>
-              </Reveal>
+        </div>
+        <div className="cm-reviews-stage">
+          <Reveal className="cm-score">
+            <b>
+              <Contador valor={PERFIL.calificacion} decimales={1} />
+            </b>
+            <Estrellas className="is-lg" />
+            <small>{PERFIL.total_resenas} reseñas en Google Maps</small>
+          </Reveal>
+          <div className="cm-carousel" aria-roledescription="carrusel" aria-label="Reseñas de clientes">
+            <button type="button" className="cm-arrow" onClick={() => setResena(anterior)} aria-label="Reseña anterior">
+              <ChevronLeft />
+            </button>
+            <div className="cm-cards">
+              {r.map((x, i) => {
+                const pos = i === resena ? "is-center" : i === anterior ? "is-left" : i === siguiente ? "is-right" : "is-hidden";
+                return (
+                  <blockquote key={x.autor} className={`cm-review ${pos}`} aria-hidden={i !== resena}>
+                    <Quote className="cm-review-quote" />
+                    <Estrellas />
+                    <p>{x.texto}</p>
+                    <footer>
+                      <span className="cm-review-avatar">{x.autor.charAt(0)}</span>
+                      <span>
+                        <b>{x.autor}</b>
+                        <small>Reseña en Google</small>
+                      </span>
+                    </footer>
+                  </blockquote>
+                );
+              })}
+            </div>
+            <button type="button" className="cm-arrow" onClick={() => setResena(siguiente)} aria-label="Siguiente reseña">
+              <ChevronRight />
+            </button>
+          </div>
+          <div className="cm-dots">
+            {r.map((x, i) => (
+              <button
+                key={x.autor}
+                type="button"
+                className={i === resena ? "is-active" : ""}
+                onClick={() => setResena(i)}
+                aria-label={`Ver reseña de ${x.autor}`}
+              />
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* ── Tarjeta de lealtad ──────────────────────────────────── */}
-      <section id="lealtad" className="biz-section">
-        <div className="biz-loyalty">
-          <Reveal className="biz-loyalty-copy">
-            <p className="kicker" style={{ color: "var(--gold)" }}>Tarjeta de lealtad</p>
-            <h2 className="biz-h2">Cada visita cuenta.</h2>
+      <section id="lealtad" className="cm-section cm-brick">
+        <div className="cm-loyalty">
+          <Reveal className="cm-loyalty-copy">
+            <p className="cm-kicker">Tarjeta de lealtad</p>
+            <h2 className="cm-h2">Cada visita cuenta</h2>
             <p>
-              Todos nuestros clientes tienen tarjeta. Cada visita suma un sello y con{" "}
-              {recompensasConfig.citas_requeridas} sellos ganas {recompensasConfig.valor_descuento}% de
-              descuento en tu siguiente servicio.
+              Cada visita suma un sello y con {recompensasConfig.citas_requeridas} sellos ganas{" "}
+              <b>{recompensasConfig.valor_descuento}% de descuento</b> en tu siguiente servicio.
             </p>
             <ul>
               <li><Gift /> Se llena sola cuando reservas en línea.</li>
               <li><Smartphone /> Guárdala en Google Wallet y llévala en tu teléfono.</li>
               <li><Scissors /> ¿Llegaste sin cita? Muestra tu QR y te ponemos el sello.</li>
             </ul>
-            <Link href="/cuenta/tarjeta" className="landing-primary-action mt-6 w-fit">
-              Obtener mi tarjeta <ArrowRight className="h-4 w-4" />
+            <Link href="/cuenta/tarjeta" className="cm-btn">
+              Obtener mi tarjeta <ArrowRight />
             </Link>
           </Reveal>
-          <Reveal delay={120} className="biz-loyalty-card">
+          <Reveal delay={150} className="cm-loyalty-card">
             <TarjetaLealtadVisual
               negocio={nombre}
               titular="Tu nombre"
@@ -339,81 +604,82 @@ export function SitioNegocio() {
       </section>
 
       {/* ── Visítanos ───────────────────────────────────────────── */}
-      <section id="visitanos" className="biz-section">
-        <Reveal className="biz-section-head">
-          <p className="kicker" style={{ color: "var(--gold)" }}>Visítanos</p>
-          <h2 className="biz-h2">Te esperamos en la silla</h2>
+      <section id="visitanos" className="cm-section cm-visit-section">
+        <Reveal className="cm-head">
+          <p className="cm-kicker">Visítanos</p>
+          <h2 className="cm-h2">Te esperamos en la silla</h2>
         </Reveal>
-        <div className="biz-visit">
-          <Reveal className="biz-visit-card">
-            <h3><Clock3 /> Horario</h3>
-            {tieneHorario ? (
-              <ul className="biz-hours">
+        <div className="cm-visit">
+          <Reveal className="cm-map">
+            <iframe
+              title={`Mapa de ${nombre}`}
+              src={PERFIL.mapa_embed}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </Reveal>
+          <div className="cm-visit-info">
+            <Reveal delay={80} className="cm-card">
+              <h3><MapPin /> Dirección</h3>
+              <p>{direccion}</p>
+              <p className="cm-muted"><TrainFront /> {PERFIL.referencia}</p>
+              <a href={mapa} target="_blank" rel="noopener noreferrer" className="cm-btn cm-btn-sm">
+                <Navigation /> Cómo llegar
+              </a>
+            </Reveal>
+            <Reveal delay={160} className="cm-card">
+              <h3><Clock3 /> Horario</h3>
+              <ul className="cm-hours">
                 {DIAS_SEMANA.map((d) => {
                   const b = horario[d.id];
                   return (
                     <li key={d.id} className={hoy?.dia === d.id ? "is-today" : ""}>
                       <span>{d.label}</span>
-                      <span>{b.activo ? `${b.inicio} – ${b.fin}` : "Cerrado"}</span>
+                      <span>{b.activo ? `${hora12(b.inicio)} – ${hora12(b.fin)}` : "Cerrado"}</span>
                     </li>
                   );
                 })}
               </ul>
-            ) : (
-              <p className="biz-muted">Consulta nuestro horario por teléfono o WhatsApp.</p>
-            )}
-          </Reveal>
-
-          <Reveal delay={100} className="biz-visit-card">
-            <h3><MapPin /> Ubicación</h3>
-            {negocio.direccion ? <p>{negocio.direccion}</p> : <p className="biz-muted">Dirección próximamente.</p>}
-            {mapa && (
-              <a href={mapa} target="_blank" rel="noopener noreferrer" className="landing-secondary-action mt-4 w-fit">
-                <Navigation className="h-4 w-4" /> Cómo llegar
-              </a>
-            )}
-          </Reveal>
-
-          <Reveal delay={200} className="biz-visit-card">
-            <h3><Phone /> Contacto</h3>
-            <ul className="biz-contact">
-              {negocio.telefono && (
-                <li><a href={`tel:${soloDigitos(negocio.telefono)}`}><Phone /> {negocio.telefono}</a></li>
-              )}
-              {whatsapp && (
-                <li><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp</a></li>
-              )}
-              {negocio.email && (
-                <li><a href={`mailto:${negocio.email}`}><Mail /> {negocio.email}</a></li>
-              )}
-              {redes.map((r) => (
-                <li key={r.id}><a href={r.url!} target="_blank" rel="noopener noreferrer">{r.icono} {r.label}</a></li>
-              ))}
-              <li><Link href="/reservar"><CalendarCheck /> Reservar en línea</Link></li>
-            </ul>
-          </Reveal>
+            </Reveal>
+            <Reveal delay={240} className="cm-card">
+              <h3><Phone /> Contacto</h3>
+              <ul className="cm-contact">
+                <li><a href={`tel:+52${soloDigitos(telefono)}`}><Phone /> {telefono}</a></li>
+                {whatsapp && (
+                  <li><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp</a></li>
+                )}
+                {cfg.email && (
+                  <li><a href={`mailto:${cfg.email}`}><Mail /> {cfg.email}</a></li>
+                )}
+                {redes.map((x) => (
+                  <li key={x.id}><a href={x.url!} target="_blank" rel="noopener noreferrer">{x.icono} {x.label}</a></li>
+                ))}
+                <li><Link href="/reservar"><CalendarCheck /> Reservar en línea</Link></li>
+              </ul>
+            </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ── Cierre ──────────────────────────────────────────────── */}
-      <section className="landing-final">
-        <Reveal className="mx-auto max-w-3xl px-6 py-16 text-center">
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Tu próximo corte, a un clic.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-white/70">
-            Elige barbero y horario, paga en la barbería y suma un sello en tu tarjeta.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/reservar" className="btn-gold card-hover rounded-full px-6 py-3 font-semibold shadow-lg">
-              Reservar cita
+      <section className="cm-final">
+        <div className="cm-final-photo" data-parallax aria-hidden>
+          <Image src={PERFIL.fotos.letrero} alt="" fill sizes="100vw" />
+        </div>
+        <Reveal className="cm-final-inner">
+          <h2 className="cm-h2">Tu próximo corte, a un clic</h2>
+          <p>Elige barbero y horario, paga en la barbería y suma un sello en tu tarjeta.</p>
+          <div className="cm-hero-actions">
+            <Link href="/reservar" className="cm-btn">
+              <CalendarCheck /> Reservar cita
             </Link>
-            <Link href="/login" className="card-hover rounded-full border border-white/25 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/10">
+            <Link href="/login" className="cm-btn cm-btn-ghost">
               Mi cuenta
             </Link>
           </div>
         </Reveal>
       </section>
+      {!listo && <span className="sr-only">Cargando información del negocio…</span>}
     </main>
   );
 }

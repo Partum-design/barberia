@@ -7,6 +7,7 @@ import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
 import { nombreDelNegocio, useBarberia } from "@/lib/store";
+import { WALLET_VISIBLE } from "@/lib/modo";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -217,7 +218,7 @@ export default function DashboardAdminPage() {
               { hecho: Boolean(barberiaConfig.nombre.trim() && barberiaConfig.direccion.trim()), label: "Datos del negocio", nota: "Nombre, dirección, horario y redes para la portada", href: "/dashboard/admin/configuracion" },
               { hecho: servicios.length > 0, label: "Servicios y precios", nota: "El menú que ve el cliente en la portada", href: "/dashboard/admin/servicios" },
               { hecho: barberos.length > 0, label: "Equipo de barberos", nota: "Cada barbero con su especialidad y precio", href: "/dashboard/admin/equipo" },
-              { hecho: clientes.length > 0, label: "Primer cliente con tarjeta", nota: "Emite su tarjeta de lealtad y vincúlala a Google Wallet", href: "/dashboard/admin/lealtad" },
+              { hecho: clientes.length > 0, label: "Primer cliente con tarjeta", nota: WALLET_VISIBLE ? "Emite su tarjeta de lealtad y vincúlala a Google Wallet" : "Emite su tarjeta de lealtad", href: "/dashboard/admin/lealtad" },
             ]}
           />
         </div>

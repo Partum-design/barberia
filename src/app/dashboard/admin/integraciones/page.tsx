@@ -13,6 +13,7 @@ import {
   StripeMark,
 } from "@/components/payments/BrandMarks";
 import { useBarberia } from "@/lib/store";
+import { WALLET_VISIBLE } from "@/lib/modo";
 
 type EstadoIntegracion = {
   variables: { nombre: string; definida: boolean }[];
@@ -27,7 +28,7 @@ type Catalogo = {
   grupo: "Marketing" | "Cobros" | "Operación";
 };
 
-const CATALOGO: Catalogo[] = [
+const CATALOGO_COMPLETO: Catalogo[] = [
   {
     id: "google-analytics",
     nombre: "Google Analytics 4",
@@ -85,6 +86,9 @@ const CATALOGO: Catalogo[] = [
     grupo: "Operación",
   },
 ];
+
+// Google Wallet se oculta hasta activarlo (ver WALLET_VISIBLE).
+const CATALOGO = CATALOGO_COMPLETO.filter((c) => WALLET_VISIBLE || c.id !== "google-wallet");
 
 /**
  * Estado de las conexiones del sistema. En lugar de una lista decorativa de

@@ -34,6 +34,7 @@ import { horarioConPersonal } from "@/lib/datos/disponibilidad";
 import { PERFIL } from "@/lib/negocio/perfil";
 import { DIAS_SEMANA, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
 import "./cortmart.css";
+import { WALLET_VISIBLE } from "@/lib/modo";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -579,7 +580,11 @@ export function SitioNegocio() {
             </p>
             <ul>
               <li><Gift /> Se llena sola cuando reservas en línea.</li>
-              <li><Smartphone /> Guárdala en Google Wallet y llévala en tu teléfono.</li>
+              {WALLET_VISIBLE ? (
+                <li><Smartphone /> Guárdala en Google Wallet y llévala en tu teléfono.</li>
+              ) : (
+                <li><Smartphone /> Llévala siempre en tu teléfono desde tu cuenta.</li>
+              )}
               <li><Scissors /> ¿Llegaste sin cita? Muestra tu QR y te ponemos el sello.</li>
             </ul>
             <Link href="/cuenta/tarjeta" className="cm-btn">

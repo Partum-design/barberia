@@ -10,6 +10,7 @@ import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual"
 import { BotonGoogleWallet } from "@/components/lealtad/BotonGoogleWallet";
 import { estadoTarjeta, solicitarPase } from "@/lib/lealtad";
 import { nombreDelNegocio, useBarberia } from "@/lib/store";
+import { WALLET_VISIBLE } from "@/lib/modo";
 
 // Nodo Cliente: su tarjeta de lealtad, con QR para el mostrador y el botón
 // para llevarla en Google Wallet.
@@ -73,7 +74,9 @@ export default function MiTarjetaPage() {
         <p className="kicker">Programa de lealtad</p>
         <h1 className="font-display text-2xl font-bold tracking-tight">Mi tarjeta</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-          Muéstrala en mostrador o llévala en Google Wallet. Cada visita suma un sello.
+          {WALLET_VISIBLE
+            ? "Muéstrala en mostrador o llévala en Google Wallet. Cada visita suma un sello."
+            : "Muéstrala en mostrador desde tu teléfono. Cada visita suma un sello."}
         </p>
       </header>
 
@@ -91,13 +94,13 @@ export default function MiTarjetaPage() {
               suspendida={tarjeta.estado === "suspendida"}
             />
             {tarjeta.estado === "activa" ? (
-              <BotonGoogleWallet pase={estado.pase} onGuardada={() => marcarWalletGuardada(tarjeta.id)} />
+              WALLET_VISIBLE && <BotonGoogleWallet pase={estado.pase} onGuardada={() => marcarWalletGuardada(tarjeta.id)} />
             ) : (
               <p className="wallet-note is-error">
                 Tu tarjeta está suspendida. Acércate al mostrador para reactivarla.
               </p>
             )}
-            {tarjeta.wallet_guardada_en && (
+            {WALLET_VISIBLE && tarjeta.wallet_guardada_en && (
               <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
                 Guardada en Google Wallet el{" "}
                 {format(new Date(tarjeta.wallet_guardada_en), "d 'de' MMMM, yyyy", { locale: es })}.
@@ -117,7 +120,9 @@ export default function MiTarjetaPage() {
               <ul className="space-y-2.5" style={{ color: "var(--ink-muted)" }}>
                 <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" /> Cada visita suma un sello, reserves en línea o llegues directo.</li>
                 <li className="flex gap-2"><Gift className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" /> Con {estado.lealtad.requerido} sellos ganas {recompensasConfig.valor_descuento}% de descuento en tu siguiente servicio.</li>
-                <li className="flex gap-2"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" /> En Google Wallet la tarjeta se actualiza sola cuando sumas sellos.</li>
+                {WALLET_VISIBLE && (
+                  <li className="flex gap-2"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" /> En Google Wallet la tarjeta se actualiza sola cuando sumas sellos.</li>
+                )}
                 <li className="flex gap-2"><QrCode className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" /> En mostrador basta con mostrar el código QR o dictar el número {tarjeta.numero}.</li>
               </ul>
               <Link href="/cuenta/recompensas" className="mt-4 inline-block text-sm font-medium text-accent-600">

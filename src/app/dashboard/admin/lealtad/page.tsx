@@ -21,6 +21,7 @@ import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual"
 import { BotonGoogleWallet } from "@/components/lealtad/BotonGoogleWallet";
 import { estadoTarjeta, solicitarPase } from "@/lib/lealtad";
 import { nombreDelNegocio, resumirClientes, useBarberia, type TarjetaLealtad } from "@/lib/store";
+import { WALLET_VISIBLE } from "@/lib/modo";
 
 const CAMPO =
   "w-full rounded-xl border border-slate-300/70 bg-transparent px-3.5 py-2 text-sm outline-none focus:border-accent-500 dark:border-white/15";
@@ -116,14 +117,14 @@ export default function LealtadAdminPage() {
         <p className="kicker">Programa de lealtad</p>
         <h1 className="font-display text-2xl font-bold tracking-tight">Tarjetas de lealtad</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-          Una tarjeta por cliente, con QR y pase para Google Wallet. Cada cita asistida pone un
+          {WALLET_VISIBLE ? "Una tarjeta por cliente, con QR y pase para Google Wallet." : "Una tarjeta por cliente, con QR."} Cada cita asistida pone un
           sello sola; aquí registras las visitas sin cita y los canjes.
         </p>
       </header>
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<IdCard />} label="Tarjetas emitidas" valor={numero.format(totales.emitidas)} />
-        <Metric icono={<Smartphone />} label="En Google Wallet" valor={numero.format(totales.wallet)} />
+        {WALLET_VISIBLE && <Metric icono={<Smartphone />} label="En Google Wallet" valor={numero.format(totales.wallet)} />}
         <Metric icono={<Stamp />} label="Sellos acumulados" valor={numero.format(totales.sellos)} />
         <Metric icono={<Gift />} label="Recompensas por canjear" valor={numero.format(totales.porCanjear)} nota={`${recompensasConfig.valor_descuento}% c/u`} />
       </div>
@@ -164,7 +165,7 @@ export default function LealtadAdminPage() {
                         <p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>
                           {f.titular}
                           {t.estado === "suspendida" && <span className="badge badge-warm ml-2 align-middle">Suspendida</span>}
-                          {t.wallet_guardada_en && <span className="badge badge-gold ml-2 align-middle"><Smartphone /> Wallet</span>}
+                          {WALLET_VISIBLE && t.wallet_guardada_en && <span className="badge badge-gold ml-2 align-middle"><Smartphone /> Wallet</span>}
                         </p>
                         <p className="mt-0.5 font-num text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
                           {t.numero}
@@ -245,7 +246,7 @@ export default function LealtadAdminPage() {
                             Emitida el {format(new Date(t.emitida_en), "d 'de' MMMM, yyyy", { locale: es })} ·{" "}
                             {f.lealtad.puntos} sellos en total ({t.sellos_extra} en mostrador) · {f.canjeadas} canjeada{f.canjeadas === 1 ? "" : "s"}
                           </p>
-                          {t.estado === "activa" && (
+                          {WALLET_VISIBLE && t.estado === "activa" && (
                             <BotonGoogleWallet
                               variante="enlace"
                               pase={f.pase}

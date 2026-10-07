@@ -88,7 +88,14 @@ function construirClase(datos: DatosPase, origen: string) {
         defaultValue: { language: "es-MX", value: `Logotipo de ${datos.negocio.nombre}` },
       },
     },
-    hexBackgroundColor: process.env.GOOGLE_WALLET_COLOR || "#14100b",
+    // Foto del local como portada del pase
+    heroImage: {
+      sourceUri: { uri: process.env.GOOGLE_WALLET_HERO_URL || `${origen}/negocio/cortmart-wallet.jpg` },
+      contentDescription: {
+        defaultValue: { language: "es-MX", value: `Interior de ${datos.negocio.nombre}` },
+      },
+    },
+    hexBackgroundColor: process.env.GOOGLE_WALLET_COLOR || "#1a0f08",
     countryCode: "MX",
     reviewStatus: "UNDER_REVIEW",
     localizedIssuerName: {

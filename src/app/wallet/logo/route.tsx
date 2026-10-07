@@ -4,12 +4,10 @@ export const runtime = "edge";
 
 /**
  * Logotipo PNG para el programa de lealtad en Google Wallet, que no acepta
- * SVG. Se sustituye por el logo real con GOOGLE_WALLET_LOGO_URL.
+ * SVG: las iniciales de CortMart sobre su naranja. Se sustituye por el
+ * logo real con GOOGLE_WALLET_LOGO_URL.
  */
 export function GET() {
-  const nombre = process.env.NEXT_PUBLIC_NOMBRE_NEGOCIO || "Barbería";
-  const inicial = nombre.trim().charAt(0).toUpperCase() || "B";
-
   return new ImageResponse(
     (
       <div
@@ -19,25 +17,16 @@ export function GET() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#14100b",
+          // Wallet muestra el logo recortado en círculo: fondo naranja a sangre
+          background: "#f7931e",
+          color: "#120802",
+          fontSize: 270,
+          letterSpacing: -6,
+          // Satori no trae negritas: el trazo se engrosa con sombras
+          textShadow: "4px 0 0 #120802, -4px 0 0 #120802, 0 4px 0 #120802, 0 -4px 0 #120802, 3px 3px 0 #120802, -3px -3px 0 #120802, 3px -3px 0 #120802, -3px 3px 0 #120802",
         }}
       >
-        <div
-          style={{
-            width: 520,
-            height: 520,
-            borderRadius: 9999,
-            border: "18px solid #d7b46a",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#f7931e",
-            fontSize: 300,
-            fontWeight: 700,
-          }}
-        >
-          {inicial}
-        </div>
+        CM
       </div>
     ),
     { width: 660, height: 660, headers: { "Cache-Control": "public, max-age=86400" } }

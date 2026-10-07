@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Crown, KeyRound, Loader2, Scissors, ShieldCheck, Trash2, User, UserPlus, Users, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
+import { FormularioAlta, type AltaPeticion } from "@/components/panel/FormularioAlta";
 import { EmptyState, Metric, ModulePanel, ModuleTabs, SinAcceso, numero } from "@/components/panel/ModuleUI";
-import { useBarberia, type Rol } from "@/lib/store";
+import { nombreDelNegocio, useBarberia, type Rol } from "@/lib/store";
 
 type Cuenta = {
   id: string;
@@ -44,17 +45,6 @@ async function llamar(metodo: "GET" | "POST" | "PATCH" | "DELETE", body?: unknow
   return cuerpo;
 }
 
-const formVacio = {
-  tipo: "cliente" as Rol,
-  nombre: "",
-  email: "",
-  password: "",
-  telefono: "",
-  especialidad: "",
-  precio_servicio: 0,
-  duracion_cita_min: 30,
-};
-
 /** Contraseña inicial legible para dictarla o mandarla por WhatsApp. */
 function sugerirClave() {
   const letras = "abcdefghjkmnpqrstuvwxyz";
@@ -76,8 +66,6 @@ export default function UsuariosPage() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState("");
   const [abierto, setAbierto] = useState(false);
-  const [form, setForm] = useState(formVacio);
-  const [guardando, setGuardando] = useState(false);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -114,38 +102,11 @@ export default function UsuariosPage() {
 
   const tipos: Rol[] = principal ? ["cliente", "barbero", "admin"] : ["cliente", "barbero"];
 
-  async function crear(e: React.FormEvent) {
-    e.preventDefault();
-    setGuardando(true);
+  async function crear(datos: AltaPeticion) {
     setError(null);
     setAviso(null);
-    try {
-      await llamar("POST", {
-        tipo: form.tipo,
-        nombre: form.nombre.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        telefono: form.telefono.trim(),
-        barbero:
-          form.tipo === "barbero"
-            ? {
-                especialidad: form.especialidad.trim(),
-                precio_servicio: form.precio_servicio,
-                duracion_cita_min: form.duracion_cita_min,
-              }
-            : undefined,
-      });
-      await Promise.all([cargar(), store.recargar()]);
-      setAviso(
-        `Listo: ${form.nombre.trim()} (${ETIQUETA[form.tipo].toLowerCase()}) ya puede entrar con ${form.email.trim()} y la contraseña ${form.password}`
-      );
-      setForm({ ...formVacio, tipo: form.tipo });
-      setAbierto(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear la cuenta.");
-    } finally {
-      setGuardando(false);
-    }
+    await llamar("POST", datos);
+    await Promise.all([cargar(), store.recargar()]);
   }
 
   async function cambiarClave(c: Cuenta) {
@@ -180,9 +141,6 @@ export default function UsuariosPage() {
     }
   }
 
-  const campo =
-    "w-full rounded-xl border border-white/15 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500";
-
   return (
     <PanelShell sesion={sesion} activo="Usuarios" onLogout={store.logout}>
       <header className="anim-in mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -197,10 +155,7 @@ export default function UsuariosPage() {
         </div>
         <button
           type="button"
-          onClick={() => {
-            setAbierto((v) => !v);
-            setForm((f) => ({ ...f, password: f.password || sugerirClave() }));
-          }}
+          onClick={() => setAbierto((v) => !v)}
           className="btn-gold px-5 py-2.5 text-sm"
         >
           {abierto ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
@@ -220,78 +175,14 @@ export default function UsuariosPage() {
       )}
 
       {abierto && (
-        <form onSubmit={crear} className="anim-pop mb-6">
-          <ModulePanel titulo="Nuevo usuario" descripcion="La cuenta queda lista para entrar de inmediato, sin confirmar correo.">
-            <div className="mb-4 flex flex-wrap gap-2" role="radiogroup" aria-label="Tipo de cuenta">
-              {tipos.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.tipo === t}
-                  onClick={() => setForm((f) => ({ ...f, tipo: t }))}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
-                    form.tipo === t ? "border-accent-500 bg-accent-500 text-[#120802]" : "border-white/15 hover:border-accent-500"
-                  }`}
-                >
-                  {ICONO[t]} {ETIQUETA[t]}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                Nombre completo
-                <input className={campo} value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} required minLength={2} />
-              </label>
-              <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                Correo (con este inicia sesión)
-                <input className={campo} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required autoComplete="off" />
-              </label>
-              <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                Contraseña inicial (mín. 8)
-                <input className={campo} type="text" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required minLength={8} autoComplete="new-password" />
-              </label>
-              {form.tipo === "cliente" && (
-                <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Teléfono (opcional)
-                  <input className={campo} type="tel" value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))} />
-                </label>
-              )}
-              {form.tipo === "barbero" && (
-                <>
-                  <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                    Especialidad
-                    <input className={campo} value={form.especialidad} onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))} required placeholder="Ej. Fades y barba" />
-                  </label>
-                  <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                    Precio base del servicio (MXN)
-                    <input className={campo} type="number" min={0} value={form.precio_servicio} onChange={(e) => setForm((f) => ({ ...f, precio_servicio: Number(e.target.value) }))} />
-                  </label>
-                  <label className="grid gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-                    Duración de cita
-                    <select className={campo} value={form.duracion_cita_min} onChange={(e) => setForm((f) => ({ ...f, duracion_cita_min: Number(e.target.value) }))}>
-                      {[15, 20, 30, 45, 60].map((d) => (
-                        <option key={d} value={d} className="bg-[#150d08]">
-                          {d} minutos
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </>
-              )}
-            </div>
-            {form.tipo === "admin" && (
-              <p className="mt-3 text-xs" style={{ color: "var(--ink-muted)" }}>
-                Un administrador ve todo el panel y puede crear clientes y barberos, pero no gestionar a otros administradores.
-              </p>
-            )}
-            <button type="submit" disabled={guardando} className="btn-gold mt-4 px-5 py-2.5 text-sm disabled:opacity-40">
-              {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-              Crear {ETIQUETA[form.tipo].toLowerCase()}
-            </button>
-          </ModulePanel>
-        </form>
+        <div className="mb-6">
+          <FormularioAlta
+            tipos={tipos}
+            negocio={nombreDelNegocio(store.barberiaConfig)}
+            onCrear={crear}
+            onCerrar={() => setAbierto(false)}
+          />
+        </div>
       )}
 
       <div className="metric-grid anim-in anim-d1 mb-6">

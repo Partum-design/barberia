@@ -30,6 +30,30 @@ const MENU: readonly ServicioMenu[] = [
   { categoria: "Especial", nombre: "Box Braids", precio: 200, desde: true, duracion_min: 90 },
 ];
 
+/**
+ * Catálogo igual al menú impreso. Lo que ya existía con el mismo nombre
+ * conserva su id, duración, comisión y pausa (para no romper citas ni
+ * ajustes); lo que no está en el menú sale del catálogo. Las citas pasadas
+ * guardan su propio nombre y precio, así que caja y reportes no cambian.
+ */
+export function catalogoDelMenu(actuales: Servicio[]): Servicio[] {
+  const porNombre = new Map(actuales.map((x) => [x.nombre.trim().toLowerCase(), x]));
+  return MENU.map((m) => {
+    const previo = porNombre.get(m.nombre.toLowerCase());
+    return {
+      id: previo?.id ?? `srv-${m.nombre.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+      nombre: m.nombre,
+      categoria: m.categoria,
+      ...(m.descripcion ? { descripcion: m.descripcion } : {}),
+      ...(m.desde ? { desde: true } : {}),
+      precio: m.precio,
+      duracion_min: previo?.duracion_min ?? m.duracion_min,
+      comision_pct: previo?.comision_pct ?? 45,
+      activo: previo?.activo ?? true,
+    };
+  });
+}
+
 export const PERFIL = {
   nombre: "Barbería CortMart",
   marca: "CortMart",

@@ -5,6 +5,7 @@ import { format, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   AlertTriangle,
+  Banknote,
   CalendarPlus,
   CheckCircle2,
   Gift,
@@ -19,9 +20,12 @@ import {
   calcularLealtad,
   ETIQUETA_ESTADO_CITA,
   idDeCitaEnTexto,
+  resumirCitas,
   useBarberia,
   type Cita,
 } from "@/lib/store";
+
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 type Resultado =
   | { tipo: "confirmada"; cita: Cita; yaEstaba: boolean }
@@ -241,6 +245,14 @@ export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) 
               }}
               onCerrar={() => setResultado(null)}
               puedeAgendar={sesion?.rol === "admin"}
+              citaActual={(id) => citas.find((c) => c.id === id)}
+              onCobrar={(id) => store.cobrarEfectivo(id)}
+              resumenDe={(cita) => ({
+                cliente: resumirCitas(citas.filter((c) => c.cliente_id === cita.cliente_id)),
+                barberoHoy: resumirCitas(
+                  citas.filter((c) => c.barbero_id === cita.barbero_id && isToday(new Date(c.inicio)))
+                ),
+              })}
             />
           )}
           {!procesando && !resultado && (
@@ -304,8 +316,14 @@ function ResultadoEscaneo({
   onSello,
   onCerrar,
   puedeAgendar,
+  citaActual,
+  onCobrar,
+  resumenDe,
 }: {
   puedeAgendar: boolean;
+  citaActual: (id: string) => Cita | undefined;
+  onCobrar: (id: string) => void;
+  resumenDe: (cita: Cita) => { cliente: ReturnType<typeof resumirCitas>; barberoHoy: ReturnType<typeof resumirCitas> };
   resultado: Resultado;
   lealtadDe: (clienteId: string) => ReturnType<typeof calcularLealtad> & { disponibles: number };
   nombreDe: (id: string) => string;
@@ -327,8 +345,11 @@ function ResultadoEscaneo({
   }
 
   if (resultado.tipo === "confirmada") {
-    const { cita, yaEstaba } = resultado;
+    const { yaEstaba } = resultado;
+    // Siempre la versión más reciente: el cobro o el precio pueden cambiar aquí mismo.
+    const cita = (resultado.cita.id && citaActual(resultado.cita.id)) || resultado.cita;
     const l = lealtadDe(cita.cliente_id);
+    const r = cita.barbero_id ? resumenDe(cita) : null;
     return (
       <div className="resultado-escaneo is-ok anim-pop">
         <CheckCircle2 className="h-10 w-10" />
@@ -348,6 +369,39 @@ function ResultadoEscaneo({
         <p className="resultado-detalle">
           <Stamp className="inline h-4 w-4" /> {l.puntos} visitas · {l.progreso}/{l.requerido} en la tarjeta
         </p>
+        {cita.barbero_id && (
+          <div className="resultado-cobro">
+            <span>
+              <small>Total del servicio</small>
+              <b>{mxn.format(cita.precio)}</b>
+            </span>
+            {cita.estado_pago === "pagado" ? (
+              <span className="badge badge-ok">Pagado</span>
+            ) : (
+              <button type="button" className="btn-gold is-sm" onClick={() => onCobrar(cita.id)}>
+                <Banknote className="h-4 w-4" /> Cobrar {mxn.format(cita.precio)}
+              </button>
+            )}
+          </div>
+        )}
+        {r && (
+          <dl className="resultado-datos">
+            <div>
+              <dt>Visitas del cliente</dt>
+              <dd>{r.cliente.atendidas}</dd>
+            </div>
+            <div>
+              <dt>Consumo total</dt>
+              <dd>{mxn.format(r.cliente.ingresos)}</dd>
+            </div>
+            <div>
+              <dt>{cita.barbero_nombre.split(" ")[0]} hoy</dt>
+              <dd>
+                {r.barberoHoy.atendidas} atendid{r.barberoHoy.atendidas === 1 ? "a" : "as"} · {mxn.format(r.barberoHoy.ingresos)}
+              </dd>
+            </div>
+          </dl>
+        )}
         {l.disponibles > 0 && (
           <p className="resultado-premio">
             <Gift className="h-4 w-4" /> Tiene {l.disponibles} recompensa{l.disponibles === 1 ? "" : "s"} por canjear

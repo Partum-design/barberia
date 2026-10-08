@@ -76,7 +76,9 @@ export default function ClientesPage() {
         id: r.id,
         nombre: r.nombre,
         visitas: 0,
+        faltas: 0,
         gastoTotal: 0,
+        pagado: 0,
         ticketMedio: 0,
         ultimaVisita: null,
         proximaCita: null,
@@ -156,7 +158,7 @@ export default function ClientesPage() {
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<Users />} label="Clientes" valor={numero.format(totales.total)} nota={`${totales.riesgo} en riesgo de fuga`} />
-        <Metric icono={<TrendingUp />} label="Facturado" valor={moneda.format(totales.gasto)} nota="Histórico cobrado" />
+        <Metric icono={<TrendingUp />} label="Consumo" valor={moneda.format(totales.gasto)} nota="Servicios atendidos" />
         <Metric icono={<CalendarClock />} label="Ticket medio" valor={moneda.format(totales.ticket)} nota="Por visita atendida" />
         <Metric icono={<Repeat />} label="Recurrencia" valor={porcentaje(totales.recurrencia, 0)} nota="Clientes con más de una visita" />
       </div>
@@ -238,6 +240,7 @@ export default function ClientesPage() {
                       {c.visitas === 0
                         ? `Sin visitas todavía${c.registro ? ` · alta ${fecha(c.registro.creado_en)}` : ""}`
                         : `${c.visitas} visita${c.visitas === 1 ? "" : "s"} · última ${fecha(c.ultimaVisita)} · barbero de confianza: ${c.barberoPreferido}`}
+                      {c.faltas > 0 && ` · ${c.faltas} falta${c.faltas === 1 ? "" : "s"}`}
                       {c.cadenciaDias !== null && ` · vuelve cada ~${c.cadenciaDias} días`}
                       {c.proximaCita && ` · próxima cita ${fecha(c.proximaCita)}`}
                     </p>
@@ -250,7 +253,7 @@ export default function ClientesPage() {
                       {moneda.format(c.gastoTotal)}
                     </p>
                     <p className="text-[0.62rem]" style={{ color: "var(--ink-faint)" }}>
-                      ticket {moneda.format(c.ticketMedio)}
+                      {c.gastoTotal > c.pagado ? `debe ${moneda.format(c.gastoTotal - c.pagado)}` : `ticket ${moneda.format(c.ticketMedio)}`}
                     </p>
                     <p className="mt-1 text-[0.62rem]" style={{ color: "var(--gold)" }}>
                       {tarjeta ? `${tarjeta.numero} · ` : ""}lealtad {lealtad.progreso}/{lealtad.requerido}

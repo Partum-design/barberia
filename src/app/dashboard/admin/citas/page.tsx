@@ -24,7 +24,7 @@ import { EmptyState, Metric, ModulePanel, ModuleTabs, SinAcceso, moneda, numero 
 import { Modal } from "@/components/panel/Modal";
 import { EditorCita } from "@/components/citas/EditorCita";
 import { QrCita } from "@/components/citas/QrCita";
-import { ETIQUETA_ESTADO_CITA, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, resumirCitas, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
 
 type Rango = "hoy" | "proximas" | "pasadas" | "todas";
 
@@ -74,14 +74,8 @@ export default function CitasAdminPage() {
   }, [aviso]);
 
   const metricas = useMemo(() => {
-    const hoy = citas.filter((c) => isToday(new Date(c.inicio)));
-    return {
-      hoy: hoy.filter((c) => c.estado !== "cancelada").length,
-      porLlegar: hoy.filter((c) => c.estado === "confirmada").length,
-      llegaron: hoy.filter((c) => c.estado === "asistida").length,
-      faltas: hoy.filter((c) => c.estado === "no_asistio").length,
-      porCobrar: hoy.filter((c) => c.estado === "asistida" && c.estado_pago === "pendiente").reduce((s, c) => s + c.precio, 0),
-    };
+    const hoy = resumirCitas(citas.filter((c) => isToday(new Date(c.inicio))));
+    return { hoy: hoy.total, porLlegar: hoy.porVenir, llegaron: hoy.atendidas, faltas: hoy.faltas, porCobrar: hoy.porCobrar, ingresos: hoy.ingresos };
   }, [citas]);
 
   const grupos = useMemo(() => {
@@ -146,7 +140,7 @@ export default function CitasAdminPage() {
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<CalendarClock />} label="Citas hoy" valor={numero.format(metricas.hoy)} nota={`${metricas.porLlegar} por llegar`} />
-        <Metric icono={<CalendarCheck />} label="Llegaron hoy" valor={numero.format(metricas.llegaron)} nota="Con su visita sumada" />
+        <Metric icono={<CalendarCheck />} label="Llegaron hoy" valor={numero.format(metricas.llegaron)} nota={`${moneda.format(metricas.ingresos)} en servicios`} />
         <Metric icono={<UserX />} label="Faltas hoy" valor={numero.format(metricas.faltas)} nota="Marcadas como no asistió" />
         <Metric icono={<Banknote />} label="Por cobrar hoy" valor={moneda.format(metricas.porCobrar)} nota="Atendidas sin pago" />
       </div>
@@ -209,10 +203,20 @@ export default function CitasAdminPage() {
           <div className="space-y-5">
             {grupos.dias.map(([dia, lista]) => (
               <div key={dia}>
-                <p className="dia-citas">
-                  {isToday(new Date(`${dia}T12:00`)) ? "Hoy · " : ""}
-                  {format(new Date(`${dia}T12:00`), "EEEE d 'de' MMMM", { locale: es })}
-                </p>
+                {(() => {
+                  const t = resumirCitas(lista);
+                  return (
+                    <p className="dia-citas">
+                      {isToday(new Date(`${dia}T12:00`)) ? "Hoy · " : ""}
+                      {format(new Date(`${dia}T12:00`), "EEEE d 'de' MMMM", { locale: es })}
+                      <span className="dia-citas-totales">
+                        {t.atendidas} atendida{t.atendidas === 1 ? "" : "s"} · {moneda.format(t.ingresos)}
+                        {t.porCobrar > 0 && ` · ${moneda.format(t.porCobrar)} por cobrar`}
+                        {t.porVenir > 0 && ` · ${t.porVenir} por llegar (${moneda.format(t.agendado)})`}
+                      </span>
+                    </p>
+                  );
+                })()}
                 <div className="grid gap-2">
                   {lista.map((c) => (
                     <FilaCita

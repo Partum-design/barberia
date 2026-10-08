@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { addDays, format } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Bar,
@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { Banknote, CalendarCheck, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
-import { citaActiva, useBarberia } from "@/lib/store";
+import { resumirBarberos, resumirCitas, useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 const mxnCompact = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", notation: "compact", maximumFractionDigits: 1 });
@@ -67,24 +67,19 @@ export default function ReportesPage() {
   const inkMuted = esOscuro ? INK_MUTED_DARK : INK_MUTED_LIGHT;
   const grid = esOscuro ? GRID_DARK : GRID_LIGHT;
 
+  // Mismas cuentas que el Panel, Caja y Equipo: una llegada confirmada mueve
+  // todos los reportes al mismo tiempo.
   const datos = useMemo(() => {
-    const vivas = citas.filter(citaActiva);
-    const asistidas = citas.filter((c) => c.estado === "asistida");
+    const general = resumirCitas(citas);
+    const atendidas = citas.filter((c) => c.estado === "asistida");
 
-    const porBarbero = barberos
-      .map((m) => {
-        const suyas = vivas.filter((c) => c.barbero_id === m.id);
-        return {
-          nombre: m.nombre.replace(/^Dra?\.\s*/, ""),
-          ingresos: suyas.reduce((s, c) => s + c.precio, 0),
-          citas: suyas.length,
-        };
-      })
-      .filter((m) => m.citas > 0)
+    const porBarbero = resumirBarberos(citas, barberos)
+      .map((m) => ({ ...m, nombre: m.nombre.replace(/^Dra?\.\s*/, "") }))
+      .filter((m) => m.total > 0)
       .sort((a, b) => b.ingresos - a.ingresos);
 
-    const tarjeta = vivas.filter((c) => c.metodo_pago === "tarjeta");
-    const efectivo = vivas.filter((c) => c.metodo_pago === "efectivo");
+    const tarjeta = atendidas.filter((c) => c.metodo_pago === "tarjeta");
+    const efectivo = atendidas.filter((c) => c.metodo_pago === "efectivo");
     const porMetodo = [
       { metodo: "Tarjeta", ingresos: tarjeta.reduce((s, c) => s + c.precio, 0), citas: tarjeta.length },
       { metodo: "Efectivo", ingresos: efectivo.reduce((s, c) => s + c.precio, 0), citas: efectivo.length },
@@ -92,11 +87,12 @@ export default function ReportesPage() {
 
     const dias = Array.from({ length: 14 }).map((_, i) => {
       const dia = addDays(new Date(), -13 + i);
-      const clave = format(dia, "yyyy-MM-dd");
-      const delDia = vivas.filter((c) => c.inicio.slice(0, 10) === clave);
+      const delDia = citas.filter((c) => isSameDay(new Date(c.inicio), dia));
       return {
         fecha: format(dia, "d MMM", { locale: es }),
-        citas: delDia.length,
+        atendidas: delDia.filter((c) => c.estado === "asistida").length,
+        faltas: delDia.filter((c) => c.estado === "no_asistio").length,
+        agendadas: delDia.filter((c) => c.estado === "confirmada").length,
       };
     });
 
@@ -104,10 +100,13 @@ export default function ReportesPage() {
       porBarbero,
       porMetodo,
       dias,
-      ingresoTotal: vivas.reduce((s, c) => s + c.precio, 0),
-      ticketPromedio: vivas.length ? vivas.reduce((s, c) => s + c.precio, 0) / vivas.length : 0,
-      tasaAsistencia: vivas.length ? asistidas.length / vivas.length : 0,
-      clientes: new Set(vivas.map((c) => c.cliente_id)).size,
+      ingresoTotal: general.ingresos,
+      porCobrar: general.porCobrar,
+      ticketPromedio: general.ticketMedio,
+      tasaAsistencia: general.asistencia,
+      atendidas: general.atendidas,
+      faltas: general.faltas,
+      clientes: general.clientes,
     };
   }, [citas, barberos]);
 
@@ -127,10 +126,10 @@ export default function ReportesPage() {
       </header>
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiPastel tono="lila" delay="anim-d1" icon={<Banknote className="h-4 w-4" />} label="Ingresos totales" value={mxn.format(datos.ingresoTotal)} nota="Citas confirmadas y asistidas" />
-        <KpiPastel tono="azul" delay="anim-d2" icon={<TrendingUp className="h-4 w-4" />} label="Ticket promedio" value={mxn.format(Math.round(datos.ticketPromedio))} nota="Por cita" />
-        <KpiPastel tono="menta" delay="anim-d3" icon={<CalendarCheck className="h-4 w-4" />} label="Tasa de asistencia" value={`${Math.round(datos.tasaAsistencia * 100)}%`} nota="Asistidas vs. totales" />
-        <KpiPastel tono="durazno" delay="anim-d4" icon={<Users className="h-4 w-4" />} label="Clientes activos" value={String(datos.clientes)} nota="Con al menos una cita" />
+        <KpiPastel tono="lila" delay="anim-d1" icon={<Banknote className="h-4 w-4" />} label="Ingresos" value={mxn.format(datos.ingresoTotal)} nota={datos.porCobrar > 0 ? `Servicios atendidos · ${mxn.format(datos.porCobrar)} por cobrar` : "Servicios atendidos"} />
+        <KpiPastel tono="azul" delay="anim-d2" icon={<TrendingUp className="h-4 w-4" />} label="Ticket promedio" value={mxn.format(Math.round(datos.ticketPromedio))} nota={`${datos.atendidas} visitas atendidas`} />
+        <KpiPastel tono="menta" delay="anim-d3" icon={<CalendarCheck className="h-4 w-4" />} label="Tasa de asistencia" value={`${Math.round(datos.tasaAsistencia * 100)}%`} nota={`${datos.faltas} falta${datos.faltas === 1 ? "" : "s"}`} />
+        <KpiPastel tono="durazno" delay="anim-d4" icon={<Users className="h-4 w-4" />} label="Clientes atendidos" value={String(datos.clientes)} nota="Con al menos una visita" />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -176,18 +175,55 @@ export default function ReportesPage() {
         </section>
 
         <section className="anim-in anim-d4 rounded-3xl p-5 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 lg:col-span-2" style={{ background: "var(--card)" }}>
-          <h2 className="mb-4 font-semibold">Citas por día (últimos 14 días)</h2>
+          <h2 className="mb-4 font-semibold">Visitas por día (últimos 14 días)</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={datos.dias} margin={{ left: -16 }}>
                 <CartesianGrid vertical={false} stroke={grid} />
                 <XAxis dataKey="fecha" tick={{ fill: inkMuted, fontSize: 11 }} axisLine={{ stroke: grid }} tickLine={false} interval={1} />
                 <YAxis allowDecimals={false} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
-                <Tooltip content={<TooltipCard formatter={(v) => `${v} ${v === 1 ? "cita" : "citas"}`} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)" }} />
-                <Bar dataKey="citas" name="Citas" fill={cat[0]} radius={[4, 4, 0, 0]} barSize={18} />
+                <Tooltip content={<TooltipCard formatter={(v) => String(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)" }} />
+                <Bar dataKey="atendidas" name="Atendidas" stackId="d" fill={cat[0]} barSize={18} />
+                <Bar dataKey="faltas" name="No asistió" stackId="d" fill={cat[2]} />
+                <Bar dataKey="agendadas" name="Por llegar" stackId="d" fill={cat[1]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </section>
+        <section className="anim-in anim-d5 rounded-3xl p-5 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 lg:col-span-2" style={{ background: "var(--card)" }}>
+          <h2 className="mb-4 font-semibold">Desempeño por barbero</h2>
+          {datos.porBarbero.length === 0 ? (
+            <p className="py-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Aún no hay citas registradas.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left" style={{ color: "var(--ink-muted)" }}>
+                  <th className="pb-3 font-medium">Barbero</th>
+                  <th className="pb-3 text-right font-medium">Atendidas</th>
+                  <th className="pb-3 text-right font-medium">Clientes</th>
+                  <th className="pb-3 text-right font-medium">Faltas</th>
+                  <th className="pb-3 text-right font-medium">Asistencia</th>
+                  <th className="pb-3 text-right font-medium">Por venir</th>
+                  <th className="pb-3 text-right font-medium">Ingresos</th>
+                  <th className="pb-3 text-right font-medium">Por cobrar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                {datos.porBarbero.map((m) => (
+                  <tr key={m.id}>
+                    <td className="py-2.5 font-medium">{m.nombre}</td>
+                    <td className="py-2.5 text-right tabular-nums">{m.atendidas}</td>
+                    <td className="py-2.5 text-right tabular-nums">{m.clientes}</td>
+                    <td className="py-2.5 text-right tabular-nums">{m.faltas}</td>
+                    <td className="py-2.5 text-right tabular-nums">{Math.round(m.asistencia * 100)}%</td>
+                    <td className="py-2.5 text-right tabular-nums">{m.porVenir}</td>
+                    <td className="py-2.5 text-right tabular-nums">{mxn.format(m.ingresos)}</td>
+                    <td className="py-2.5 text-right tabular-nums">{mxn.format(m.porCobrar)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
       </div>
     </PanelShell>

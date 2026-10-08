@@ -40,11 +40,14 @@ export {
   NOMBRE_POR_DEFECTO,
   calcularLealtad,
   nombreDelNegocio,
+  resumirBarberos,
+  resumirCitas,
   resumirClientes,
 } from "@/lib/datos/modelo";
 export type {
   Barbero,
   BarberiaConfig,
+  BarberoResumen,
   BloqueHorario,
   Cita,
   Cliente,
@@ -164,12 +167,16 @@ function iniciar() {
     }
   });
 
-  // Lo que hagan otros (una reserva nueva, un cobro) llega al volver a la
-  // pestaña y, mientras está abierta, cada 30 segundos.
+  // Lo que hagan otros (una reserva nueva, una llegada confirmada en otro
+  // teléfono, un cobro) llega al volver a la pestaña y, mientras está
+  // abierta, cada 10 segundos: los reportes y contadores se mueven solos.
   window.addEventListener("focus", () => void cargar());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void cargar();
+  });
   window.setInterval(() => {
     if (document.visibilityState === "visible") void cargar();
-  }, 30_000);
+  }, 10_000);
 }
 
 /**

@@ -6,7 +6,7 @@ import { CheckCircle2, Home, KeyRound, Loader2, Plus, Settings2, ShieldCheck, Us
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Modal } from "@/components/panel/Modal";
 import { EditorBarbero } from "@/components/citas/EditorBarbero";
-import { citaActiva, useBarberia, type Barbero } from "@/lib/store";
+import { resumirBarberos, useBarberia, type Barbero } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -60,14 +60,10 @@ export default function EquipoBarberoPage() {
     if (esAdmin) void cargarCuentas();
   }, [esAdmin, cargarCuentas]);
 
-  const conStats = useMemo(
-    () =>
-      barberos.map((m) => {
-        const suyas = citas.filter((c) => c.barbero_id === m.id && citaActiva(c));
-        return { ...m, citas: suyas.length, ingresos: suyas.reduce((s, c) => s + c.precio, 0) };
-      }),
-    [barberos, citas]
-  );
+  const conStats = useMemo(() => {
+    const resumen = resumirBarberos(citas, barberos);
+    return barberos.map((m, i) => ({ ...m, stats: resumen[i] }));
+  }, [barberos, citas]);
 
   if (!listo) return null;
 
@@ -276,14 +272,30 @@ export default function EquipoBarberoPage() {
                 <dd className="font-semibold">{m.acepta_domicilio ? "Sí" : "No"}</dd>
               </div>
             </dl>
-            <dl className="mb-4 grid grid-cols-2 gap-2 text-sm">
+            <dl className="mb-4 grid grid-cols-3 gap-2 rounded-2xl p-3 text-sm" style={{ background: "rgba(247,147,30,0.06)" }}>
               <div>
-                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Citas</dt>
-                <dd className="font-semibold">{m.citas}</dd>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Atendidas</dt>
+                <dd className="font-semibold">{m.stats.atendidas}</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Clientes</dt>
+                <dd className="font-semibold">{m.stats.clientes}</dd>
               </div>
               <div>
                 <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Ingresos</dt>
-                <dd className="font-semibold">{mxn.format(m.ingresos)}</dd>
+                <dd className="font-semibold">{mxn.format(m.stats.ingresos)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Por venir</dt>
+                <dd className="font-semibold">{m.stats.porVenir}</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Faltas</dt>
+                <dd className="font-semibold">{m.stats.faltas}</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Asistencia</dt>
+                <dd className="font-semibold">{Math.round(m.stats.asistencia * 100)}%</dd>
               </div>
             </dl>
             <p className="mb-3 truncate text-xs" style={{ color: "var(--ink-muted)" }}>

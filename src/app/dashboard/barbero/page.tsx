@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { format, isToday } from "date-fns";
+import { format, isThisMonth, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { Banknote, CalendarDays, CheckCircle2, CreditCard, Home, MapPin, ScanLine, UserX, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { ETIQUETA_ESTADO_CITA, useBarberia } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, resumirCitas, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -34,13 +34,15 @@ export default function DashboardBarberoPage() {
     vista === "hoy" ? propias.filter((c) => isToday(new Date(c.inicio))) : futurasOHoy;
 
   const deHoy = propias.filter((c) => isToday(new Date(c.inicio)));
-  const pendientesEfectivo = deHoy.filter((c) => c.estado_pago === "pendiente");
+  const hoy = resumirCitas(deHoy);
+  const mes = resumirCitas(propias.filter((c) => isThisMonth(new Date(c.inicio))));
   const stats = {
-    hoy: deHoy.length,
+    hoy: hoy.total,
     tele: deHoy.filter((c) => c.modalidad === "domicilio").length,
-    ingresos: deHoy.reduce((s, c) => s + c.precio, 0),
-    porCobrar: pendientesEfectivo.reduce((s, c) => s + c.precio, 0),
-    asistidas: deHoy.filter((c) => c.estado === "asistida").length,
+    ingresos: hoy.ingresos,
+    porCobrar: hoy.porCobrar,
+    asistidas: hoy.atendidas,
+    mes,
   };
 
   if (!listo) return null;
@@ -93,11 +95,11 @@ export default function DashboardBarberoPage() {
           value={mxn.format(stats.ingresos)}
           nota={
             stats.porCobrar > 0
-              ? `Incluye ${mxn.format(stats.porCobrar)} por cobrar en efectivo`
-              : "Todo pagado"
+              ? `Atendidos · ${mxn.format(stats.porCobrar)} por cobrar`
+              : `Atendidos · mes ${mxn.format(stats.mes.ingresos)}`
           }
         />
-        <KpiPastel tono="durazno" delay="anim-d4" icon={<CheckCircle2 className="h-4 w-4" />} label="Atendidas" value={`${stats.asistidas}/${stats.hoy}`} nota="Marcadas como asistidas" />
+        <KpiPastel tono="durazno" delay="anim-d4" icon={<CheckCircle2 className="h-4 w-4" />} label="Atendidas" value={`${stats.asistidas}/${stats.hoy}`} nota={`Este mes: ${stats.mes.atendidas} visitas · ${stats.mes.clientes} clientes`} />
       </section>
 
       <div className="mb-6">

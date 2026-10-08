@@ -794,8 +794,14 @@ export function vistaPara(estado: Estado, s: Sesion | null): Estado {
 export type ClienteResumen = {
   id: string;
   nombre: string;
+  /** Visitas reales: citas con la llegada confirmada (Asistió) */
   visitas: number;
+  /** Veces que no se presentó */
+  faltas: number;
+  /** Lo que ha consumido: suma de sus citas atendidas */
   gastoTotal: number;
+  /** De lo consumido, lo que ya pagó */
+  pagado: number;
   ticketMedio: number;
   ultimaVisita: string | null;
   proximaCita: string | null;
@@ -806,17 +812,19 @@ export type ClienteResumen = {
   enRiesgo: boolean;
 };
 
+const suma = (lista: Cita[], f: (c: Cita) => number = (c) => c.precio) => lista.reduce((a, c) => a + f(c), 0);
+
 /**
- * Construye la ficha 360 de cada cliente a partir de las citas. No hay una
- * tabla de clientes: el historial de citas ya contiene toda la verdad, y
- * duplicarla sólo abriría la puerta a que ambas se desincronicen.
+ * Construye la ficha 360 de cada cliente a partir de las citas. Una visita es
+ * una cita con la llegada confirmada (escaneo del QR o «Llegó»): en cuanto se
+ * confirma, sube su número de visitas, su gasto y su barbero de confianza.
  */
 export function resumirClientes(citas: Cita[]): ClienteResumen[] {
   const ahora = Date.now();
   const porCliente = new Map<string, Cita[]>();
 
   for (const c of citas) {
-    if (!citaActiva(c)) continue;
+    if (!c.cliente_id || c.estado === "cancelada") continue;
     const lista = porCliente.get(c.cliente_id) ?? [];
     lista.push(c);
     porCliente.set(c.cliente_id, lista);
@@ -826,53 +834,93 @@ export function resumirClientes(citas: Cita[]): ClienteResumen[] {
 
   for (const [id, lista] of porCliente) {
     const ordenadas = [...lista].sort((a, b) => a.inicio.localeCompare(b.inicio));
-    const pasadas = ordenadas.filter((c) => new Date(c.inicio).getTime() <= ahora);
-    const futuras = ordenadas.filter((c) => new Date(c.inicio).getTime() > ahora);
+    const atendidas = ordenadas.filter((c) => c.estado === "asistida");
+    const futuras = ordenadas.filter((c) => c.estado === "confirmada" && new Date(c.fin).getTime() > ahora);
 
-    const gastoTotal = ordenadas
-      .filter((c) => c.estado_pago === "pagado")
-      .reduce((acc, c) => acc + c.precio, 0);
+    const gastoTotal = suma(atendidas);
+    const pagado = suma(atendidas.filter((c) => c.estado_pago === "pagado"));
 
-    // Barbero preferido: el que más veces la ha atendido.
+    // Barbero preferido: el que más veces lo ha atendido.
     const conteo = new Map<string, number>();
-    for (const c of ordenadas) conteo.set(c.barbero_nombre, (conteo.get(c.barbero_nombre) ?? 0) + 1);
+    for (const c of atendidas) conteo.set(c.barbero_nombre, (conteo.get(c.barbero_nombre) ?? 0) + 1);
     const barberoPreferido = [...conteo.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
 
-    const ultima = pasadas.at(-1) ?? null;
-    const diasDesdeUltima = ultima
-      ? Math.floor((ahora - new Date(ultima.inicio).getTime()) / 86_400_000)
-      : null;
+    const ultima = atendidas.at(-1) ?? null;
+    const diasDesdeUltima = ultima ? Math.floor((ahora - new Date(ultima.inicio).getTime()) / 86_400_000) : null;
 
     // Cadencia: media de días entre visitas consecutivas.
     let cadenciaDias: number | null = null;
-    if (pasadas.length > 1) {
-      let suma = 0;
-      for (let i = 1; i < pasadas.length; i++) {
-        suma += (new Date(pasadas[i].inicio).getTime() - new Date(pasadas[i - 1].inicio).getTime()) / 86_400_000;
+    if (atendidas.length > 1) {
+      let total = 0;
+      for (let i = 1; i < atendidas.length; i++) {
+        total += (new Date(atendidas[i].inicio).getTime() - new Date(atendidas[i - 1].inicio).getTime()) / 86_400_000;
       }
-      cadenciaDias = Math.round(suma / (pasadas.length - 1));
+      cadenciaDias = Math.round(total / (atendidas.length - 1));
     }
 
     resumen.push({
       id,
-      nombre: ordenadas[0].cliente_nombre,
-      visitas: pasadas.length,
+      nombre: ordenadas.at(-1)!.cliente_nombre,
+      visitas: atendidas.length,
+      faltas: ordenadas.filter((c) => c.estado === "no_asistio").length,
       gastoTotal,
-      ticketMedio: pasadas.length > 0 ? Math.round(gastoTotal / pasadas.length) : 0,
+      pagado,
+      ticketMedio: atendidas.length > 0 ? Math.round(gastoTotal / atendidas.length) : 0,
       ultimaVisita: ultima?.inicio ?? null,
       proximaCita: futuras[0]?.inicio ?? null,
       barberoPreferido,
       diasDesdeUltima,
       cadenciaDias,
       enRiesgo:
-        futuras.length === 0 &&
-        cadenciaDias !== null &&
-        diasDesdeUltima !== null &&
-        diasDesdeUltima > cadenciaDias * 2,
+        futuras.length === 0 && cadenciaDias !== null && diasDesdeUltima !== null && diasDesdeUltima > cadenciaDias * 2,
     });
   }
 
   return resumen.sort((a, b) => b.gastoTotal - a.gastoTotal);
+}
+
+/** Números de una lista de citas: lo que todos los paneles muestran igual. */
+export function resumirCitas(citas: Cita[]) {
+  const ahora = Date.now();
+  const atendidas = citas.filter((c) => c.estado === "asistida");
+  const faltas = citas.filter((c) => c.estado === "no_asistio");
+  const porVenir = citas.filter((c) => c.estado === "confirmada");
+  const cobradas = citas.filter((c) => citaActiva(c) && c.estado_pago === "pagado");
+  const porCobrar = atendidas.filter((c) => c.estado_pago === "pendiente");
+  // Asistencia: de las citas cuya hora ya pasó, cuántas llegaron.
+  const vencidas = citas.filter(
+    (c) => c.estado === "asistida" || c.estado === "no_asistio" || (c.estado === "confirmada" && new Date(c.fin).getTime() < ahora)
+  );
+  const ingresos = suma(atendidas);
+  return {
+    total: citas.filter((c) => c.estado !== "cancelada").length,
+    atendidas: atendidas.length,
+    faltas: faltas.length,
+    porVenir: porVenir.length,
+    canceladas: citas.filter((c) => c.estado === "cancelada").length,
+    /** Valor de los servicios realizados */
+    ingresos,
+    cobrado: suma(cobradas),
+    porCobrar: suma(porCobrar),
+    porCobrarCitas: porCobrar.length,
+    /** Lo que suman las citas agendadas que aún no llegan */
+    agendado: suma(porVenir),
+    ticketMedio: atendidas.length > 0 ? ingresos / atendidas.length : 0,
+    asistencia: vencidas.length > 0 ? atendidas.length / vencidas.length : 0,
+    clientes: new Set(atendidas.map((c) => c.cliente_id).filter(Boolean)).size,
+  };
+}
+
+export type BarberoResumen = ReturnType<typeof resumirCitas> & { id: string; nombre: string; activo: boolean };
+
+/** Desempeño de cada barbero: atendidas, clientes, ingresos y faltas. */
+export function resumirBarberos(citas: Cita[], barberos: Pick<Barbero, "id" | "nombre" | "activo">[]): BarberoResumen[] {
+  return barberos.map((b) => ({
+    id: b.id,
+    nombre: b.nombre,
+    activo: b.activo,
+    ...resumirCitas(citas.filter((c) => c.barbero_id === b.id)),
+  }));
 }
 
 // Lealtad: 1 sello por cita asistida más los sellos puestos a mano en la

@@ -58,7 +58,8 @@ export default function CajaPage() {
     const pagadas = enRango.filter((c) => c.estado_pago === "pagado");
     const tarjeta = pagadas.filter((c) => c.metodo_pago === "tarjeta");
     const efectivo = pagadas.filter((c) => c.metodo_pago === "efectivo");
-    const pendientes = enRango.filter((c) => c.estado_pago === "pendiente");
+    // Por cobrar: servicios ya atendidos (llegada confirmada) que no se han pagado.
+    const pendientes = enRango.filter((c) => c.estado === "asistida" && c.estado_pago === "pendiente");
 
     const suma = (lista: typeof enRango) => lista.reduce((a, c) => a + c.precio, 0);
 
@@ -140,7 +141,7 @@ export default function CajaPage() {
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<Wallet />} label="Ingresos cobrados" valor={moneda.format(periodo.ingresos)} nota={`${periodo.citas} citas en el periodo`} />
-        <Metric icono={<Receipt />} label="Por cobrar" valor={moneda.format(periodo.porCobrar)} nota={`${periodo.pendientes} citas pendientes de pago`} />
+        <Metric icono={<Receipt />} label="Por cobrar" valor={moneda.format(periodo.porCobrar)} nota={`${periodo.pendientes} atendidas sin pagar`} />
         <Metric icono={<ArrowDownRight />} label="Gastos y comisiones" valor={moneda.format(periodo.totalGastos + periodo.comisiones)} nota={`${moneda.format(periodo.comisiones)} en comisiones`} />
         <Metric icono={<ArrowUpRight />} label="Utilidad" valor={moneda.format(periodo.utilidad)} nota={`Ticket medio ${moneda.format(periodo.ticketMedio)}`} />
       </div>

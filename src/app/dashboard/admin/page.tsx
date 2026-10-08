@@ -6,7 +6,8 @@ import { Banknote, CalendarCheck, CalendarPlus, ScanLine, CheckCircle2, Circle, 
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { citaActiva, nombreDelNegocio, useBarberia } from "@/lib/store";
+import { isToday } from "date-fns";
+import { citaActiva, nombreDelNegocio, resumirBarberos, resumirCitas, useBarberia } from "@/lib/store";
 import { WALLET_VISIBLE } from "@/lib/modo";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -17,31 +18,20 @@ export default function DashboardAdminPage() {
   const store = useBarberia();
   const { listo, citas, sesion, barberos, recompensasConfig, barberiaConfig, servicios, clientes } = store;
 
+  // Todo sale de las mismas funciones que usan Reportes, Caja y Equipo: al
+  // confirmar una llegada cambian a la vez aquí y en el resto del panel.
   const stats = useMemo(() => {
-    const vivas = citas.filter(citaActiva);
-    const asistidas = citas.filter((c) => c.estado === "asistida");
-    const clientes = new Set(vivas.map((c) => c.cliente_id));
-    const pendientesEfectivo = vivas.filter((c) => c.estado_pago === "pendiente");
-    const pagadasTarjeta = vivas.filter((c) => c.metodo_pago === "tarjeta");
-    const pagadasEfectivo = vivas.filter((c) => c.metodo_pago === "efectivo" && c.estado_pago === "pagado");
+    const general = resumirCitas(citas);
+    const hoy = resumirCitas(citas.filter((c) => isToday(new Date(c.inicio))));
+    const efectivo = citas.filter((c) => citaActiva(c) && c.metodo_pago === "efectivo").length;
+    const tarjeta = citas.filter((c) => citaActiva(c) && c.metodo_pago === "tarjeta").length;
     return {
-      ingresos: vivas.reduce((s, c) => s + c.precio, 0),
-      citas: vivas.length,
-      asistencia: vivas.length ? asistidas.length / vivas.length : 0,
-      clientes: clientes.size,
-      recompensas: Math.floor(asistidas.length / recompensasConfig.citas_requeridas),
-      porCobrarMonto: pendientesEfectivo.reduce((s, c) => s + c.precio, 0),
-      porCobrarCitas: pendientesEfectivo.length,
-      tarjetaCitas: pagadasTarjeta.length,
-      efectivoCitas: pagadasEfectivo.length + pendientesEfectivo.length,
-      porBarbero: barberos.map((m) => {
-        const suyas = vivas.filter((c) => c.barbero_id === m.id);
-        return {
-          ...m,
-          citas: suyas.length,
-          ingresos: suyas.reduce((s, c) => s + c.precio, 0),
-        };
-      }),
+      ...general,
+      hoy,
+      recompensas: Math.floor(general.atendidas / Math.max(1, recompensasConfig.citas_requeridas)),
+      tarjetaCitas: tarjeta,
+      efectivoCitas: efectivo,
+      porBarbero: resumirBarberos(citas, barberos).map((r) => ({ ...r, especialidad: barberos.find((b) => b.id === r.id)?.especialidad ?? "" })),
     };
   }, [citas, barberos, recompensasConfig]);
 
@@ -93,14 +83,14 @@ export default function DashboardAdminPage() {
           label="Ingresos"
           value={mxn.format(stats.ingresos)}
           nota={
-            stats.porCobrarMonto > 0
-              ? `Incluye ${mxn.format(stats.porCobrarMonto)} pendientes en efectivo`
-              : "Citas confirmadas y asistidas"
+            stats.porCobrar > 0
+              ? `Servicios atendidos · ${mxn.format(stats.porCobrar)} por cobrar`
+              : `Servicios atendidos · hoy ${mxn.format(stats.hoy.ingresos)}`
           }
         />
-        <KpiPastel tono="azul" delay="anim-d2" icon={<CalendarCheck className="h-4 w-4" />} label="Citas" value={String(stats.citas)} nota="Activas en la barbería" />
-        <KpiPastel tono="menta" delay="anim-d3" icon={<TrendingUp className="h-4 w-4" />} label="Tasa de asistencia" value={`${Math.round(stats.asistencia * 100)}%`} nota="Asistidas vs. totales" />
-        <KpiPastel tono="durazno" delay="anim-d4" icon={<Users className="h-4 w-4" />} label="Clientes" value={String(stats.clientes)} nota="Con citas activas" />
+        <KpiPastel tono="azul" delay="anim-d2" icon={<CalendarCheck className="h-4 w-4" />} label="Visitas atendidas" value={String(stats.atendidas)} nota={`Hoy ${stats.hoy.atendidas} · ${stats.porVenir} agendadas por venir`} />
+        <KpiPastel tono="menta" delay="anim-d3" icon={<TrendingUp className="h-4 w-4" />} label="Tasa de asistencia" value={`${Math.round(stats.asistencia * 100)}%`} nota={`${stats.faltas} falta${stats.faltas === 1 ? "" : "s"} registradas`} />
+        <KpiPastel tono="durazno" delay="anim-d4" icon={<Users className="h-4 w-4" />} label="Clientes atendidos" value={String(stats.clientes)} nota={`${clientes.length} registrados`} />
       </section>
 
       <div className="mb-6">
@@ -128,14 +118,15 @@ export default function DashboardAdminPage() {
                 <tr className="text-left" style={{ color: "var(--ink-muted)" }}>
                   <th className="pb-3 font-medium">Barbero</th>
                   <th className="pb-3 font-medium">Especialidad</th>
-                  <th className="pb-3 text-right font-medium">Citas</th>
+                  <th className="pb-3 text-right font-medium">Atendidas</th>
+                  <th className="pb-3 text-right font-medium">Clientes</th>
                   <th className="pb-3 text-right font-medium">Ingresos</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {stats.porBarbero.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+                    <td colSpan={5} className="py-6 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
                       Aún no hay barberos dados de alta.
                     </td>
                   </tr>
@@ -156,7 +147,11 @@ export default function DashboardAdminPage() {
                       </div>
                     </td>
                     <td className="py-3" style={{ color: "var(--ink-muted)" }}>{m.especialidad}</td>
-                    <td className="py-3 text-right tabular-nums">{m.citas}</td>
+                    <td className="py-3 text-right tabular-nums">
+                      {m.atendidas}
+                      {m.porVenir > 0 && <span className="block text-[11px]" style={{ color: "var(--ink-faint)" }}>+{m.porVenir} por venir</span>}
+                    </td>
+                    <td className="py-3 text-right tabular-nums">{m.clientes}</td>
                     <td className="py-3 text-right tabular-nums">{mxn.format(m.ingresos)}</td>
                   </tr>
                 ))}
@@ -214,7 +209,7 @@ export default function DashboardAdminPage() {
               {stats.porCobrarCitas > 0 && (
                 <p className="mt-1 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">
                   {stats.porCobrarCitas} {stats.porCobrarCitas === 1 ? "cita" : "citas"} por
-                  cobrar en recepción ({mxn.format(stats.porCobrarMonto)})
+                  cobrar en recepción ({mxn.format(stats.porCobrar)}) · ya atendidas
                 </p>
               )}
             </div>

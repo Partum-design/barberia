@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { format, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { Banknote, CalendarDays, CheckCircle2, CreditCard, Home, MapPin, Users } from "lucide-react";
+import { Banknote, CalendarDays, CheckCircle2, CreditCard, Home, MapPin, ScanLine, UserX, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { useBarberia } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -58,6 +58,10 @@ export default function DashboardBarberoPage() {
         title="Mi agenda"
         lead={<span className="capitalize">{format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}</span>}
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/barbero/confirmar" className="btn-gold px-4 py-2 text-sm">
+            <ScanLine className="h-4 w-4" /> Escanear QR
+          </Link>
           <div className="flex rounded-full bg-white p-1 shadow-sm">
             {(["hoy", "semana"] as const).map((v) => (
               <button
@@ -72,6 +76,7 @@ export default function DashboardBarberoPage() {
                 {v === "hoy" ? "Hoy" : "Próximas"}
               </button>
             ))}
+          </div>
           </div>
         }
       />
@@ -166,15 +171,26 @@ export default function DashboardBarberoPage() {
                   </a>
                 )}
               {cita.estado === "confirmada" ? (
-                <button
-                  onClick={() => store.marcarAsistida(cita.id)}
-                  className="rounded-full border border-brand-500/30 px-4 py-2 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/30"
-                >
-                  Marcar asistida
-                </button>
+                <>
+                  <button
+                    onClick={() => store.marcarAsistida(cita.id)}
+                    className="rounded-full border border-brand-500/30 px-4 py-2 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/30"
+                  >
+                    Llegó
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const r = await store.actualizarCita(cita.id, { estado: "no_asistio" });
+                      if (!r.ok) window.alert(r.error);
+                    }}
+                    className="btn-linea is-sm"
+                  >
+                    <UserX className="h-4 w-4" /> No vino
+                  </button>
+                </>
               ) : (
-                <span className="badge anim-pop badge-gold px-3 py-1.5 text-xs">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Asistida
+                <span className={`badge anim-pop px-3 py-1.5 text-xs ${cita.estado === "asistida" ? "badge-gold" : "badge-warm"}`}>
+                  {cita.estado === "asistida" && <CheckCircle2 className="h-3.5 w-3.5" />} {ETIQUETA_ESTADO_CITA[cita.estado]}
                 </span>
               )}
             </div>

@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   AlertTriangle,
   CalendarClock,
+  CalendarPlus,
+  CheckCircle2,
+  Mail,
+  Pencil,
+  Phone,
   Repeat,
   Search,
   TrendingUp,
+  UserPlus,
   UserRound,
   Users,
 } from "lucide-react";
+import { Modal } from "@/components/panel/Modal";
+import { FormularioCliente } from "@/components/citas/FormularioCliente";
 import { PanelShell } from "@/components/shell/PanelShell";
 import {
   EmptyState,
@@ -24,36 +33,86 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { calcularLealtad, resumirClientes, useBarberia } from "@/lib/store";
+import { calcularLealtad, resumirClientes, useBarberia, type Cliente, type ClienteResumen } from "@/lib/store";
 
-type Filtro = "todos" | "riesgo" | "vip" | "proximos";
+type Filtro = "todos" | "riesgo" | "vip" | "proximos" | "nuevos";
+
+type Fila = ClienteResumen & { registro?: Cliente };
 
 const fecha = (iso: string | null) =>
   iso ? format(new Date(iso), "d MMM yyyy", { locale: es }) : "—";
 
 /**
- * CRM de la barbería. Todo sale del historial de citas: no hay una tabla de
- * clientes que mantener sincronizada, y por tanto no hay dos versiones de la
- * verdad sobre cuánto ha gastado alguien o cuándo vino por última vez.
+ * CRM de la barbería. Las cifras (gasto, visitas, cadencia) salen del
+ * historial de citas; los datos de contacto, de la ficha de cliente que se da
+ * de alta aquí o al registrarse. Quien está dado de alta pero aún no viene
+ * aparece igual, con sus cifras en cero.
  */
 export default function ClientesPage() {
   const store = useBarberia();
-  const { listo, sesion, citas, recompensasConfig, tarjetas } = store;
+  const { listo, sesion, citas, recompensasConfig, tarjetas, clientes: registros } = store;
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [editando, setEditando] = useState<{ cliente?: Cliente } | null>(null);
+  const [aviso, setAviso] = useState("");
 
-  const clientes = useMemo(() => resumirClientes(citas), [citas]);
+  useEffect(() => {
+    if (!aviso) return;
+    const t = window.setTimeout(() => setAviso(""), 5000);
+    return () => window.clearTimeout(t);
+  }, [aviso]);
+
+  const clientes = useMemo<Fila[]>(() => {
+    const resumen = resumirClientes(citas);
+    const porId = new Map(registros.map((r) => [r.id, r]));
+    const filas: Fila[] = resumen.map((r) => {
+      const registro = porId.get(r.id);
+      return { ...r, nombre: registro?.nombre || r.nombre, registro };
+    });
+    const conCitas = new Set(resumen.map((r) => r.id));
+    for (const r of registros) {
+      if (conCitas.has(r.id)) continue;
+      filas.push({
+        id: r.id,
+        nombre: r.nombre,
+        visitas: 0,
+        gastoTotal: 0,
+        ticketMedio: 0,
+        ultimaVisita: null,
+        proximaCita: null,
+        barberoPreferido: "—",
+        diasDesdeUltima: null,
+        cadenciaDias: null,
+        enRiesgo: false,
+        registro: r,
+      });
+    }
+    return filas;
+  }, [citas, registros]);
 
   const visibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
+    const digitos = texto.replace(/\D/g, "");
     return clientes
-      .filter((c) => (texto ? c.nombre.toLowerCase().includes(texto) : true))
+      .filter((c) =>
+        texto
+          ? c.nombre.toLowerCase().includes(texto) ||
+            (c.registro?.email ?? "").toLowerCase().includes(texto) ||
+            (digitos.length >= 3 && (c.registro?.telefono ?? "").replace(/\D/g, "").includes(digitos))
+          : true
+      )
       .filter((c) => {
         if (filtro === "riesgo") return c.enRiesgo;
         if (filtro === "vip") return c.visitas >= 3;
         if (filtro === "proximos") return Boolean(c.proximaCita);
+        if (filtro === "nuevos") return c.visitas === 0;
         return true;
-      });
+      })
+      .sort((a, b) =>
+        filtro === "nuevos"
+          ? (b.registro?.creado_en ?? "").localeCompare(a.registro?.creado_en ?? "")
+          : b.gastoTotal - a.gastoTotal || a.nombre.localeCompare(b.nombre)
+      );
   }, [clientes, filtro, busqueda]);
 
   const totales = useMemo(() => {
@@ -75,14 +134,25 @@ export default function ClientesPage() {
 
   return (
     <PanelShell sesion={sesion} activo="Clientes" onLogout={store.logout}>
-      <header className="anim-in mb-6">
-        <p className="kicker">Relación con el cliente</p>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Clientes</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-          Ficha completa de cada persona: gasto, frecuencia, barbero de confianza y quién lleva
-          demasiado sin volver.
-        </p>
+      <header className="anim-in mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="kicker">Relación con el cliente</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Clientes</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+            Da de alta clientes, corrige sus datos y agenda desde aquí. Cada ficha muestra su gasto, frecuencia y
+            barbero de confianza.
+          </p>
+        </div>
+        <button type="button" className="btn-gold px-5 py-2.5 text-sm" onClick={() => setEditando({})}>
+          <UserPlus className="h-4 w-4" /> Nuevo cliente
+        </button>
       </header>
+
+      {aviso && (
+        <p className="aviso-ok anim-pop mb-4" role="status">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> {aviso}
+        </p>
+      )}
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<Users />} label="Clientes" valor={numero.format(totales.total)} nota={`${totales.riesgo} en riesgo de fuga`} />
@@ -100,6 +170,7 @@ export default function ClientesPage() {
             { id: "vip", label: "Recurrentes" },
             { id: "proximos", label: "Con cita próxima" },
             { id: "riesgo", label: "En riesgo" },
+            { id: "nuevos", label: "Sin visitas" },
           ]}
         />
       </div>
@@ -113,16 +184,19 @@ export default function ClientesPage() {
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar cliente"
+              placeholder="Nombre, teléfono o correo"
               aria-label="Buscar cliente"
-              className="w-44 rounded-full border py-1.5 pl-8 pr-3 text-xs"
+              className="campo-input is-sm w-56 pl-8"
             />
           </label>
         }
       >
         {visibles.length === 0 ? (
           <EmptyState icono={<UserRound />}>
-            Ningún cliente coincide con este filtro todavía.
+            {clientes.length === 0 ? "Aún no hay clientes. " : "Ningún cliente coincide con este filtro. "}
+            <button type="button" className="underline underline-offset-4" onClick={() => setEditando({})}>
+              Dar de alta uno
+            </button>
           </EmptyState>
         ) : (
           <div className="grid gap-2">
@@ -146,10 +220,26 @@ export default function ClientesPage() {
                         </span>
                       )}
                     </p>
+                    {(c.registro?.telefono || c.registro?.email) && (
+                      <p className="mt-0.5 flex flex-wrap gap-x-3 text-[0.7rem]" style={{ color: "var(--ink-muted)" }}>
+                        {c.registro?.telefono && (
+                          <a href={`tel:${c.registro.telefono.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {c.registro.telefono}
+                          </a>
+                        )}
+                        {c.registro?.email && (
+                          <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                            <Mail className="h-3 w-3" /> {c.registro.email}
+                          </span>
+                        )}
+                      </p>
+                    )}
                     <p className="mt-0.5 text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
-                      {c.visitas} visita{c.visitas === 1 ? "" : "s"} · última {fecha(c.ultimaVisita)} · barbero
-                      de confianza: {c.barberoPreferido}
+                      {c.visitas === 0
+                        ? `Sin visitas todavía${c.registro ? ` · alta ${fecha(c.registro.creado_en)}` : ""}`
+                        : `${c.visitas} visita${c.visitas === 1 ? "" : "s"} · última ${fecha(c.ultimaVisita)} · barbero de confianza: ${c.barberoPreferido}`}
                       {c.cadenciaDias !== null && ` · vuelve cada ~${c.cadenciaDias} días`}
+                      {c.proximaCita && ` · próxima cita ${fecha(c.proximaCita)}`}
                     </p>
                     <div className="mt-1.5 max-w-56">
                       <ShareBar valor={c.gastoTotal / gastoMaximo} tono={c.enRiesgo ? "ox" : "oro"} />
@@ -165,6 +255,29 @@ export default function ClientesPage() {
                     <p className="mt-1 text-[0.62rem]" style={{ color: "var(--gold)" }}>
                       {tarjeta ? `${tarjeta.numero} · ` : ""}lealtad {lealtad.progreso}/{lealtad.requerido}
                     </p>
+                    <div className="mt-2 flex justify-end gap-1.5">
+                      <Link
+                        href={`/dashboard/admin/citas?nueva=${encodeURIComponent(c.id)}`}
+                        className="btn-icono"
+                        aria-label={`Agendar cita a ${c.nombre}`}
+                        title="Agendar cita"
+                      >
+                        <CalendarPlus className="h-4 w-4" />
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn-icono"
+                        aria-label={`Editar a ${c.nombre}`}
+                        title="Editar datos"
+                        onClick={() =>
+                          setEditando({
+                            cliente: c.registro ?? { id: c.id, nombre: c.nombre, telefono: "", email: "", creado_en: new Date().toISOString() },
+                          })
+                        }
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
@@ -172,6 +285,23 @@ export default function ClientesPage() {
           </div>
         )}
       </ModulePanel>
+
+      {editando && (
+        <Modal
+          titulo={editando.cliente ? "Editar cliente" : "Nuevo cliente"}
+          descripcion={editando.cliente ? "Corrige su nombre o datos de contacto." : "Alta desde mostrador. Se le emite su tarjeta de lealtad."}
+          onCerrar={() => setEditando(null)}
+        >
+          <FormularioCliente
+            cliente={editando.cliente}
+            onCancelar={() => setEditando(null)}
+            onListo={(cli) => {
+              setEditando(null);
+              setAviso(editando.cliente ? `Datos de ${cli.nombre} actualizados.` : `${cli.nombre} dado de alta con su tarjeta de lealtad.`);
+            }}
+          />
+        </Modal>
+      )}
     </PanelShell>
   );
 }

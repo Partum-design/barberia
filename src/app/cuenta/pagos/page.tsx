@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { Banknote, Check, CreditCard, ShieldCheck } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
-import { useBarberia } from "@/lib/store";
+import { citaActiva, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -22,7 +22,7 @@ export default function PagosPage() {
   const mias = useMemo(
     () =>
       citas
-        .filter((c) => c.cliente_id === clienteId && c.estado !== "cancelada")
+        .filter((c) => c.cliente_id === clienteId && citaActiva(c))
         .sort((a, b) => b.inicio.localeCompare(a.inicio)),
     [citas, clienteId]
   );

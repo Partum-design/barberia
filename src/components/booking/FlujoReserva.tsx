@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
 import { calcularLealtad, useBarberia, type Barbero } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
+import { QrCita } from "@/components/citas/QrCita";
 
 type Paso = "barbero" | "horario" | "confirmar" | "confirmada";
 
@@ -27,6 +28,7 @@ export function FlujoReserva() {
   const [direccion, setDireccion] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [citaId, setCitaId] = useState<string | null>(null);
 
   // Horarios libres de los próximos 7 días por barbero activo.
   const disponibles = useMemo(
@@ -68,7 +70,7 @@ export function FlujoReserva() {
     if (!barbero || !slot) return;
     setError("");
     setCargando(true);
-    const { error: err } = await store.crearCita({
+    const { cita, error: err } = await store.crearCita({
       barbero_id: barbero.id,
       inicio: slot.toISOString(),
       modalidad,
@@ -82,6 +84,7 @@ export function FlujoReserva() {
       setPaso("horario");
       return;
     }
+    setCitaId(cita?.id ?? null);
     setPaso("confirmada");
   }
 
@@ -243,6 +246,14 @@ export function FlujoReserva() {
             <p className="mt-1 text-sm capitalize" style={{ color: "var(--ink-muted)" }}>
               {barbero.nombre} · {format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
             </p>
+            {citaId && (
+              <div className="mx-auto mt-5 flex w-fit flex-col items-center gap-2">
+                <QrCita citaId={citaId} tamano={190} />
+                <p className="max-w-xs text-xs" style={{ color: "var(--ink-muted)" }}>
+                  Muestra este QR al llegar: confirma tu cita y suma la visita a tu tarjeta. También lo tienes en «Mi cuenta».
+                </p>
+              </div>
+            )}
             <p className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">
               <Banknote className="h-4 w-4 shrink-0" />
               Recuerda llevar {mxn.format(barbero.precio_servicio)} en efectivo el día de tu cita

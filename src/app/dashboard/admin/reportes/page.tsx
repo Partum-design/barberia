@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { Banknote, CalendarCheck, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
-import { useBarberia } from "@/lib/store";
+import { citaActiva, useBarberia } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 const mxnCompact = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", notation: "compact", maximumFractionDigits: 1 });
@@ -68,7 +68,7 @@ export default function ReportesPage() {
   const grid = esOscuro ? GRID_DARK : GRID_LIGHT;
 
   const datos = useMemo(() => {
-    const vivas = citas.filter((c) => c.estado !== "cancelada");
+    const vivas = citas.filter(citaActiva);
     const asistidas = citas.filter((c) => c.estado === "asistida");
 
     const porBarbero = barberos

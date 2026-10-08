@@ -14,7 +14,7 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock3, Home, MapPin } from "lucide-react";
-import type { Cita } from "@/lib/store";
+import { citaActiva, type Cita } from "@/lib/store";
 
 type CalendarOverviewProps = {
   citas: Cita[];
@@ -36,7 +36,7 @@ export function CalendarOverview({ citas, perspective, title = "Calendario" }: C
     [month]
   );
 
-  const active = citas.filter((cita) => cita.estado !== "cancelada");
+  const active = citas.filter(citaActiva);
   const selectedAppointments = active
     .filter((cita) => isSameDay(new Date(cita.inicio), selected))
     .sort((a, b) => a.inicio.localeCompare(b.inicio));

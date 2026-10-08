@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Banknote, CalendarPlus, CreditCard, Gift, Home, MapPin, Sparkles } from "lucide-react";
+import { Banknote, CalendarPlus, CreditCard, Gift, Home, MapPin, QrCode, Sparkles } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { calcularLealtad, useBarberia } from "@/lib/store";
+import { calcularLealtad, ETIQUETA_ESTADO_CITA, useBarberia, type Cita } from "@/lib/store";
+import { Modal } from "@/components/panel/Modal";
+import { QrCita } from "@/components/citas/QrCita";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -19,6 +21,7 @@ export default function CuentaPage() {
   const { listo, citas, sesion, recompensasConfig, tarjetas } = store;
   const clienteId = sesion?.id ?? "";
   const tarjeta = tarjetas.find((t) => t.cliente_id === clienteId);
+  const [qr, setQr] = useState<Cita | null>(null);
 
   const mias = useMemo(
     () => citas.filter((c) => c.cliente_id === clienteId),
@@ -70,7 +73,7 @@ export default function CuentaPage() {
           icon={<CalendarPlus className="h-4 w-4" />}
           label="Próximas citas"
           value={String(proximas.length)}
-          nota="Confirmadas y pagadas"
+          nota="Muestra tu QR al llegar"
         />
         <KpiPastel
           tono="lila"
@@ -150,12 +153,19 @@ export default function CuentaPage() {
                   Ver dirección
                 </a>
               )}
-              <button
-                onClick={() => store.cancelarCita(c.id)}
-                className="btn-danger-ghost rounded-full px-3 py-2 text-sm font-medium"
-              >
-                Cancelar
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button type="button" onClick={() => setQr(c)} className="btn-gold is-sm">
+                  <QrCode className="h-4 w-4" /> Mi QR
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm("¿Cancelar esta cita?")) store.cancelarCita(c.id);
+                  }}
+                  className="btn-danger-ghost rounded-full px-3 py-2 text-sm font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
             </article>
           ))}
 
@@ -181,10 +191,12 @@ export default function CuentaPage() {
                     ? "badge-gold"
                     : c.estado === "cancelada"
                       ? "badge-danger"
-                      : "badge-neutral"
+                      : c.estado === "no_asistio"
+                        ? "badge-warm"
+                        : "badge-neutral"
                 }`}
               >
-                {c.estado}
+                {ETIQUETA_ESTADO_CITA[c.estado]}
               </span>
             </article>
           ))}
@@ -235,6 +247,21 @@ export default function CuentaPage() {
           </div>
         </section>
       </div>
+
+      {qr && (
+        <Modal titulo="Tu código de cita" descripcion="Muéstralo en recepción al llegar." onCerrar={() => setQr(null)}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <QrCita citaId={qr.id} tamano={240} />
+            <p className="font-semibold">{qr.barbero_nombre}</p>
+            <p className="text-sm capitalize" style={{ color: "var(--ink-muted)" }}>
+              {format(new Date(qr.inicio), "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
+            </p>
+            <p className="form-nota justify-center">
+              <Gift className="h-4 w-4 shrink-0" /> Al escanearlo se confirma tu llegada y se suma la visita a tu tarjeta.
+            </p>
+          </div>
+        </Modal>
+      )}
     </PanelShell>
   );
 }

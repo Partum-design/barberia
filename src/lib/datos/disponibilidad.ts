@@ -104,7 +104,7 @@ function ocupado(ctx: Contexto, inicio: number, fin: number) {
   return ctx.citas.some(
     (c) =>
       c.barbero_id === ctx.barbero.id &&
-      c.estado !== "cancelada" &&
+      (c.estado === "confirmada" || c.estado === "asistida") &&
       inicio < new Date(c.fin).getTime() &&
       fin > new Date(c.inicio).getTime()
   );

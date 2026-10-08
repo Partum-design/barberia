@@ -91,11 +91,24 @@ Mientras el emisor está en modo de prueba, sólo las cuentas de prueba del
 emisor pueden guardar el pase; Google lo abre al público tras aprobarlo. El
 pase es informativo: el canje se valida siempre contra el sistema con el QR.
 
+## Citas y confirmación por QR
+
+- Cada cita tiene su **QR** (en «Mi cuenta» del cliente y al terminar de reservar).
+- En **Confirmar cita** el personal lo escanea con la cámara: la cita pasa a
+  «Asistió» y la visita se suma sola a la tarjeta de lealtad. También acepta el
+  QR de la tarjeta (`LC-…`): confirma la cita del día o registra una visita sin cita.
+- Si el código es de otro día o de una cita cancelada, pide confirmación.
+- El QR abre `/confirmar?cita=…`, que lleva al personal a su escáner.
+- Estados de cita: Agendada, Asistió, No asistió y Cancelada. Las faltas y
+  cancelaciones no cuentan como ingreso ni ocupan horario.
+
 ## Módulos del panel de administración
 
 | Módulo | Ruta |
 |---|---|
 | Panel | `/dashboard/admin` |
+| **Citas** (agendar, reprogramar, cambiar barbero, asistió / no asistió, cancelar, cobrar) | `/dashboard/admin/citas` |
+| **Confirmar cita** (escáner QR con la cámara) | `/dashboard/admin/confirmar` |
 | Marketing (GA4 + Google Ads) | `/dashboard/admin/marketing` |
 | Clientes | `/dashboard/admin/clientes` |
 | **Tarjetas de lealtad** | `/dashboard/admin/lealtad` |

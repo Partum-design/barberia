@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Banknote, CalendarCheck, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, UserPlus, Users } from "lucide-react";
+import { Banknote, CalendarCheck, CalendarPlus, ScanLine, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, UserPlus, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { nombreDelNegocio, useBarberia } from "@/lib/store";
+import { citaActiva, nombreDelNegocio, useBarberia } from "@/lib/store";
 import { WALLET_VISIBLE } from "@/lib/modo";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -18,7 +18,7 @@ export default function DashboardAdminPage() {
   const { listo, citas, sesion, barberos, recompensasConfig, barberiaConfig, servicios, clientes } = store;
 
   const stats = useMemo(() => {
-    const vivas = citas.filter((c) => c.estado !== "cancelada");
+    const vivas = citas.filter(citaActiva);
     const asistidas = citas.filter((c) => c.estado === "asistida");
     const clientes = new Set(vivas.map((c) => c.cliente_id));
     const pendientesEfectivo = vivas.filter((c) => c.estado_pago === "pendiente");
@@ -70,9 +70,17 @@ export default function DashboardAdminPage() {
         title={nombreDelNegocio(barberiaConfig)}
         lead="Los números se actualizan en vivo con la actividad de clientes y barberos."
         actions={
-          <Link href="/dashboard/admin/usuarios" className="btn-gold px-5 py-2.5 text-sm">
-            <UserPlus className="h-4 w-4" /> Crear usuario
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/admin/confirmar" className="btn-gold px-5 py-2.5 text-sm">
+              <ScanLine className="h-4 w-4" /> Confirmar cita
+            </Link>
+            <Link href="/dashboard/admin/citas?nueva=" className="btn-linea">
+              <CalendarPlus className="h-4 w-4" /> Nueva cita
+            </Link>
+            <Link href="/dashboard/admin/usuarios" className="btn-linea">
+              <UserPlus className="h-4 w-4" /> Crear usuario
+            </Link>
+          </div>
         }
       />
 

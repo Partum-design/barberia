@@ -33,6 +33,10 @@ import {
 export {
   BARBERIA_VACIA,
   DIAS_SEMANA,
+  ETIQUETA_ESTADO_CITA,
+  citaActiva,
+  enlaceDeCita,
+  idDeCitaEnTexto,
   NOMBRE_POR_DEFECTO,
   calcularLealtad,
   nombreDelNegocio,
@@ -46,6 +50,7 @@ export type {
   Cliente,
   ClienteResumen,
   DiaSemana,
+  EstadoCita,
   EstadoPago,
   EstadoTarjeta,
   Ficha,
@@ -252,6 +257,10 @@ export function useBarberia() {
     recargar: cargar,
     horarioDeBarbero,
     crearCita,
+    crearCitaPersonal,
+    actualizarCita: (id: string, cambios: CambiosCita, forzar = false) =>
+      ejecutarEnServidor({ tipo: "actualizarCita", id, cambios, forzar }),
+    confirmarLlegada: (id: string) => ejecutarEnServidor({ tipo: "marcarAsistida", id }),
     marcarAsistida: (id: string) => ejecutar({ tipo: "marcarAsistida", id }),
     cancelarCita: (id: string) => ejecutar({ tipo: "cancelarCita", id }),
     cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarEfectivo", id }),
@@ -283,6 +292,47 @@ export function useBarberia() {
 }
 
 // --- Mutadores que devuelven lo creado --------------------------------------
+
+type CambiosCita = Extract<Operacion, { tipo: "actualizarCita" }>["cambios"];
+
+/**
+ * Igual que `ejecutar`, pero espera la respuesta del servidor y devuelve el
+ * error en lugar de mostrar una alerta: lo usan los formularios de citas y el
+ * escáner, que enseñan el motivo en su propia pantalla.
+ */
+async function ejecutarEnServidor(op: Operacion): Promise<{ ok: boolean; error: string | null }> {
+  const { sesion, estado } = snapshot;
+  if (!sesion) return { ok: false, error: "Tu sesión terminó. Vuelve a iniciar sesión." };
+  try {
+    aplicarOperacion(estado, op, sesion);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "No se pudo completar la acción." };
+  }
+  try {
+    const res = await fetch("/api/datos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ op }),
+    });
+    const cuerpo = (await res.json().catch(() => ({}))) as { estado?: Estado; error?: string };
+    if (!res.ok || !cuerpo.estado) {
+      void cargar();
+      return { ok: false, error: cuerpo.error ?? "No se pudo guardar el cambio." };
+    }
+    aplicarDelServidor(cuerpo.estado);
+    return { ok: true, error: null };
+  } catch {
+    return { ok: false, error: "Sin conexión. Intenta de nuevo." };
+  }
+}
+
+/** El personal agenda a nombre de un cliente (mostrador, teléfono, WhatsApp). */
+async function crearCitaPersonal(datos: Omit<Extract<Operacion, { tipo: "crearCitaPersonal" }>, "tipo" | "id">) {
+  const op: Operacion = { tipo: "crearCitaPersonal", id: nuevoId("c"), ...datos };
+  const r = await ejecutarEnServidor(op);
+  return { ...r, id: r.ok ? op.id : null };
+}
 
 /**
  * Reserva una cita. A diferencia del resto de cambios, espera al servidor:

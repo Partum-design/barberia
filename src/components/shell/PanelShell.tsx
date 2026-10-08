@@ -19,6 +19,7 @@ import {
   Megaphone,
   PieChart,
   Plug,
+  ScanLine,
   Scissors,
   Settings,
   Sparkles,
@@ -35,12 +36,15 @@ type NavItem = { label: string; corto?: string; href: string; icon: React.ReactN
 const NAV: Record<Rol, NavItem[]> = {
   barbero: [
     { label: "Mi agenda", href: "/dashboard/barbero", icon: <CalendarDays className="h-4 w-4" /> },
+    { label: "Confirmar cita", corto: "Escanear", href: "/dashboard/barbero/confirmar", icon: <ScanLine className="h-4 w-4" /> },
     { label: "Fichas", href: "/dashboard/barbero/fichas", icon: <ClipboardList className="h-4 w-4" /> },
     { label: "Horarios", href: "/dashboard/barbero/horarios", icon: <Clock3 className="h-4 w-4" /> },
     { label: "Configuración", corto: "Ajustes", href: "/dashboard/barbero/configuracion", icon: <Settings className="h-4 w-4" /> },
   ],
   admin: [
     { label: "Panel", href: "/dashboard/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
+    { label: "Citas", href: "/dashboard/admin/citas", icon: <CalendarDays className="h-4 w-4" /> },
+    { label: "Confirmar cita", corto: "Escanear", href: "/dashboard/admin/confirmar", icon: <ScanLine className="h-4 w-4" /> },
     { label: "Marketing", href: "/dashboard/admin/marketing", icon: <Megaphone className="h-4 w-4" /> },
     { label: "Clientes", href: "/dashboard/admin/clientes", icon: <Users className="h-4 w-4" /> },
     { label: "Tarjetas de lealtad", corto: "Lealtad", href: "/dashboard/admin/lealtad", icon: <IdCard className="h-4 w-4" /> },
@@ -66,8 +70,8 @@ const NAV: Record<Rol, NavItem[]> = {
 // En el teléfono la barra inferior lleva sólo los accesos del día a día; el
 // resto vive en "Más", una hoja con botones grandes.
 const PRINCIPALES_MOVIL: Record<Rol, string[]> = {
-  admin: ["Panel", "Clientes", "Caja y finanzas", "Usuarios"],
-  barbero: ["Mi agenda", "Fichas", "Horarios", "Configuración"],
+  admin: ["Panel", "Citas", "Confirmar cita", "Clientes"],
+  barbero: ["Mi agenda", "Confirmar cita", "Fichas", "Horarios"],
   cliente: ["Mi cuenta", "Agendar cita", "Mi tarjeta", "Recompensas"],
 };
 

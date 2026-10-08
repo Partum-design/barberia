@@ -44,7 +44,7 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { useBarberia } from "@/lib/store";
+import { citaActiva, useBarberia } from "@/lib/store";
 import type { ResumenAds, ResumenAnalytics } from "@/lib/integrations/tipos";
 
 type Pestana = "audiencia" | "campanas" | "atribucion";
@@ -108,13 +108,13 @@ export default function MarketingPage() {
   const ingresos = useMemo(() => {
     const desde = Date.now() - 28 * 24 * 3600 * 1000;
     return citas
-      .filter((c) => c.estado !== "cancelada" && new Date(c.inicio).getTime() >= desde)
+      .filter((c) => citaActiva(c) && new Date(c.inicio).getTime() >= desde)
       .reduce((acc, c) => acc + (c.estado_pago === "pagado" ? c.precio : 0), 0);
   }, [citas]);
 
   const citasPeriodo = useMemo(() => {
     const desde = Date.now() - 28 * 24 * 3600 * 1000;
-    return citas.filter((c) => c.estado !== "cancelada" && new Date(c.inicio).getTime() >= desde);
+    return citas.filter((c) => citaActiva(c) && new Date(c.inicio).getTime() >= desde);
   }, [citas]);
 
   if (!listo) return null;

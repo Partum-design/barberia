@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Home, KeyRound, Loader2, Plus, ShieldCheck, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Home, KeyRound, Loader2, Plus, Settings2, ShieldCheck, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
-import { useBarberia } from "@/lib/store";
+import { Modal } from "@/components/panel/Modal";
+import { EditorBarbero } from "@/components/citas/EditorBarbero";
+import { citaActiva, useBarberia, type Barbero } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -43,6 +45,7 @@ export default function EquipoBarberoPage() {
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
+  const [editando, setEditando] = useState<Barbero | null>(null);
   const esAdmin = sesion?.rol === "admin";
 
   const cargarCuentas = useCallback(async () => {
@@ -60,7 +63,7 @@ export default function EquipoBarberoPage() {
   const conStats = useMemo(
     () =>
       barberos.map((m) => {
-        const suyas = citas.filter((c) => c.barbero_id === m.id && c.estado !== "cancelada");
+        const suyas = citas.filter((c) => c.barbero_id === m.id && citaActiva(c));
         return { ...m, citas: suyas.length, ingresos: suyas.reduce((s, c) => s + c.precio, 0) };
       }),
     [barberos, citas]
@@ -119,7 +122,7 @@ export default function EquipoBarberoPage() {
           <p className="kicker">Equipo</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">Equipo de barberos</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-            Da de alta barberos y activa o desactiva su disponibilidad para agendar.
+            Da de alta barberos y cambia su configuración: precio, duración de citas, domicilio y disponibilidad.
           </p>
         </div>
         <button
@@ -137,8 +140,8 @@ export default function EquipoBarberoPage() {
         </p>
       )}
       {aviso && (
-        <p className="mb-4 rounded-xl px-4 py-3 text-sm ring-1 ring-emerald-500/30" role="status">
-          {aviso}
+        <p className="aviso-ok anim-pop mb-4" role="status">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> {aviso}
         </p>
       )}
 
@@ -259,6 +262,20 @@ export default function EquipoBarberoPage() {
                 <p className="truncate text-xs" style={{ color: "var(--ink-muted)" }}>{m.especialidad}</p>
               </div>
             </div>
+            <dl className="mb-3 grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Precio</dt>
+                <dd className="font-semibold">{mxn.format(m.precio_servicio)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Duración</dt>
+                <dd className="font-semibold">{m.duracion_cita_min} min</dd>
+              </div>
+              <div>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Domicilio</dt>
+                <dd className="font-semibold">{m.acepta_domicilio ? "Sí" : "No"}</dd>
+              </div>
+            </dl>
             <dl className="mb-4 grid grid-cols-2 gap-2 text-sm">
               <div>
                 <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Citas</dt>
@@ -272,6 +289,13 @@ export default function EquipoBarberoPage() {
             <p className="mb-3 truncate text-xs" style={{ color: "var(--ink-muted)" }}>
               {correoDe(m.id) ?? "Sin cuenta de acceso"}
             </p>
+            <button
+              type="button"
+              onClick={() => setEditando(m)}
+              className="btn-gold mb-2 w-full justify-center px-4 py-2 text-sm"
+            >
+              <Settings2 className="h-4 w-4" /> Editar configuración
+            </button>
             {correoDe(m.id) && (
               <button
                 onClick={() => cambiarClave(m.id, m.nombre)}
@@ -293,6 +317,25 @@ export default function EquipoBarberoPage() {
           </article>
         ))}
       </section>
+
+      {editando && (
+        <Modal
+          titulo={`Configurar a ${editando.nombre}`}
+          descripcion="Los cambios se reflejan en la portada y en las reservas nuevas."
+          onCerrar={() => setEditando(null)}
+          ancho="lg"
+        >
+          <EditorBarbero
+            barbero={editando}
+            onCancelar={() => setEditando(null)}
+            onListo={(m) => {
+              setEditando(null);
+              setError(null);
+              setAviso(m);
+            }}
+          />
+        </Modal>
+      )}
 
       <Administradores
         cuentas={cuentas.filter((c) => c.rol === "admin")}

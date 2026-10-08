@@ -25,7 +25,7 @@ import {
   numero,
   porcentaje,
 } from "@/components/panel/ModuleUI";
-import { useBarberia, type Gasto } from "@/lib/store";
+import { citaActiva, useBarberia, type Gasto } from "@/lib/store";
 
 const CATEGORIAS: Gasto["categoria"][] = [
   "Renta",
@@ -53,7 +53,7 @@ export default function CajaPage() {
 
   const periodo = useMemo(() => {
     const enRango = citas.filter(
-      (c) => c.estado !== "cancelada" && new Date(c.inicio).getTime() >= desde
+      (c) => citaActiva(c) && new Date(c.inicio).getTime() >= desde
     );
     const pagadas = enRango.filter((c) => c.estado_pago === "pagado");
     const tarjeta = pagadas.filter((c) => c.metodo_pago === "tarjeta");

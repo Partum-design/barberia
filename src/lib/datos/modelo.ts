@@ -178,10 +178,17 @@ export type TarjetaLealtad = {
 
 // --- Catálogo, inventario y caja -------------------------------------------
 
+/** Secciones del menú. Barba, Color y Ritual quedan por datos anteriores al menú impreso. */
+export const CATEGORIAS_SERVICIO = ["Corte", "Afeitado", "Rostro", "Paquete", "Especial", "Barba", "Color", "Ritual"] as const;
+
 export type Servicio = {
   id: string;
   nombre: string;
-  categoria: "Corte" | "Barba" | "Color" | "Ritual" | "Paquete";
+  categoria: (typeof CATEGORIAS_SERVICIO)[number];
+  /** Qué incluye, p. ej. "Corte y facial" en los paquetes */
+  descripcion?: string;
+  /** El precio es mínimo ("A partir de $250"): sube según largo o diseño */
+  desde?: boolean;
   precio: number;
   duracion_min: number;
   /** Porcentaje del servicio que se lleva el barbero */
@@ -354,6 +361,8 @@ export type Operacion =
   | { tipo: "cobrarEfectivo"; id: string }
   | { tipo: "marcarAsistida"; id: string }
   | { tipo: "cancelarCita"; id: string }
+  | { tipo: "eliminarCita"; id: string }
+  | { tipo: "eliminarTodasLasCitas" }
   | { tipo: "agregarBarbero"; barbero: Barbero }
   | { tipo: "actualizarBarbero"; id: string; cambios: Partial<Omit<Barbero, "id">> }
   | { tipo: "toggleActivoBarbero"; id: string }
@@ -366,6 +375,7 @@ export type Operacion =
   | { tipo: "actualizarBarberiaConfig"; cambios: Partial<BarberiaConfig> }
   | { tipo: "canjearRecompensa"; clienteId: string }
   | { tipo: "agregarServicio"; servicio: Servicio }
+  | { tipo: "agregarServicios"; servicios: Servicio[] }
   | { tipo: "actualizarServicio"; id: string; cambios: Partial<Omit<Servicio, "id">> }
   | { tipo: "agregarProducto"; producto: Producto }
   | { tipo: "ajustarExistencias"; id: string; delta: number }
@@ -634,6 +644,16 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       return { citas: estado.citas.map((c) => (c.id === op.id ? { ...c, ...cambios } : c)) };
     }
 
+    case "eliminarCita":
+      // Borrar no es cancelar: la cita desaparece de agenda, caja, reportes y sellos.
+      exigir(s.rol === "admin", "Sólo el administrador elimina citas.");
+      buscar(estado.citas, op.id, "Cita");
+      return { citas: estado.citas.filter((c) => c.id !== op.id) };
+
+    case "eliminarTodasLasCitas":
+      exigir(s.rol === "admin", "Sólo el administrador elimina citas.");
+      return { citas: [] };
+
     case "agregarBarbero":
       // Lo usa /api/admin/usuarios tras crear la cuenta: el id es el del usuario.
       exigir(s.rol === "admin");
@@ -752,6 +772,15 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       exigir(s.rol === "admin");
       idNuevo(estado.servicios, op.servicio.id);
       return { servicios: [...estado.servicios, op.servicio] };
+
+    case "agregarServicios": {
+      // Carga del menú impreso: sólo entra lo que aún no está (por nombre).
+      exigir(s.rol === "admin");
+      const nombres = new Set(estado.servicios.map((x) => x.nombre.trim().toLowerCase()));
+      const nuevos = (op.servicios ?? []).filter((x) => !nombres.has(x.nombre.trim().toLowerCase()));
+      for (const x of nuevos) idNuevo(estado.servicios, x.id);
+      return nuevos.length > 0 ? { servicios: [...estado.servicios, ...nuevos] } : {};
+    }
 
     case "actualizarServicio":
       exigir(s.rol === "admin");

@@ -76,22 +76,29 @@ function estadoHoy(horario: BarberiaConfig["horario"], ahora: Date) {
 const ICONO_CATEGORIA: Record<Servicio["categoria"], (p: { className?: string }) => React.ReactElement> = {
   Corte: Tijeras,
   Barba: Navaja,
+  Afeitado: Navaja,
+  Rostro: Brocha,
   Ritual: Brocha,
   Color: Navajazo,
   Paquete: Maquina,
+  Especial: Peine,
 };
 
-/** Lo que se ofrece mientras el panel no tenga servicios capturados. */
-const SERVICIOS_BASE = [
-  { icono: Tijeras, nombre: "Corte de cabello", texto: "Clásico o moderno, a tijera y máquina, con el acabado que pides." },
-  { icono: Maquina, nombre: "Degradados", texto: "Fades limpios y transiciones parejas, del bajo al alto." },
-  { icono: Navaja, nombre: "Arreglo de barba", texto: "Perfilado, rebajado y línea marcada a navaja." },
-  { icono: Peine, nombre: "Perfilado y diseño", texto: "Contornos, líneas y detalles que marcan la diferencia." },
-  { icono: Brocha, nombre: "Corte + barba", texto: "El servicio completo para salir impecable de una vez." },
-  { icono: Navajazo, nombre: "Peinado y estilo", texto: "Te dejamos listo para la ocasión, con el producto ideal." },
-];
+const TITULO_CATEGORIA: Partial<Record<Servicio["categoria"], string>> = {
+  Corte: "Corte de cabello",
+  Especial: "Servicios especiales",
+  Paquete: "Paquetes",
+};
 
-const MARQUESINA = ["Cortes", "Degradados", "Barba", "Navaja", "Perfilado", "Estilo", "Tarjeta de lealtad"];
+/** WhatsApp pide lada de país: a un número de 10 dígitos le antepone el 52 de México. */
+function enlaceWhatsApp(numero: string, texto: string) {
+  const d = numero.replace(/\D/g, "");
+  if (!d) return null;
+  return `https://wa.me/${d.length === 10 ? `52${d}` : d}?text=${encodeURIComponent(texto)}`;
+}
+
+
+const MARQUESINA = ["Cortes", "Grecas", "Afeitado", "Facial", "Cejas", "Paquetes", "Crioterapia", "Box Braids"];
 
 /** Número que sube desde 0 cuando entra en pantalla. */
 function Contador({ valor, decimales = 0 }: { valor: number; decimales?: number }) {
@@ -207,25 +214,35 @@ export function SitioNegocio() {
   const horario = DIAS_SEMANA.some((d) => horarioPanel[d.id].activo) ? horarioPanel : PERFIL.horario;
   const hoy = ahora ? estadoHoy(horario, ahora) : null;
 
+  const instagram = cfg.instagram.trim() || PERFIL.instagram;
+  const tiktok = cfg.tiktok.trim() || PERFIL.tiktok;
   const redes = [
-    { id: "instagram" as const, icono: <Instagram />, url: enlaceRed("instagram", cfg.instagram), label: "Instagram" },
+    { id: "instagram" as const, icono: <Instagram />, url: enlaceRed("instagram", instagram), label: `Instagram @${instagram.replace(/^@/, "")}` },
     { id: "facebook" as const, icono: <Facebook />, url: enlaceRed("facebook", cfg.facebook), label: "Facebook" },
-    { id: "tiktok" as const, icono: <Sparkles />, url: enlaceRed("tiktok", cfg.tiktok), label: "TikTok" },
+    { id: "tiktok" as const, icono: <Sparkles />, url: enlaceRed("tiktok", tiktok), label: `TikTok @${tiktok.replace(/^@/, "")}` },
   ].filter((r) => r.url);
 
-  const whatsapp = cfg.whatsapp
-    ? `https://wa.me/${soloDigitos(cfg.whatsapp).replace(/^\+/, "")}?text=${encodeURIComponent(`Hola ${nombre}, quiero información para agendar.`)}`
-    : null;
+  const whatsapp = enlaceWhatsApp(cfg.whatsapp.trim() || PERFIL.whatsapp, `Hola ${nombre}, quiero información para agendar.`);
 
-  const tarjetasServicio =
-    activos.length > 0
-      ? activos.slice(0, 6).map((s) => ({
-          icono: ICONO_CATEGORIA[s.categoria] ?? Tijeras,
-          nombre: s.nombre,
-          texto: `${s.categoria} · ${s.duracion_min} min`,
-          precio: s.precio,
-        }))
-      : SERVICIOS_BASE.map((s) => ({ ...s, precio: null as number | null }));
+  // El catálogo del panel manda; sin él se muestra el menú impreso.
+  const secciones = useMemo(() => {
+    type Item = Pick<Servicio, "nombre" | "categoria" | "precio" | "duracion_min" | "descripcion" | "desde">;
+    const menu: readonly Item[] = activos.length > 0 ? activos : PERFIL.menu;
+    const m = new Map<Servicio["categoria"], Item[]>();
+    for (const s of menu) m.set(s.categoria, [...(m.get(s.categoria) ?? []), s]);
+    return [...m.entries()];
+  }, [activos]);
+  // Tarjetas grandes: el primer servicio de cada sección.
+  const tarjetasServicio = secciones.slice(0, 6).map(([, lista]) => {
+    const s = lista[0];
+    return {
+      icono: ICONO_CATEGORIA[s.categoria] ?? Tijeras,
+      nombre: s.nombre,
+      texto: s.descripcion || `${TITULO_CATEGORIA[s.categoria] ?? s.categoria} · ${s.duracion_min} min`,
+      precio: s.precio,
+      desde: Boolean(s.desde),
+    };
+  });
 
   const equipo =
     equipoPanel.length > 0
@@ -393,21 +410,41 @@ export function SitioNegocio() {
                   </span>
                   <h3>{s.nombre}</h3>
                   <p>{s.texto}</p>
-                  {s.precio !== null ? (
-                    <div className="cm-service-price">
-                      <small>Desde</small>
-                      <b>{mxn.format(s.precio)}</b>
-                    </div>
-                  ) : (
-                    <Link href="/reservar" className="cm-service-link">
-                      Agendar <ArrowRight />
-                    </Link>
-                  )}
+                  <div className="cm-service-price">
+                    {s.desde && <small>A partir de</small>}
+                    <b>{mxn.format(s.precio)}</b>
+                  </div>
                 </article>
               </Reveal>
             );
           })}
         </div>
+
+        <Reveal className="cm-menu">
+          {secciones.map(([categoria, lista]) => (
+            <div key={categoria} className="cm-menu-seccion">
+              <h3>{TITULO_CATEGORIA[categoria] ?? categoria}</h3>
+              <ul>
+                {lista.map((s) => (
+                  <li key={s.nombre}>
+                    <span className="cm-menu-nombre">
+                      {s.nombre}
+                      {s.descripcion && <small>{s.descripcion}</small>}
+                    </span>
+                    <i aria-hidden />
+                    <span className="cm-menu-precio">
+                      {s.desde && <small>A partir de </small>}
+                      {mxn.format(s.precio)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <Link href="/reservar" className="cm-btn cm-menu-cta">
+            <CalendarCheck /> Reservar cita
+          </Link>
+        </Reveal>
         <Brocha className="cm-deco cm-deco-a" />
         <Tijeras className="cm-deco cm-deco-b" />
       </section>

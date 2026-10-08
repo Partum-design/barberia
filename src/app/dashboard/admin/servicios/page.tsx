@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, CheckCircle2, Clock3, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
+import { Check, CheckCircle2, Clock3, ListPlus, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EmptyState, Metric, ModulePanel, SinAcceso, moneda, numero } from "@/components/panel/ModuleUI";
 import { Campo, Modal } from "@/components/panel/Modal";
-import { useBarberia, type Servicio } from "@/lib/store";
+import { CATEGORIAS_SERVICIO, useBarberia, type Servicio } from "@/lib/store";
+import { PERFIL } from "@/lib/negocio/perfil";
 
-const CATEGORIAS: Servicio["categoria"][] = ["Corte", "Barba", "Color", "Ritual", "Paquete"];
-const VACIO = { nombre: "", categoria: "Corte" as Servicio["categoria"], precio: "250", duracion_min: "30", comision_pct: "45" };
+const VACIO = {
+  nombre: "",
+  categoria: "Corte" as Servicio["categoria"],
+  descripcion: "",
+  desde: false,
+  precio: "250",
+  duracion_min: "30",
+  comision_pct: "45",
+};
 
 /**
  * Catálogo de servicios. Aquí vive el precio: la reserva y el mostrador lo
@@ -64,6 +72,24 @@ export default function ServiciosPage() {
     if (store.eliminarServicio(s.id)) setAviso(`«${s.nombre}» eliminado del catálogo.`);
   }
 
+  // Servicios del menú impreso que todavía no están en el catálogo.
+  const faltantes = PERFIL.menu.filter(
+    (m) => !servicios.some((s) => s.nombre.trim().toLowerCase() === m.nombre.toLowerCase())
+  );
+
+  async function cargarMenu() {
+    const r = await store.agregarServicios(
+      faltantes.map((m) => ({
+        ...m,
+        id: `srv-${crypto.randomUUID().slice(0, 8)}`,
+        comision_pct: Number(VACIO.comision_pct),
+        activo: true,
+      }))
+    );
+    if (!r.ok) window.alert(r.error);
+    else setAviso(`Se agregaron ${faltantes.length} servicios del menú.`);
+  }
+
   return (
     <PanelShell sesion={sesion} activo="Servicios" onLogout={store.logout}>
       <header className="anim-in mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -74,9 +100,16 @@ export default function ServiciosPage() {
             El precio y la duración de cada cita salen de aquí. La comisión del barbero sólo la ves tú.
           </p>
         </div>
-        <button type="button" className="btn-gold px-5 py-2.5 text-sm" onClick={() => setEditando({})}>
-          <Plus className="h-4 w-4" /> Nuevo servicio
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {faltantes.length > 0 && (
+            <button type="button" className="btn-linea" onClick={cargarMenu} title="Agrega los servicios del menú impreso que faltan">
+              <ListPlus className="h-4 w-4" /> Cargar menú ({faltantes.length})
+            </button>
+          )}
+          <button type="button" className="btn-gold px-5 py-2.5 text-sm" onClick={() => setEditando({})}>
+            <Plus className="h-4 w-4" /> Nuevo servicio
+          </button>
+        </div>
       </header>
 
       {aviso && (
@@ -114,12 +147,16 @@ export default function ServiciosPage() {
                       {!s.activo && <span className="badge badge-warm">En pausa</span>}
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>
+                      {s.descripcion ? `${s.descripcion} · ` : ""}
                       {s.duracion_min} min · comisión {s.comision_pct}% ({moneda.format(s.precio - caja)}) · queda en caja{" "}
                       {moneda.format(caja)}
                       {v ? ` · vendido ${v.veces} ${v.veces === 1 ? "vez" : "veces"} (${moneda.format(v.ingresos)})` : ""}
                     </p>
                   </div>
-                  <strong className="fila-servicio-precio">{moneda.format(s.precio)}</strong>
+                  <strong className="fila-servicio-precio">
+                    {s.desde && <small className="mr-1 font-normal">desde</small>}
+                    {moneda.format(s.precio)}
+                  </strong>
                   <div className="flex gap-1.5">
                     <button type="button" className="btn-icono" title="Editar" aria-label={`Editar ${s.nombre}`} onClick={() => setEditando({ servicio: s })}>
                       <Pencil className="h-4 w-4" />
@@ -179,6 +216,8 @@ function FormularioServicio({
       ? {
           nombre: servicio.nombre,
           categoria: servicio.categoria,
+          descripcion: servicio.descripcion ?? "",
+          desde: Boolean(servicio.desde),
           precio: String(servicio.precio),
           duracion_min: String(servicio.duracion_min),
           comision_pct: String(servicio.comision_pct),
@@ -196,6 +235,8 @@ function FormularioServicio({
     const datos = {
       nombre: f.nombre.trim(),
       categoria: f.categoria,
+      descripcion: f.descripcion.trim(),
+      desde: f.desde,
       precio: Math.round(Number(f.precio)),
       duracion_min: Math.round(Number(f.duracion_min)),
       comision_pct: Math.round(Number(f.comision_pct)),
@@ -220,16 +261,22 @@ function FormularioServicio({
       </Campo>
       <Campo label="Categoría">
         <select className="campo-input" value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value as Servicio["categoria"] })}>
-          {CATEGORIAS.map((c) => (
+          {CATEGORIAS_SERVICIO.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
           ))}
         </select>
       </Campo>
+      <Campo label="Incluye" ancho="completo" ayuda="Opcional. Se ve en la portada, p. ej. «Corte y facial».">
+        <input className="campo-input" value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} placeholder="Corte y facial" />
+      </Campo>
       <Campo label="Precio (MXN)">
         <input className="campo-input" type="number" inputMode="numeric" min={0} value={f.precio} onChange={(e) => setF({ ...f, precio: e.target.value })} />
       </Campo>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={f.desde} onChange={(e) => setF({ ...f, desde: e.target.checked })} /> Precio «a partir de»
+      </label>
       <Campo label="Duración (min)">
         <input className="campo-input" type="number" inputMode="numeric" min={5} step={5} value={f.duracion_min} onChange={(e) => setF({ ...f, duracion_min: e.target.value })} />
       </Campo>

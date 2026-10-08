@@ -77,7 +77,10 @@ export function TarjetaLealtadVisual({
               : `${requerido - progreso} sello${requerido - progreso === 1 ? "" : "s"} para ${descuento}% de descuento`}
           </p>
         </div>
-        <div className="loyalty-card-qr" aria-label={`Código QR de la tarjeta ${numero}`} dangerouslySetInnerHTML={{ __html: qr }} />
+        <figure className="loyalty-card-qr-wrap">
+          <div className="loyalty-card-qr" aria-label={`Código QR de la tarjeta ${numero}`} dangerouslySetInnerHTML={{ __html: qr }} />
+          <figcaption>{numero}</figcaption>
+        </figure>
       </footer>
     </article>
   );

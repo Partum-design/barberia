@@ -5,9 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
-import { calcularLealtad, useBarberia, type Barbero, type Servicio } from "@/lib/store";
+import { calcularLealtad, enlaceDeCita, nombreDelNegocio, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
 import { QrCita } from "@/components/citas/QrCita";
+import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 
 type Paso = "servicio" | "barbero" | "horario" | "confirmar" | "confirmada";
 
@@ -295,6 +296,23 @@ export function FlujoReserva() {
             {citaId && (
               <div className="mx-auto mt-5 flex w-fit flex-col items-center gap-2">
                 <QrCita citaId={citaId} tamano={190} />
+                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  Código: <b>{citaId}</b>
+                  {tarjeta && <> · Tarjeta: <b>{tarjeta.numero}</b></>}
+                </p>
+                <BotonGuardarQr
+                  datos={{
+                    contenido: enlaceDeCita(citaId, window.location.origin),
+                    titulo: nombreDelNegocio(barberiaConfig),
+                    subtitulo: "Tu cita",
+                    codigo: citaId,
+                    detalles: [
+                      `${barbero.nombre} · ${format(slot, "d MMM yyyy, HH:mm 'h'", { locale: es })}`,
+                      ...(tarjeta ? [`Tarjeta de lealtad ${tarjeta.numero}`] : []),
+                    ],
+                    archivo: `cita-${citaId}`,
+                  }}
+                />
                 <p className="max-w-xs text-xs" style={{ color: "var(--ink-muted)" }}>
                   Muestra este QR al llegar: confirma tu cita y suma la visita a tu tarjeta. También lo tienes en «Mi cuenta».
                 </p>

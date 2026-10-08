@@ -8,9 +8,10 @@ import { Banknote, CalendarPlus, CreditCard, Gift, Home, MapPin, QrCode, Sparkle
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
-import { calcularLealtad, ETIQUETA_ESTADO_CITA, useBarberia, type Cita } from "@/lib/store";
+import { calcularLealtad, enlaceDeCita, ETIQUETA_ESTADO_CITA, nombreDelNegocio, useBarberia, type Cita } from "@/lib/store";
 import { Modal } from "@/components/panel/Modal";
 import { QrCita } from "@/components/citas/QrCita";
+import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -18,7 +19,7 @@ const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN",
 // Nodo Cliente: su cuenta con citas, historial y programa de recompensas.
 export default function CuentaPage() {
   const store = useBarberia();
-  const { listo, citas, sesion, recompensasConfig, tarjetas } = store;
+  const { listo, citas, sesion, recompensasConfig, tarjetas, barberiaConfig } = store;
   const clienteId = sesion?.id ?? "";
   const tarjeta = tarjetas.find((t) => t.cliente_id === clienteId);
   const [qr, setQr] = useState<Cita | null>(null);
@@ -257,6 +258,27 @@ export default function CuentaPage() {
             <p className="text-sm capitalize" style={{ color: "var(--ink-muted)" }}>
               {format(new Date(qr.inicio), "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
             </p>
+            <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+              Código de cita: <b>{qr.id}</b>
+              {tarjeta && (
+                <>
+                  {" · "}Tarjeta: <b>{tarjeta.numero}</b>
+                </>
+              )}
+            </p>
+            <BotonGuardarQr
+              datos={{
+                contenido: enlaceDeCita(qr.id, window.location.origin),
+                titulo: nombreDelNegocio(barberiaConfig),
+                subtitulo: "Tu cita",
+                codigo: qr.id,
+                detalles: [
+                  `${qr.barbero_nombre} · ${format(new Date(qr.inicio), "d MMM yyyy, HH:mm 'h'", { locale: es })}`,
+                  ...(tarjeta ? [`Tarjeta de lealtad ${tarjeta.numero}`] : []),
+                ],
+                archivo: `cita-${qr.id}`,
+              }}
+            />
             <p className="form-nota justify-center">
               <Gift className="h-4 w-4 shrink-0" /> Al escanearlo se confirma tu llegada y se suma la visita a tu tarjeta.
             </p>

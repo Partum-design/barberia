@@ -2228,3 +2228,7 @@ html[data-movimiento="reducido"] *::after {
 .login-lead-lg { margin-top: 0.7rem; color: var(--ink-muted); font-size: 1rem; line-height: 1.6; }
 .login-code-input { text-align: center; font-family: var(--font-num), monospace; font-size: 1.8rem !important; letter-spacing: 0.5em; padding-left: 1.4rem !important; }
 .login-help { margin-top: 0.5rem; color: var(--ink-muted); font-size: 0.85rem; line-height: 1.5; }
+
+/* Número de la tarjeta bajo su QR, para dictarlo si la cámara no lo lee */
+.loyalty-card-qr-wrap { display: grid; justify-items: center; gap: 0.3rem; margin: 0; flex-shrink: 0; }
+.loyalty-card-qr-wrap figcaption { font-family: var(--font-num); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }

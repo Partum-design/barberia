@@ -554,6 +554,8 @@ body:has(.app-shell) .a11y-fab { display: none; }
 .btn-linea:hover { border-color: var(--cm-orange); background: rgba(247, 147, 30, 0.08); }
 .btn-linea:active { transform: scale(0.97); }
 .btn-linea.is-sm, .btn-gold.is-sm { min-height: 2.25rem; padding: 0.4rem 0.85rem; font-size: 0.8rem; }
+.btn-linea.is-danger { color: #f0a59c; }
+.btn-linea.is-danger:hover { border-color: #f0a59c; background: rgba(224, 108, 100, 0.1); }
 .btn-gold.is-sm { display: inline-flex; align-items: center; gap: 0.4rem; }
 .btn-gold:disabled { opacity: 0.45; pointer-events: none; }
 .btn-icono {

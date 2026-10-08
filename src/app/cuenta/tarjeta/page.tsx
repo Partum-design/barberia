@@ -8,6 +8,7 @@ import { CalendarPlus, CheckCircle2, Gift, QrCode, Smartphone, User } from "luci
 import { PanelShell } from "@/components/shell/PanelShell";
 import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual";
 import { BotonGoogleWallet } from "@/components/lealtad/BotonGoogleWallet";
+import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { estadoTarjeta, solicitarPase } from "@/lib/lealtad";
 import { nombreDelNegocio, useBarberia } from "@/lib/store";
 import { WALLET_VISIBLE } from "@/lib/modo";
@@ -96,6 +97,18 @@ export default function MiTarjetaPage() {
               descuento={recompensasConfig.valor_descuento}
               suspendida={tarjeta.estado === "suspendida"}
             />
+            {tarjeta.estado === "activa" && (
+              <BotonGuardarQr
+                datos={{
+                  contenido: tarjeta.numero,
+                  titulo: nombreDelNegocio(barberiaConfig),
+                  subtitulo: "Tarjeta de lealtad",
+                  codigo: tarjeta.numero,
+                  detalles: [titular, `${estado.lealtad.progreso} de ${estado.lealtad.requerido} sellos`],
+                  archivo: `tarjeta-${tarjeta.numero}`,
+                }}
+              />
+            )}
             {tarjeta.estado === "activa" ? (
               WALLET_VISIBLE && <BotonGoogleWallet pase={estado.pase} onGuardada={() => marcarWalletGuardada(tarjeta.id)} />
             ) : (

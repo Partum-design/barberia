@@ -1,4 +1,4 @@
-import type { HorarioSemanal } from "@/lib/datos/modelo";
+import type { HorarioSemanal, Servicio } from "@/lib/datos/modelo";
 
 // ============================================================================
 // Ficha pública de Barbería CortMart, tomada de su perfil de Google Maps
@@ -6,16 +6,45 @@ import type { HorarioSemanal } from "@/lib/datos/modelo";
 // capture en el panel siempre tiene prioridad sobre estos datos.
 // ============================================================================
 
+type ServicioMenu = Pick<Servicio, "nombre" | "categoria" | "precio" | "duracion_min"> &
+  Pick<Servicio, "descripcion" | "desde">;
+
+// Las duraciones no vienen en el menú: son un punto de partida para la agenda
+// y se ajustan en Panel → Servicios.
+const MENU: readonly ServicioMenu[] = [
+  { categoria: "Corte", nombre: "Corte de adulto", precio: 200, duracion_min: 40 },
+  { categoria: "Corte", nombre: "Corte Junior", precio: 180, duracion_min: 30 },
+  { categoria: "Corte", nombre: "Diseño de grecas", precio: 60, duracion_min: 15 },
+  { categoria: "Afeitado", nombre: "Afeitado Clásico", precio: 200, duracion_min: 30 },
+  { categoria: "Afeitado", nombre: "Afeitado CortMart", precio: 300, duracion_min: 45 },
+  { categoria: "Afeitado", nombre: "Bigote", precio: 60, duracion_min: 15 },
+  { categoria: "Rostro", nombre: "Facial", precio: 200, duracion_min: 30 },
+  { categoria: "Rostro", nombre: "Ceja (Delineado)", precio: 50, duracion_min: 10 },
+  { categoria: "Rostro", nombre: "Ceja (Planchado)", precio: 150, duracion_min: 30 },
+  { categoria: "Rostro", nombre: "Mascarilla Negra", precio: 100, duracion_min: 20 },
+  { categoria: "Paquete", nombre: "Paquete Facial", descripcion: "Corte y facial", precio: 300, duracion_min: 70 },
+  { categoria: "Paquete", nombre: "Paquete Clásico", descripcion: "Corte y afeitado clásico", precio: 300, duracion_min: 70 },
+  { categoria: "Paquete", nombre: "Paquete CortMart", descripcion: "Corte y afeitado CortMart", precio: 400, duracion_min: 85 },
+  { categoria: "Paquete", nombre: "Paquete Premium", descripcion: "Corte, afeitado CortMart y facial", precio: 500, duracion_min: 115 },
+  { categoria: "Especial", nombre: "Crioterapia", precio: 250, desde: true, duracion_min: 40 },
+  { categoria: "Especial", nombre: "Box Braids", precio: 200, desde: true, duracion_min: 90 },
+];
+
 export const PERFIL = {
   nombre: "Barbería CortMart",
   marca: "CortMart",
-  eslogan: "Cortes con detalle, atención de lujo",
+  eslogan: "Estilo que habla por ti",
+  anio_fundacion: "2001",
   descripcion:
     "Somos la barbería de la colonia Industrial, en Gustavo A. Madero. Ladrillo, luz cálida y sillas listas para que salgas con el corte justo como lo quieres: con tiempo, con detalle y sin prisas.",
   direccion: "Av. Euzkaro 152, Industrial, Gustavo A. Madero, 07800 Ciudad de México, CDMX",
   zona: "Industrial · GAM · CDMX",
   referencia: "A pasos del Metrobús L7 Avenida Talismán",
   telefono: "56 4338 8834",
+  /** El mismo número atiende WhatsApp */
+  whatsapp: "56 4338 8834",
+  instagram: "barberiacortmart",
+  tiktok: "barberiacortmart",
   mapa_url: "https://maps.app.goo.gl/kxM54X3zWtwRYZC89",
   mapa_embed: "https://www.google.com/maps?q=19.4801165,-99.125262&z=17&hl=es&output=embed",
   calificacion: 5.0,
@@ -35,6 +64,8 @@ export const PERFIL = {
     sillas: "/negocio/cortmart-sillas.jpg",
     sala: "/negocio/cortmart-sala.jpg",
   },
+  /** Menú impreso de la barbería (octubre 2026) */
+  menu: MENU,
   /** Barberos que los clientes mencionan en sus reseñas */
   equipo: [
     { nombre: "Christian", rol: "Barbero", nota: "“El mejor de la zona”, según sus clientes." },

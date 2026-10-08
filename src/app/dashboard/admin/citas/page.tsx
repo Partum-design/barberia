@@ -16,6 +16,7 @@ import {
   QrCode,
   ScanLine,
   Search,
+  Trash2,
   UserX,
   XCircle,
 } from "lucide-react";
@@ -24,7 +25,8 @@ import { EmptyState, Metric, ModulePanel, ModuleTabs, SinAcceso, moneda, numero 
 import { Modal } from "@/components/panel/Modal";
 import { EditorCita } from "@/components/citas/EditorCita";
 import { QrCita } from "@/components/citas/QrCita";
-import { ETIQUETA_ESTADO_CITA, resumirCitas, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
+import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
+import { ETIQUETA_ESTADO_CITA, enlaceDeCita, nombreDelNegocio, resumirCitas, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
 
 type Rango = "hoy" | "proximas" | "pasadas" | "todas";
 
@@ -105,6 +107,29 @@ export default function CitasAdminPage() {
   if (!listo) return null;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
+  async function eliminar(c: Cita) {
+    if (
+      !window.confirm(
+        `¿Eliminar la cita de ${c.cliente_nombre || "este cliente"}?\n\nSe borra por completo: deja de contar en caja, reportes y sellos de lealtad. Si sólo no va a venir, mejor cancélala.`
+      )
+    )
+      return;
+    const r = await store.eliminarCita(c.id);
+    if (!r.ok) window.alert(r.error);
+    else setAviso("Cita eliminada.");
+  }
+
+  async function eliminarTodas() {
+    if (citas.length === 0) return;
+    const escrito = window.prompt(
+      `Vas a borrar las ${citas.length} citas de la barbería (pasadas y futuras). Caja, reportes y sellos de lealtad que salen de ellas quedan en cero.\n\nNo se puede deshacer. Escribe ELIMINAR para confirmar.`
+    );
+    if (escrito?.trim().toUpperCase() !== "ELIMINAR") return;
+    const r = await store.eliminarTodasLasCitas();
+    if (!r.ok) window.alert(r.error);
+    else setAviso("Se eliminaron todas las citas.");
+  }
+
   async function cambiarEstado(c: Cita, nuevo: EstadoCita, mensaje: string) {
     const r = await store.actualizarCita(c.id, { estado: nuevo });
     if (!r.ok) window.alert(r.error);
@@ -123,6 +148,11 @@ export default function CitasAdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {citas.length > 0 && (
+            <button type="button" className="btn-linea is-danger" onClick={eliminarTodas}>
+              <Trash2 className="h-4 w-4" /> Eliminar todas
+            </button>
+          )}
           <Link href="/dashboard/admin/confirmar" className="btn-linea">
             <ScanLine className="h-4 w-4" /> Escanear QR
           </Link>
@@ -234,6 +264,7 @@ export default function CitasAdminPage() {
                         setAviso(`Cobro de ${moneda.format(c.precio)} registrado.`);
                       }}
                       onEditar={() => setEditor({ cita: c })}
+                      onEliminar={() => void eliminar(c)}
                       onQr={() => setQr(c)}
                     />
                   ))}
@@ -277,7 +308,28 @@ export default function CitasAdminPage() {
             </p>
             <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
               Código: {qr.id}
+              {(() => {
+                const t = store.tarjetas.find((x) => x.cliente_id === qr.cliente_id);
+                return t ? ` · Tarjeta: ${t.numero}` : "";
+              })()}
             </p>
+            <BotonGuardarQr
+              datos={{
+                contenido: enlaceDeCita(qr.id, window.location.origin),
+                titulo: nombreDelNegocio(store.barberiaConfig),
+                subtitulo: "Cita",
+                codigo: qr.id,
+                detalles: [
+                  qr.cliente_nombre,
+                  `${qr.barbero_nombre} · ${format(new Date(qr.inicio), "d MMM yyyy, HH:mm 'h'", { locale: es })}`,
+                  ...(() => {
+                    const t = store.tarjetas.find((x) => x.cliente_id === qr.cliente_id);
+                    return t ? [`Tarjeta de lealtad ${t.numero}`] : [];
+                  })(),
+                ],
+                archivo: `cita-${qr.id}`,
+              }}
+            />
           </div>
         </Modal>
       )}
@@ -292,6 +344,7 @@ function FilaCita({
   onCancelar,
   onCobrar,
   onEditar,
+  onEliminar,
   onQr,
 }: {
   cita: Cita;
@@ -300,6 +353,7 @@ function FilaCita({
   onCancelar: () => void;
   onCobrar: () => void;
   onEditar: () => void;
+  onEliminar: () => void;
   onQr: () => void;
 }) {
   const pasada = new Date(c.fin).getTime() < Date.now();
@@ -368,6 +422,9 @@ function FilaCita({
             </button>
           </>
         )}
+        <button type="button" className="btn-icono is-danger" onClick={onEliminar} aria-label="Eliminar cita" title="Eliminar cita">
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </article>
   );

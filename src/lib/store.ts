@@ -32,6 +32,7 @@ import {
 // módulo "use client" Next no admite `export *`: la lista tiene que ser explícita.
 export {
   BARBERIA_VACIA,
+  CATEGORIAS_SERVICIO,
   DIAS_SEMANA,
   ETIQUETA_ESTADO_CITA,
   citaActiva,
@@ -270,6 +271,8 @@ export function useBarberia() {
     confirmarLlegada: (id: string) => ejecutarEnServidor({ tipo: "marcarAsistida", id }),
     marcarAsistida: (id: string) => ejecutar({ tipo: "marcarAsistida", id }),
     cancelarCita: (id: string) => ejecutar({ tipo: "cancelarCita", id }),
+    eliminarCita: (id: string) => ejecutarEnServidor({ tipo: "eliminarCita", id }),
+    eliminarTodasLasCitas: () => ejecutarEnServidor({ tipo: "eliminarTodasLasCitas" }),
     cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarEfectivo", id }),
     actualizarBarbero: (id: string, cambios: Partial<Barbero>) => ejecutar({ tipo: "actualizarBarbero", id, cambios }),
     toggleActivoBarbero: (id: string) => ejecutar({ tipo: "toggleActivoBarbero", id }),
@@ -284,6 +287,7 @@ export function useBarberia() {
     actualizarBarberiaConfig: (cambios: Partial<BarberiaConfig>) => ejecutar({ tipo: "actualizarBarberiaConfig", cambios }),
     canjearRecompensa: (clienteId: string) => ejecutar({ tipo: "canjearRecompensa", clienteId }),
     agregarServicio,
+    agregarServicios: (servicios: Servicio[]) => ejecutarEnServidor({ tipo: "agregarServicios", servicios }),
     actualizarServicio: (id: string, cambios: Partial<Servicio>) => ejecutar({ tipo: "actualizarServicio", id, cambios }),
     agregarProducto,
     ajustarExistencias: (id: string, delta: number) => ejecutar({ tipo: "ajustarExistencias", id, delta }),

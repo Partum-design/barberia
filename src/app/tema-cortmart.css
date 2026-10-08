@@ -748,3 +748,31 @@ textarea.campo-input { resize: vertical; min-height: 4rem; }
 .resultado-datos dd { margin-top: 0.15rem; font-size: 0.85rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .dia-citas-totales { margin-left: 0.6rem; font-family: inherit; font-size: 0.75rem; letter-spacing: 0; text-transform: none; color: var(--ink-muted); }
 @media (max-width: 640px) { .resultado-datos { grid-template-columns: minmax(0, 1fr); } }
+
+/* Reserva: tarjetas de servicio */
+.reserva-servicio { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-radius: 1.1rem; text-align: left; border: 1px solid var(--line-strong); background: var(--card); transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+.reserva-servicio:hover { transform: translateY(-2px); border-color: var(--cm-orange); box-shadow: 0 14px 30px -18px rgba(255, 122, 18, 0.6); }
+.reserva-servicio-cat { display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cm-orange); }
+.reserva-servicio-precio { flex: none; font-family: var(--cm-sign); font-size: 1.5rem; letter-spacing: 0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Servicios */
+.fila-servicio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border-radius: 1rem; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); transition: border-color 160ms ease; }
+.fila-servicio:hover { border-color: rgba(247, 147, 30, 0.35); }
+.fila-servicio.is-paused { opacity: 0.6; }
+.fila-servicio-precio { font-family: var(--cm-sign); font-weight: 400; font-size: 1.6rem; letter-spacing: 0.02em; color: var(--cm-orange); font-variant-numeric: tabular-nums; }
+.reparto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.reparto > div { padding: 0.65rem 0.75rem; border-radius: 0.85rem; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); }
+.reparto small { display: block; font-size: 0.7rem; color: var(--ink-faint); }
+.reparto b { font-size: 1.05rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.reparto > div:last-child b { color: #7fd3a8; }
+@media (max-width: 640px) { .fila-servicio-precio { margin-left: auto; } }
+
+/* Cifras que se actualizan solas */
+@keyframes cm-valor-vivo {
+  0% { color: #ffb44d; text-shadow: 0 0 18px rgba(255, 122, 18, 0.85); transform: scale(1.06); }
+  100% { text-shadow: 0 0 0 transparent; transform: none; }
+}
+.valor-vivo { display: inline-block; transform-origin: left center; animation: cm-valor-vivo 900ms cubic-bezier(.2, .9, .3, 1); }
+.kpi-card p.font-num { color: var(--ink); }
+.metric-card strong, .kpi-card .font-num { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .valor-vivo { animation: none; } }

@@ -2,20 +2,19 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Home, KeyRound, Loader2, Plus, Settings2, ShieldCheck, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Home, KeyRound, Loader2, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Modal } from "@/components/panel/Modal";
 import { EditorBarbero } from "@/components/citas/EditorBarbero";
 import { resumirBarberos, useBarberia, type Barbero } from "@/lib/store";
 
-const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 const formInicial = {
   nombre: "",
   email: "",
   password: "",
   especialidad: "",
-  precio_servicio: 800,
   duracion_cita_min: 30,
   acepta_domicilio: true,
   biografia: "",
@@ -98,6 +97,27 @@ export default function EquipoBarberoPage() {
     }
   }
 
+  async function eliminarBarbero(m: Barbero & { stats: { porVenir: number } }) {
+    const aviso =
+      m.stats.porVenir > 0
+        ? `\n\nTiene ${m.stats.porVenir} cita(s) por venir: se cancelarán.`
+        : "";
+    if (
+      !window.confirm(
+        `¿Eliminar a ${m.nombre}?${aviso}\n\nSe borra su acceso y su horario. Su historial de citas atendidas se conserva en caja y reportes.`
+      )
+    )
+      return;
+    setError(null);
+    setAviso(null);
+    const r = await store.eliminarBarbero(m.id);
+    if (!r.ok) setError(r.error ?? "No se pudo eliminar.");
+    else {
+      setAviso(`${m.nombre} fue eliminado del equipo.`);
+      void cargarCuentas();
+    }
+  }
+
   async function cambiarClave(id: string, nombre: string) {
     const password = window.prompt(`Nueva contraseña para ${nombre} (mínimo 8 caracteres):`);
     if (!password) return;
@@ -118,7 +138,7 @@ export default function EquipoBarberoPage() {
           <p className="kicker">Equipo</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">Equipo de barberos</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-            Da de alta barberos y cambia su configuración: precio, duración de citas, domicilio y disponibilidad.
+            Da de alta, configura o elimina barberos. El precio lo pone cada servicio; aquí ves lo que atiende y su comisión.
           </p>
         </div>
         <button
@@ -171,14 +191,6 @@ export default function EquipoBarberoPage() {
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               placeholder="Contraseña inicial (mín. 8 caracteres)"
               autoComplete="new-password"
-              className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
-            />
-            <input
-              type="number"
-              min={0}
-              value={form.precio_servicio}
-              onChange={(e) => setForm((f) => ({ ...f, precio_servicio: Number(e.target.value) }))}
-              placeholder="Precio del servicio"
               className="rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
             />
             <select
@@ -258,11 +270,7 @@ export default function EquipoBarberoPage() {
                 <p className="truncate text-xs" style={{ color: "var(--ink-muted)" }}>{m.especialidad}</p>
               </div>
             </div>
-            <dl className="mb-3 grid grid-cols-3 gap-2 text-sm">
-              <div>
-                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Precio</dt>
-                <dd className="font-semibold">{mxn.format(m.precio_servicio)}</dd>
-              </div>
+            <dl className="mb-3 grid grid-cols-2 gap-2 text-sm">
               <div>
                 <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Duración</dt>
                 <dd className="font-semibold">{m.duracion_cita_min} min</dd>
@@ -297,6 +305,12 @@ export default function EquipoBarberoPage() {
                 <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Asistencia</dt>
                 <dd className="font-semibold">{Math.round(m.stats.asistencia * 100)}%</dd>
               </div>
+              <div className="col-span-3 flex items-center justify-between border-t pt-2" style={{ borderColor: "var(--line)" }}>
+                <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Comisión ganada · por cobrar en caja</dt>
+                <dd className="font-semibold tabular-nums">
+                  {mxn.format(m.stats.comisiones)} · {mxn.format(m.stats.porCobrar)}
+                </dd>
+              </div>
             </dl>
             <p className="mb-3 truncate text-xs" style={{ color: "var(--ink-muted)" }}>
               {correoDe(m.id) ?? "Sin cuenta de acceso"}
@@ -325,6 +339,14 @@ export default function EquipoBarberoPage() {
               }`}
             >
               {m.activo ? "Desactivar" : "Reactivar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => eliminarBarbero(m)}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-colors hover:bg-red-500/10"
+              style={{ color: "#f0a59c" }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Eliminar barbero
             </button>
           </article>
         ))}

@@ -8,7 +8,7 @@ import { useBarberia, type Barbero } from "@/lib/store";
 
 const DURACIONES = [15, 20, 30, 40, 45, 60, 75, 90, 120];
 
-/** Configuración de un barbero: perfil público, precio, duración y disponibilidad. */
+/** Configuración de un barbero: perfil público y disponibilidad. El precio es del servicio. */
 export function EditorBarbero({
   barbero,
   onListo,
@@ -22,7 +22,6 @@ export function EditorBarbero({
   const [form, setForm] = useState({
     nombre: barbero.nombre,
     especialidad: barbero.especialidad,
-    precio_servicio: String(barbero.precio_servicio),
     duracion_cita_min: barbero.duracion_cita_min,
     acepta_domicilio: barbero.acepta_domicilio,
     biografia: barbero.biografia,
@@ -36,15 +35,12 @@ export function EditorBarbero({
   function guardar(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const precio = Number(form.precio_servicio);
     if (form.nombre.trim().length < 2) return setError("Escribe el nombre.");
     if (!form.especialidad.trim()) return setError("Escribe su especialidad.");
-    if (!Number.isFinite(precio) || precio < 0) return setError("El precio no es válido.");
 
     const nuevo = {
       nombre: form.nombre.trim(),
       especialidad: form.especialidad.trim(),
-      precio_servicio: Math.round(precio),
       duracion_cita_min: form.duracion_cita_min,
       acepta_domicilio: form.acepta_domicilio,
       biografia: form.biografia.trim(),
@@ -72,17 +68,7 @@ export function EditorBarbero({
           required
         />
       </Campo>
-      <Campo label="Precio del servicio (MXN)" ayuda="Las citas nuevas toman este precio.">
-        <input
-          className="campo-input"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          value={form.precio_servicio}
-          onChange={(e) => setForm((f) => ({ ...f, precio_servicio: e.target.value }))}
-        />
-      </Campo>
-      <Campo label="Duración de cada cita" ayuda="Define cada cuánto se ofrecen horarios.">
+      <Campo label="Duración base de cita" ayuda="Se usa sólo si la cita no lleva servicio; con servicio manda su duración.">
         <select
           className="campo-input"
           value={form.duracion_cita_min}

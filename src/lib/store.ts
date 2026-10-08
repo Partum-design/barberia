@@ -273,6 +273,9 @@ export function useBarberia() {
     cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarEfectivo", id }),
     actualizarBarbero: (id: string, cambios: Partial<Barbero>) => ejecutar({ tipo: "actualizarBarbero", id, cambios }),
     toggleActivoBarbero: (id: string) => ejecutar({ tipo: "toggleActivoBarbero", id }),
+    eliminarBarbero: (id: string) => eliminarPersona("barbero", id),
+    eliminarCliente: (id: string) => eliminarPersona("cliente", id),
+    eliminarServicio: (id: string) => ejecutar({ tipo: "eliminarServicio", id }),
     guardarHorarioDia: (barberoId: string, dia: DiaSemana, cambios: Partial<BloqueHorario>) =>
       ejecutar({ tipo: "guardarHorarioDia", barberoId, dia, cambios }),
     agregarFicha,
@@ -311,7 +314,9 @@ async function ejecutarEnServidor(op: Operacion): Promise<{ ok: boolean; error: 
   const { sesion, estado } = snapshot;
   if (!sesion) return { ok: false, error: "Tu sesión terminó. Vuelve a iniciar sesión." };
   try {
-    aplicarOperacion(estado, op, sesion);
+    // Se aplica en pantalla al instante; si el servidor lo rechaza se recarga su versión.
+    const cambios = aplicarOperacion(estado, op, sesion);
+    publicar({ estado: { ...estado, ...cambios } });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "No se pudo completar la acción." };
   }
@@ -324,14 +329,39 @@ async function ejecutarEnServidor(op: Operacion): Promise<{ ok: boolean; error: 
     });
     const cuerpo = (await res.json().catch(() => ({}))) as { estado?: Estado; error?: string };
     if (!res.ok || !cuerpo.estado) {
-      void cargar();
+      await cargar();
       return { ok: false, error: cuerpo.error ?? "No se pudo guardar el cambio." };
     }
     aplicarDelServidor(cuerpo.estado);
     return { ok: true, error: null };
   } catch {
+    await cargar();
     return { ok: false, error: "Sin conexión. Intenta de nuevo." };
   }
+}
+
+/**
+ * Elimina a un barbero o cliente. Si tiene cuenta de acceso, la borra el
+ * servidor junto con sus datos; si sólo existe en el panel, basta la operación.
+ */
+async function eliminarPersona(tipo: "barbero" | "cliente", id: string): Promise<{ ok: boolean; error: string | null }> {
+  try {
+    const res = await fetch(`/api/admin/usuarios?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
+    if (res.ok) {
+      await cargar();
+      return { ok: true, error: null };
+    }
+    if (res.status !== 404) {
+      const cuerpo = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: cuerpo.error ?? "No se pudo eliminar." };
+    }
+  } catch {
+    return { ok: false, error: "Sin conexión. Intenta de nuevo." };
+  }
+  return ejecutarEnServidor({ tipo: tipo === "barbero" ? "eliminarBarbero" : "eliminarCliente", id });
 }
 
 /** El personal agenda a nombre de un cliente (mostrador, teléfono, WhatsApp). */
@@ -348,6 +378,7 @@ async function crearCitaPersonal(datos: Omit<Extract<Operacion, { tipo: "crearCi
  */
 async function crearCita(datos: {
   barbero_id: string;
+  servicio_id?: string | null;
   inicio: string;
   modalidad: "presencial" | "domicilio";
   direccion_domicilio?: string;

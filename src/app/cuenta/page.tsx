@@ -13,7 +13,7 @@ import { Modal } from "@/components/panel/Modal";
 import { QrCita } from "@/components/citas/QrCita";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
-const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 // Nodo Cliente: su cuenta con citas, historial y programa de recompensas.
 export default function CuentaPage() {
@@ -126,7 +126,8 @@ export default function CuentaPage() {
                 <span className="text-sm font-semibold">{format(new Date(c.inicio), "HH:mm")}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{c.barbero_nombre}</p>
+                <p className="truncate font-medium">{c.servicio_nombre || c.barbero_nombre}</p>
+                {c.servicio_nombre && <p className="truncate text-xs" style={{ color: "var(--ink-muted)" }}>con {c.barbero_nombre}</p>}
                 <p className="mt-0.5 flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-muted)" }}>
                   {c.modalidad === "domicilio" ? (
                     <><Home className="h-3.5 w-3.5 text-accent-500" /> A domicilio</>

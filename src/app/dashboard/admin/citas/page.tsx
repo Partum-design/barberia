@@ -314,6 +314,7 @@ function FilaCita({
           {c.cliente_nombre}
         </p>
         <p className="truncate text-xs" style={{ color: "var(--ink-muted)" }}>
+          {c.servicio_nombre ? `${c.servicio_nombre} · ` : ""}
           {c.barbero_nombre}
           {c.modalidad === "domicilio" && (
             <>

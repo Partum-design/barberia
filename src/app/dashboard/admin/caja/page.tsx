@@ -84,7 +84,8 @@ export default function CajaPage() {
       };
       actual.citas += 1;
       actual.ingreso += c.precio;
-      actual.comision += c.precio * comisionDe(c.precio);
+      // La comisión congelada en la cita manda; las citas viejas sin ella se aproximan.
+      actual.comision += c.comision_pct !== undefined ? (c.precio * c.comision_pct) / 100 : c.precio * comisionDe(c.precio);
       porBarbero.set(c.barbero_id, actual);
     }
 

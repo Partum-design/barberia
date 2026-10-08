@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleAlert, Radio, TrendingDown, TrendingUp } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { OrigenDatos } from "@/lib/integrations/tipos";
 
 // Piezas compartidas por todos los módulos nuevos del panel (marketing, CRM,
@@ -92,7 +92,7 @@ export function Metric({
         {icono}
         {label}
       </span>
-      <strong>{valor}</strong>
+      <ValorVivo valor={valor} />
       {direccion && (
         <span className={`metric-delta ${direccion}`}>
           {direccion === "is-up" ? <TrendingUp /> : direccion === "is-down" ? <TrendingDown /> : null}
@@ -203,5 +203,25 @@ export function OtroRol({ rol, para }: { rol: "cliente" | "barbero" | "admin"; p
         Ir a mi panel
       </a>
     </main>
+  );
+}
+
+/**
+ * Cifra que destella cuando cambia (una llegada confirmada, un cobro): así se
+ * nota al instante que el número se actualizó solo.
+ */
+export function ValorVivo({ valor, as: Tag = "strong", className = "" }: { valor: string; as?: "strong" | "p" | "span"; className?: string }) {
+  const previo = useRef(valor);
+  const [pulso, setPulso] = useState(0);
+  useEffect(() => {
+    if (previo.current !== valor) {
+      previo.current = valor;
+      setPulso((n) => n + 1);
+    }
+  }, [valor]);
+  return (
+    <Tag key={pulso} className={`${className} ${pulso > 0 ? "valor-vivo" : ""}`.trim()}>
+      {valor}
+    </Tag>
   );
 }

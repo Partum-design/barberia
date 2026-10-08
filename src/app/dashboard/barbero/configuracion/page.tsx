@@ -10,7 +10,8 @@ import { OtroRol } from "@/components/panel/ModuleUI";
 const DURACIONES = [15, 20, 30, 45, 60];
 
 // Nodo Barbero: datos del perfil que ve el cliente al elegir barbero
-// (nombre, especialidad, precio, duración, domicilio, biografía).
+// (nombre, especialidad, duración, domicilio, biografía). El precio lo pone
+// el servicio que elige el cliente.
 export default function ConfiguracionBarberoPage() {
   const store = useBarberia();
   const { listo, sesion, barberos } = store;
@@ -18,7 +19,6 @@ export default function ConfiguracionBarberoPage() {
 
   const [form, setForm] = useState({
     especialidad: "",
-    precio_servicio: 0,
     duracion_cita_min: 30,
     acepta_domicilio: true,
     biografia: "",
@@ -29,7 +29,6 @@ export default function ConfiguracionBarberoPage() {
     if (barbero) {
       setForm({
         especialidad: barbero.especialidad,
-        precio_servicio: barbero.precio_servicio,
         duracion_cita_min: barbero.duracion_cita_min,
         acepta_domicilio: barbero.acepta_domicilio,
         biografia: barbero.biografia,
@@ -77,19 +76,7 @@ export default function ConfiguracionBarberoPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-                Precio del servicio (MXN)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={form.precio_servicio}
-                onChange={(e) => setForm((f) => ({ ...f, precio_servicio: Number(e.target.value) }))}
-                className="w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-                Duración de la cita
+                Duración base de la cita
               </label>
               <select
                 value={form.duracion_cita_min}
@@ -177,9 +164,6 @@ export default function ConfiguracionBarberoPage() {
                 )}
               </p>
             </div>
-            <span className="font-semibold text-brand-600">
-              {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(form.precio_servicio)}
-            </span>
           </div>
         </section>
       </div>

@@ -129,7 +129,6 @@ export async function POST(req: NextRequest) {
         id: data.user.id,
         nombre,
         especialidad,
-        precio_servicio: Math.max(0, Number(b.precio_servicio) || 0),
         duracion_cita_min: Math.max(5, Number(b.duracion_cita_min) || 30),
         acepta_domicilio: b.acepta_domicilio !== false,
         biografia: String(b.biografia ?? "").trim(),
@@ -202,13 +201,14 @@ export async function DELETE(req: NextRequest) {
     return prohibido("Los administradores no pueden eliminar a otros administradores.");
   }
 
-  // Un barbero eliminado deja de aparecer para agendar; su historial de citas
-  // se conserva.
-  if (resolverRol(objetivo) === "barbero") {
+  // Se borran también sus datos del panel (ficha, tarjeta, horario). Las citas
+  // ya atendidas se conservan para caja y reportes; las pendientes se cancelan.
+  const rol = resolverRol(objetivo);
+  if (rol === "barbero" || rol === "cliente") {
     try {
-      await ejecutarOperacion({ tipo: "actualizarBarbero", id, cambios: { activo: false } }, sesion);
+      await ejecutarOperacion({ tipo: rol === "barbero" ? "eliminarBarbero" : "eliminarCliente", id }, sesion);
     } catch {
-      /* sin ficha de barbero: sólo queda borrar la cuenta */
+      /* sin ficha en el panel: sólo queda borrar la cuenta */
     }
   }
 

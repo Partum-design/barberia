@@ -43,6 +43,16 @@ export type Cita = {
   notas?: string;
   /** Quién la registró: el propio cliente o el personal */
   creada_por?: "cliente" | "personal";
+  /** Servicio contratado: de él salen el precio y la duración */
+  servicio_id?: string | null;
+  servicio_nombre?: string;
+  /**
+   * Comisión del barbero (%) congelada al agendar, para que cambiar el
+   * catálogo después no reescriba lo ya pagado. Sólo la ve el administrador.
+   */
+  comision_pct?: number;
+  /** El cliente fue eliminado: la cita queda para caja y reportes, no en Clientes */
+  cliente_eliminado?: boolean;
 };
 
 export type EstadoCita = "confirmada" | "asistida" | "no_asistio" | "cancelada";
@@ -76,7 +86,9 @@ export type Barbero = {
   id: string;
   nombre: string;
   especialidad: string;
-  precio_servicio: number;
+  /** Obsoleto: el precio ahora es del servicio. Se conserva para datos viejos. */
+  precio_servicio?: number;
+  /** Duración base de su agenda cuando la cita no lleva servicio */
   duracion_cita_min: number;
   acepta_domicilio: boolean;
   biografia: string;
@@ -310,6 +322,7 @@ export type Operacion =
       tipo: "crearCita";
       id: string;
       barbero_id: string;
+      servicio_id?: string | null;
       inicio: string;
       fin: string;
       modalidad: "presencial" | "domicilio";
@@ -321,6 +334,7 @@ export type Operacion =
       id: string;
       cliente_id: string;
       barbero_id: string;
+      servicio_id?: string | null;
       inicio: string;
       modalidad: "presencial" | "domicilio";
       direccion_domicilio?: string;
@@ -332,7 +346,9 @@ export type Operacion =
   | {
       tipo: "actualizarCita";
       id: string;
-      cambios: Partial<Pick<Cita, "inicio" | "barbero_id" | "estado" | "precio" | "estado_pago" | "notas" | "modalidad" | "direccion_domicilio">>;
+      cambios: Partial<
+        Pick<Cita, "inicio" | "barbero_id" | "servicio_id" | "estado" | "precio" | "estado_pago" | "notas" | "modalidad" | "direccion_domicilio">
+      >;
       forzar?: boolean;
     }
   | { tipo: "cobrarEfectivo"; id: string }
@@ -341,6 +357,9 @@ export type Operacion =
   | { tipo: "agregarBarbero"; barbero: Barbero }
   | { tipo: "actualizarBarbero"; id: string; cambios: Partial<Omit<Barbero, "id">> }
   | { tipo: "toggleActivoBarbero"; id: string }
+  | { tipo: "eliminarBarbero"; id: string }
+  | { tipo: "eliminarCliente"; id: string }
+  | { tipo: "eliminarServicio"; id: string }
   | { tipo: "guardarHorarioDia"; barberoId: string; dia: DiaSemana; cambios: Partial<BloqueHorario> }
   | { tipo: "agregarFicha"; ficha: Ficha }
   | { tipo: "actualizarRecompensasConfig"; cambios: Partial<RecompensasConfig> }
@@ -369,6 +388,27 @@ export class ErrorOperacion extends Error {
 }
 
 const esStaff = (s: Sesion) => s.rol === "admin" || s.rol === "barbero";
+
+/**
+ * Servicio elegido para una cita y lo que define: precio, duración y comisión.
+ * Sin catálogo (barbería recién abierta) la cita va sin servicio, precio 0 y
+ * la duración base del barbero.
+ */
+function servicioParaCita(estado: Estado, servicioId: string | null | undefined, barbero: Barbero) {
+  const activos = estado.servicios.filter((x) => x.activo);
+  if (!servicioId) {
+    if (activos.length > 0) throw new ErrorOperacion("Elige el servicio.", 400);
+    return { servicio: null, precio: 0, duracion: Math.max(5, barbero.duracion_cita_min), comision: 0 };
+  }
+  const servicio = estado.servicios.find((x) => x.id === servicioId);
+  if (!servicio) throw new ErrorOperacion("Ese servicio ya no existe.", 400);
+  return {
+    servicio,
+    precio: servicio.precio,
+    duracion: Math.max(5, servicio.duracion_min),
+    comision: Math.min(100, Math.max(0, servicio.comision_pct)),
+  };
+}
 
 function precioValido(valor: unknown, porDefecto: number) {
   const n = Number(valor);
@@ -425,11 +465,13 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       if (!barbero) throw new ErrorOperacion("El barbero no está disponible.", 400);
       const inicio = new Date(op.inicio).getTime();
       if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-      // La duración la pone el barbero, no el navegador.
-      const fin = inicio + Math.max(5, barbero.duracion_cita_min) * 60_000;
+      // Precio y duración los pone el servicio, no el navegador.
+      const sv = servicioParaCita(estado, op.servicio_id, barbero);
+      if (sv.servicio && !sv.servicio.activo) throw new ErrorOperacion("Ese servicio no está disponible.", 400);
+      const fin = inicio + sv.duracion * 60_000;
       const problema = horarioReservable(
         {
-          barbero,
+          barbero: { ...barbero, duracion_cita_min: sv.duracion },
           horario: estado.horarios[barbero.id] ?? horarioPorDefecto(),
           barberia: estado.barberia,
           citas: estado.citas,
@@ -448,7 +490,10 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         fin: new Date(fin).toISOString(),
         modalidad: op.modalidad === "domicilio" && barbero.acepta_domicilio ? "domicilio" : "presencial",
         estado: "confirmada",
-        precio: barbero.precio_servicio,
+        precio: sv.precio,
+        servicio_id: sv.servicio?.id ?? null,
+        servicio_nombre: sv.servicio?.nombre ?? "",
+        comision_pct: sv.comision,
         direccion_domicilio:
           op.modalidad === "domicilio" && barbero.acepta_domicilio
             ? String(op.direccion_domicilio || "Domicilio del cliente").slice(0, 300)
@@ -470,7 +515,8 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       const barbero = buscar(estado.barberos, op.barbero_id, "Barbero");
       const inicio = new Date(op.inicio).getTime();
       if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-      const fin = inicio + Math.max(5, barbero.duracion_cita_min) * 60_000;
+      const sv = servicioParaCita(estado, op.servicio_id, barbero);
+      const fin = inicio + sv.duracion * 60_000;
       validarHueco(estado, barbero, inicio, fin, null, Boolean(op.forzar) && s.rol === "admin");
       const domicilio = op.modalidad === "domicilio";
       const nueva: Cita = {
@@ -484,7 +530,10 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         fin: new Date(fin).toISOString(),
         modalidad: domicilio ? "domicilio" : "presencial",
         estado: "confirmada",
-        precio: precioValido(op.precio, barbero.precio_servicio),
+        precio: s.rol === "admin" ? precioValido(op.precio, sv.precio) : sv.precio,
+        servicio_id: sv.servicio?.id ?? null,
+        servicio_nombre: sv.servicio?.nombre ?? "",
+        comision_pct: sv.comision,
         direccion_domicilio: domicilio ? String(op.direccion_domicilio || "Domicilio del cliente").slice(0, 300) : null,
         metodo_pago: "efectivo",
         estado_pago: "pendiente",
@@ -508,15 +557,25 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         siguiente.barbero_nombre = otro.nombre;
         siguiente.especialidad = otro.especialidad;
       }
+      let duracion = Math.max(5 * 60_000, new Date(cita.fin).getTime() - new Date(cita.inicio).getTime());
+      if (c.servicio_id !== undefined && c.servicio_id !== (cita.servicio_id ?? null)) {
+        const sv = servicioParaCita(estado, c.servicio_id, buscar(estado.barberos, siguiente.barbero_id, "Barbero"));
+        siguiente.servicio_id = sv.servicio?.id ?? null;
+        siguiente.servicio_nombre = sv.servicio?.nombre ?? "";
+        siguiente.comision_pct = sv.comision;
+        siguiente.precio = sv.precio;
+        duracion = sv.duracion * 60_000;
+        siguiente.fin = new Date(new Date(siguiente.inicio).getTime() + duracion).toISOString();
+      }
       if (c.inicio !== undefined && c.inicio !== cita.inicio) {
         const inicio = new Date(c.inicio).getTime();
         if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-        const duracion = Math.max(5 * 60_000, new Date(cita.fin).getTime() - new Date(cita.inicio).getTime());
         siguiente.inicio = new Date(inicio).toISOString();
         siguiente.fin = new Date(inicio + duracion).toISOString();
       }
       // Al mover la cita (de hora o de barbero) el hueco nuevo debe estar libre.
-      const seMueve = siguiente.inicio !== cita.inicio || siguiente.barbero_id !== cita.barbero_id;
+      const seMueve =
+        siguiente.inicio !== cita.inicio || siguiente.barbero_id !== cita.barbero_id || siguiente.fin !== cita.fin;
       const estadoFinal = c.estado ?? cita.estado;
       if (seMueve && estadoFinal === "confirmada") {
         const barbero = buscar(estado.barberos, siguiente.barbero_id, "Barbero");
@@ -601,6 +660,52 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       exigir(s.rol === "admin");
       buscar(estado.barberos, op.id, "Barbero");
       return { barberos: estado.barberos.map((b) => (b.id === op.id ? { ...b, activo: !b.activo } : b)) };
+    }
+
+    case "eliminarBarbero": {
+      exigir(s.rol === "admin", "Sólo el administrador elimina barberos.");
+      const barbero = buscar(estado.barberos, op.id, "Barbero");
+      const horarios = { ...estado.horarios };
+      delete horarios[op.id];
+      // Su historial se queda (con su nombre); lo que tenía agendado se cancela.
+      return {
+        barberos: estado.barberos.filter((b) => b.id !== op.id),
+        horarios,
+        citas: estado.citas.map((c) =>
+          c.barbero_id === op.id && c.estado === "confirmada"
+            ? { ...c, estado: "cancelada" as const, notas: `${c.notas ? `${c.notas} · ` : ""}Cancelada: ${barbero.nombre} ya no está en el equipo.` }
+            : c
+        ),
+      };
+    }
+
+    case "eliminarCliente": {
+      exigir(s.rol === "admin", "Sólo el administrador elimina clientes.");
+      const enFicha = estado.clientes.some((c) => c.id === op.id);
+      const conCitas = estado.citas.some((c) => c.cliente_id === op.id);
+      if (!enFicha && !conCitas) throw new ErrorOperacion("Cliente no encontrado.", 404);
+      const canjes = { ...estado.canjes };
+      delete canjes[op.id];
+      return {
+        clientes: estado.clientes.filter((c) => c.id !== op.id),
+        tarjetas: estado.tarjetas.filter((t) => t.cliente_id !== op.id),
+        canjes,
+        // Las citas atendidas siguen contando en caja y reportes; las pendientes se cancelan.
+        citas: estado.citas.map((c) =>
+          c.cliente_id !== op.id
+            ? c
+            : c.estado === "confirmada"
+              ? { ...c, cliente_eliminado: true, estado: "cancelada" as const, notas: `${c.notas ? `${c.notas} · ` : ""}Cancelada: cliente eliminado.` }
+              : { ...c, cliente_eliminado: true }
+        ),
+        fichas: estado.fichas.filter((f) => f.cliente_id !== op.id),
+      };
+    }
+
+    case "eliminarServicio": {
+      exigir(s.rol === "admin");
+      buscar(estado.servicios, op.id, "Servicio");
+      return { servicios: estado.servicios.filter((x) => x.id !== op.id) };
     }
 
     case "guardarHorarioDia": {
@@ -756,7 +861,15 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
  * ocupan (para que el calendario de reservas no ofrezca horas tomadas).
  */
 export function vistaPara(estado: Estado, s: Sesion | null): Estado {
-  if (s && esStaff(s)) return estado;
+  if (s?.rol === "admin") return estado;
+  // Las comisiones sólo las ve el administrador.
+  const servicios = estado.servicios.map((x) => ({ ...x, comision_pct: 0 }));
+  const sinComision = (c: Cita): Cita => {
+    const { comision_pct: _c, ...resto } = c;
+    void _c;
+    return resto;
+  };
+  if (s && esStaff(s)) return { ...estado, servicios, citas: estado.citas.map(sinComision) };
 
   const citas = estado.citas
     .filter((c) => citaActiva(c) || c.cliente_id === s?.id)
@@ -777,7 +890,8 @@ export function vistaPara(estado: Estado, s: Sesion | null): Estado {
 
   return {
     ...estado,
-    citas,
+    servicios,
+    citas: citas.map(sinComision),
     fichas: [],
     productos: [],
     gastos: [],
@@ -824,7 +938,7 @@ export function resumirClientes(citas: Cita[]): ClienteResumen[] {
   const porCliente = new Map<string, Cita[]>();
 
   for (const c of citas) {
-    if (!c.cliente_id || c.estado === "cancelada") continue;
+    if (!c.cliente_id || c.estado === "cancelada" || c.cliente_eliminado) continue;
     const lista = porCliente.get(c.cliente_id) ?? [];
     lista.push(c);
     porCliente.set(c.cliente_id, lista);
@@ -892,7 +1006,10 @@ export function resumirCitas(citas: Cita[]) {
     (c) => c.estado === "asistida" || c.estado === "no_asistio" || (c.estado === "confirmada" && new Date(c.fin).getTime() < ahora)
   );
   const ingresos = suma(atendidas);
+  const comisiones = Math.round(suma(atendidas, (c) => (c.precio * (c.comision_pct ?? 0)) / 100));
   return {
+    /** Parte del barbero sobre lo atendido (sólo tiene datos para el administrador) */
+    comisiones,
     total: citas.filter((c) => c.estado !== "cancelada").length,
     atendidas: atendidas.length,
     faltas: faltas.length,

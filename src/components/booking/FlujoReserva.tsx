@@ -1,27 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
-import { calcularLealtad, useBarberia, type Barbero } from "@/lib/store";
+import { calcularLealtad, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
 import { QrCita } from "@/components/citas/QrCita";
 
-type Paso = "barbero" | "horario" | "confirmar" | "confirmada";
+type Paso = "servicio" | "barbero" | "horario" | "confirmar" | "confirmada";
 
-const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 /**
- * Reserva en tres pasos: barbero, horario y confirmación. Sólo se ofrecen
+ * Reserva en cuatro pasos: servicio (que fija precio y duración), barbero,
+ * horario y confirmación. Sólo se ofrecen
  * barberos con horarios libres en la semana y sólo horas con personal (ver
  * lib/datos/disponibilidad). De momento el pago es en efectivo en la barbería.
  */
 export function FlujoReserva() {
   const store = useBarberia();
-  const { barberos, citas, barberiaConfig, horarioDeBarbero } = store;
-  const [paso, setPaso] = useState<Paso>("barbero");
+  const { barberos, citas, barberiaConfig, horarioDeBarbero, servicios } = store;
+  const catalogo = useMemo(() => servicios.filter((x) => x.activo), [servicios]);
+  const [paso, setPaso] = useState<Paso>(catalogo.length > 0 ? "servicio" : "barbero");
+  const [servicio, setServicio] = useState<Servicio | null>(null);
+  // El catálogo puede llegar después del primer render: entonces se empieza por él.
+  useEffect(() => {
+    if (catalogo.length > 0 && !servicio && paso === "barbero") setPaso("servicio");
+  }, [catalogo.length, servicio, paso]);
   const [barbero, setBarbero] = useState<Barbero | null>(null);
   const [slot, setSlot] = useState<Date | null>(null);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">("presencial");
@@ -30,18 +37,24 @@ export function FlujoReserva() {
   const [cargando, setCargando] = useState(false);
   const [citaId, setCitaId] = useState<string | null>(null);
 
-  // Horarios libres de los próximos 7 días por barbero activo.
+  // Horarios libres de los próximos 7 días por barbero activo, con la
+  // duración del servicio elegido.
   const disponibles = useMemo(
     () =>
       barberos
         .filter((b) => b.activo)
-        .map((b) => ({
-          barbero: b,
-          slots: slotsDisponibles({ barbero: b, horario: horarioDeBarbero(b.id), barberia: barberiaConfig, citas }),
-        }))
+        .map((b) => {
+          const conDuracion = servicio ? { ...b, duracion_cita_min: servicio.duracion_min } : b;
+          return {
+            barbero: b,
+            slots: slotsDisponibles({ barbero: conDuracion, horario: horarioDeBarbero(b.id), barberia: barberiaConfig, citas }),
+          };
+        })
         .filter((x) => x.slots.length > 0),
-    [barberos, citas, barberiaConfig, horarioDeBarbero]
+    [barberos, citas, barberiaConfig, horarioDeBarbero, servicio]
   );
+  const precio = servicio?.precio ?? 0;
+  const duracion = servicio?.duracion_min;
   const slots = disponibles.find((x) => x.barbero.id === barbero?.id)?.slots ?? [];
 
   const esCliente = store.sesion?.rol === "cliente";
@@ -72,6 +85,7 @@ export function FlujoReserva() {
     setCargando(true);
     const { cita, error: err } = await store.crearCita({
       barbero_id: barbero.id,
+      servicio_id: servicio?.id ?? null,
       inicio: slot.toISOString(),
       modalidad,
       direccion_domicilio: direccion.trim(),
@@ -98,7 +112,38 @@ export function FlujoReserva() {
         </p>
       )}
 
-      {/* Paso 1: elegir barbero */}
+      {/* Paso 1: elegir servicio */}
+      {paso === "servicio" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {catalogo.map((x) => (
+            <button
+              key={x.id}
+              onClick={() => { setServicio(x); setBarbero(null); setSlot(null); setError(""); setPaso("barbero"); }}
+              className="reserva-servicio"
+            >
+              <span className="min-w-0">
+                <span className="reserva-servicio-cat">{x.categoria}</span>
+                <span className="block truncate font-semibold">{x.nombre}</span>
+                <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{x.duracion_min} min</span>
+              </span>
+              <span className="reserva-servicio-precio">{mxn.format(x.precio)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {paso === "barbero" && servicio && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ring-1 ring-[var(--line)]" style={{ background: "var(--card)" }}>
+          <span className="min-w-0 truncate">
+            <b>{servicio.nombre}</b> · {servicio.duracion_min} min · {mxn.format(servicio.precio)}
+          </span>
+          <button onClick={() => setPaso("servicio")} className="shrink-0 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+            ← Cambiar servicio
+          </button>
+        </div>
+      )}
+
+      {/* Paso 2: elegir barbero */}
       {paso === "barbero" && disponibles.length === 0 && (
         <div className="rounded-2xl p-8 text-center text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)", color: "var(--ink-muted)" }}>
           No hay barberos con horarios disponibles esta semana. Vuelve pronto o llámanos para apartar tu lugar.
@@ -120,7 +165,7 @@ export function FlujoReserva() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{m.nombre}</p>
                 <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-                  {m.especialidad} · {m.duracion_cita_min} min
+                  {m.especialidad}
                   {m.acepta_domicilio && (
                     <span className="ml-2 inline-flex items-center gap-1 text-accent-600">
                       <Home className="h-3.5 w-3.5" /> Domicilio
@@ -131,7 +176,7 @@ export function FlujoReserva() {
                   Próximo: {format(libres[0], "EEE d MMM, HH:mm", { locale: es })}
                 </p>
               </div>
-              <span className="font-semibold text-brand-600">{mxn.format(m.precio_servicio)}</span>
+              <span className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>Elegir →</span>
             </button>
           ))}
         </div>
@@ -206,11 +251,12 @@ export function FlujoReserva() {
             />
           )}
           <dl className="mb-5 space-y-2 text-sm">
+            {servicio && <Fila k="Servicio" v={`${servicio.nombre} · ${duracion} min`} />}
             <Fila k="Barbero" v={barbero.nombre} />
             <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
             <Fila k="Modalidad" v={modalidad === "presencial" ? "En barbería" : "A domicilio"} />
             <Fila k="Pago" v="Efectivo en la barbería" />
-            <Fila k="Total" v={mxn.format(barbero.precio_servicio)} destacado />
+            <Fila k="Total" v={servicio ? mxn.format(precio) : "Se cotiza en la barbería"} destacado />
           </dl>
 
           <p className="mb-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-100">
@@ -256,7 +302,7 @@ export function FlujoReserva() {
             )}
             <p className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">
               <Banknote className="h-4 w-4 shrink-0" />
-              Recuerda llevar {mxn.format(barbero.precio_servicio)} en efectivo el día de tu cita
+              {servicio ? `Recuerda llevar ${mxn.format(precio)} en efectivo el día de tu cita` : "El pago es en efectivo en la barbería"}
             </p>
             <p className="badge mx-auto mt-4 badge-gold px-4 py-1.5 text-xs">
               <Gift className="h-3.5 w-3.5" />
@@ -292,6 +338,7 @@ export function FlujoReserva() {
 
 function Stepper({ actual }: { actual: Paso }) {
   const pasos: { id: Paso; label: string }[] = [
+    { id: "servicio", label: "Servicio" },
     { id: "barbero", label: "Barbero" },
     { id: "horario", label: "Horario" },
     { id: "confirmar", label: "Confirmar" },

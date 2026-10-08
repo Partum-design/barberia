@@ -205,6 +205,7 @@ export default function ReportesPage() {
                   <th className="pb-3 text-right font-medium">Asistencia</th>
                   <th className="pb-3 text-right font-medium">Por venir</th>
                   <th className="pb-3 text-right font-medium">Ingresos</th>
+                  <th className="pb-3 text-right font-medium">Comisión</th>
                   <th className="pb-3 text-right font-medium">Por cobrar</th>
                 </tr>
               </thead>
@@ -218,6 +219,7 @@ export default function ReportesPage() {
                     <td className="py-2.5 text-right tabular-nums">{Math.round(m.asistencia * 100)}%</td>
                     <td className="py-2.5 text-right tabular-nums">{m.porVenir}</td>
                     <td className="py-2.5 text-right tabular-nums">{mxn.format(m.ingresos)}</td>
+                    <td className="py-2.5 text-right tabular-nums">{mxn.format(m.comisiones)}</td>
                     <td className="py-2.5 text-right tabular-nums">{mxn.format(m.porCobrar)}</td>
                   </tr>
                 ))}

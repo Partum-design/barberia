@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   AtSign,
-  BadgeDollarSign,
   CalendarCheck,
   Check,
   CheckCircle2,
@@ -39,7 +38,6 @@ type Datos = {
   password: string;
   telefono: string;
   especialidad: string;
-  precio_servicio: number;
   duracion_cita_min: number;
   acepta_domicilio: boolean;
   biografia: string;
@@ -53,7 +51,6 @@ export type AltaPeticion = {
   telefono: string;
   barbero?: {
     especialidad: string;
-    precio_servicio: number;
     duracion_cita_min: number;
     acepta_domicilio: boolean;
     biografia: string;
@@ -91,7 +88,6 @@ const vacio = (tipo: Rol): Datos => ({
   password: generarClave(),
   telefono: "",
   especialidad: "",
-  precio_servicio: 0,
   duracion_cita_min: 30,
   acepta_domicilio: false,
   biografia: "",
@@ -186,7 +182,6 @@ export function FormularioAlta({
           d.tipo === "barbero"
             ? {
                 especialidad: d.especialidad.trim(),
-                precio_servicio: d.precio_servicio,
                 duracion_cita_min: d.duracion_cita_min,
                 acepta_domicilio: d.acepta_domicilio,
                 biografia: d.biografia.trim(),
@@ -380,16 +375,8 @@ export function FormularioAlta({
                   <input value={d.especialidad} onChange={(e) => poner("especialidad", e.target.value)} placeholder="Ej. Fades y arreglo de barba" />
                 </Campo>
                 <Campo
-                  icono={<BadgeDollarSign />}
-                  etiqueta="Precio base (MXN)"
-                  ayuda='Precio de referencia de su corte. Se muestra como "Desde $…". Déjalo en 0 si cobra según el servicio.'
-                  opcional
-                >
-                  <input type="number" min={0} step={10} value={d.precio_servicio} onChange={(e) => poner("precio_servicio", Math.max(0, Number(e.target.value)))} />
-                </Campo>
-                <Campo
                   icono={<Clock3 />}
-                  etiqueta="Duración de cada cita"
+                  etiqueta="Duración base de cita"
                   ayuda="Tiempo que se aparta en su agenda por cada reserva."
                 >
                   <select value={d.duracion_cita_min} onChange={(e) => poner("duracion_cita_min", Number(e.target.value))}>
@@ -461,7 +448,7 @@ export function FormularioAlta({
               {d.tipo === "barbero" && (
                 <div>
                   <dt>Citas de</dt>
-                  <dd>{d.duracion_cita_min} min{d.precio_servicio ? ` · desde $${d.precio_servicio}` : ""}</dd>
+                  <dd>{d.duracion_cita_min} min</dd>
                 </div>
               )}
             </dl>

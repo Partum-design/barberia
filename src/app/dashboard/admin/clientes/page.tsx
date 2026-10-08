@@ -13,6 +13,7 @@ import {
   Pencil,
   Phone,
   Repeat,
+  Trash2,
   Search,
   TrendingUp,
   UserPlus,
@@ -131,6 +132,19 @@ export default function ClientesPage() {
 
   if (!listo) return null;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
+
+  async function eliminar(c: Fila) {
+    const pendientes = c.proximaCita ? "\n\nSus citas por venir se cancelarán." : "";
+    if (
+      !window.confirm(
+        `¿Eliminar a ${c.nombre}?\n\nSe borran su ficha, su tarjeta de lealtad y su acceso (si tiene). Sus visitas ya atendidas se conservan en caja y reportes.${pendientes}`
+      )
+    )
+      return;
+    const r = await store.eliminarCliente(c.id);
+    if (!r.ok) window.alert(r.error);
+    else setAviso(`${c.nombre} fue eliminado.`);
+  }
 
   const gastoMaximo = Math.max(1, ...clientes.map((c) => c.gastoTotal));
 
@@ -279,6 +293,15 @@ export default function ClientesPage() {
                         }
                       >
                         <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-icono is-danger"
+                        aria-label={`Eliminar a ${c.nombre}`}
+                        title="Eliminar cliente"
+                        onClick={() => void eliminar(c)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>

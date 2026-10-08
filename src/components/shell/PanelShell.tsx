@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { Rol, Sesion } from "@/lib/store";
 import { Marca } from "@/components/shell/Marca";
+import { ValorVivo } from "@/components/panel/ModuleUI";
 
 type NavItem = { label: string; corto?: string; href: string; icon: React.ReactNode };
 
@@ -292,7 +293,7 @@ export function KpiPastel({
         </span>
         <span className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>{label}</span>
       </div>
-      <p className="font-num text-2xl font-semibold tabular-nums tracking-tight" style={{ color: "var(--ink)" }}>{value}</p>
+      <ValorVivo as="p" valor={value} className="font-num text-2xl font-semibold tabular-nums tracking-tight" />
       {nota && <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "var(--ink-muted)" }}>{nota}</p>}
     </div>
   );

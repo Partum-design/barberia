@@ -10,7 +10,7 @@ import { MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
 import { citaActiva, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
-const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 // Nodo Cliente: método de pago guardado + historial de cobros de sus citas.
 export default function PagosPage() {

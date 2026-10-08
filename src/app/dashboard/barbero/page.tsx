@@ -11,7 +11,7 @@ import { CalendarOverview } from "@/components/calendar/CalendarOverview";
 import { ETIQUETA_ESTADO_CITA, resumirCitas, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
 
-const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
+const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
 // Nodo Barbero: agenda con datos locales reales (marcar asistida funciona
 // y alimenta el programa de lealtad del cliente).
@@ -135,6 +135,9 @@ export default function DashboardBarberoPage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{cita.cliente_nombre}</p>
+              {cita.servicio_nombre && (
+                <p className="truncate text-xs font-medium" style={{ color: "var(--cm-orange)" }}>{cita.servicio_nombre}</p>
+              )}
               <p className="mt-0.5 flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-muted)" }}>
                 {cita.modalidad === "domicilio" ? (
                   <><Home className="h-3.5 w-3.5 text-accent-500" /> A domicilio</>

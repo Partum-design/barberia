@@ -27,7 +27,10 @@ export function EditorCita({
   onCancelar: () => void;
 }) {
   const store = useBarberia();
-  const { clientes, barberos, citas, barberiaConfig, horarioDeBarbero, sesion } = store;
+  const { clientes, barberos, citas, barberiaConfig, horarioDeBarbero, sesion, servicios } = store;
+  const catalogo = servicios.filter((x) => x.activo || x.id === cita?.servicio_id);
+  const [servicioId, setServicioId] = useState<string>(cita ? (cita.servicio_id ?? "") : (catalogo[0]?.id ?? ""));
+  const servicio = servicios.find((x) => x.id === servicioId);
   const esAdmin = sesion?.rol === "admin";
 
   const [clienteId, setClienteId] = useState(cita?.cliente_id ?? clienteInicial ?? "");
@@ -72,12 +75,13 @@ export function EditorCita({
     const inicioDia = new Date(`${fecha}T00:00`).getTime();
     if (!Number.isFinite(inicioDia)) return [];
     const otras = citas.filter((c) => c.id !== cita?.id);
+    const duracion = servicio?.duracion_min ?? barbero.duracion_cita_min;
     return slotsDisponibles(
-      { barbero: { ...barbero, activo: true }, horario: horarioDeBarbero(barbero.id), barberia: barberiaConfig, citas: otras },
+      { barbero: { ...barbero, activo: true, duracion_cita_min: duracion }, horario: horarioDeBarbero(barbero.id), barberia: barberiaConfig, citas: otras },
       inicioDia,
       1
     ).filter((d) => d.getTime() > Date.now() - 5 * 60_000 && format(d, "yyyy-MM-dd") === fecha);
-  }, [barbero, fecha, citas, cita?.id, horarioDeBarbero, barberiaConfig]);
+  }, [barbero, fecha, citas, cita?.id, horarioDeBarbero, barberiaConfig, servicio]);
 
   if (nuevoCliente) {
     return (
@@ -101,6 +105,7 @@ export function EditorCita({
     setError("");
     if (!clienteId) return setError("Elige al cliente.");
     if (!barbero) return setError("Elige quién lo atiende.");
+    if (catalogo.length > 0 && !servicioId) return setError("Elige el servicio.");
     if (!fecha || !hora) return setError("Elige el día y la hora.");
     const inicio = new Date(`${fecha}T${hora}`);
     if (!Number.isFinite(inicio.getTime())) return setError("La fecha u hora no es válida.");
@@ -113,6 +118,7 @@ export function EditorCita({
       const r = await store.crearCitaPersonal({
         cliente_id: clienteId,
         barbero_id: barbero.id,
+        servicio_id: servicioId || null,
         inicio: inicio.toISOString(),
         modalidad,
         direccion_domicilio: direccion.trim(),
@@ -129,6 +135,7 @@ export function EditorCita({
     const cambios: Parameters<typeof store.actualizarCita>[1] = {};
     if (inicio.toISOString() !== new Date(cita.inicio).toISOString()) cambios.inicio = inicio.toISOString();
     if (barbero.id !== cita.barbero_id) cambios.barbero_id = barbero.id;
+    if ((servicioId || null) !== (cita.servicio_id ?? null)) cambios.servicio_id = servicioId || null;
     if (estado !== cita.estado) cambios.estado = estado;
     if (esAdmin && precioNum !== undefined && precioNum !== cita.precio) cambios.precio = precioNum;
     if (pagado !== (cita.estado_pago === "pagado")) cambios.estado_pago = pagado ? "pagado" : "pendiente";
@@ -215,10 +222,7 @@ export function EditorCita({
         <select
           className="campo-input"
           value={barberoId}
-          onChange={(e) => {
-            setBarberoId(e.target.value);
-            if (!cita) setPrecio("");
-          }}
+          onChange={(e) => setBarberoId(e.target.value)}
           disabled={Boolean(cita) && !esAdmin}
         >
           <option value="" disabled>
@@ -236,7 +240,32 @@ export function EditorCita({
         </select>
       </Campo>
 
-      <Campo label="Precio" ayuda={barbero ? `Precio de ${barbero.nombre}: $${barbero.precio_servicio}` : undefined}>
+      <Campo label="Servicio" ayuda={servicio ? `${servicio.duracion_min} min · precio de lista $${servicio.precio}` : catalogo.length === 0 ? "Da de alta servicios en «Servicios» para fijar precios." : undefined}>
+        <select
+          className="campo-input"
+          value={servicioId}
+          onChange={(e) => {
+            setServicioId(e.target.value);
+            const nuevo = servicios.find((x) => x.id === e.target.value);
+            setPrecio(cita && nuevo ? String(nuevo.precio) : "");
+          }}
+          disabled={catalogo.length === 0}
+        >
+          {catalogo.length === 0 && <option value="">Sin servicios en el catálogo</option>}
+          {catalogo.length > 0 && !servicioId && (
+            <option value="" disabled>
+              Elige un servicio
+            </option>
+          )}
+          {catalogo.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.nombre} — ${x.precio}
+            </option>
+          ))}
+        </select>
+      </Campo>
+
+      <Campo ancho="completo" label="Precio a cobrar" ayuda={esAdmin ? "Cámbialo sólo para descuentos o cargos extra." : "Lo fija el servicio."}>
         <input
           className="campo-input"
           type="number"
@@ -244,7 +273,7 @@ export function EditorCita({
           min={0}
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
-          placeholder={barbero ? String(barbero.precio_servicio) : "0"}
+          placeholder={String(servicio?.precio ?? 0)}
           disabled={!esAdmin}
         />
       </Campo>

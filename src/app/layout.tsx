@@ -5,6 +5,7 @@ import "./tema-cortmart.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 import { RegistrarApp } from "@/components/app/RegistrarApp";
+import { InvitacionApp } from "@/components/app/InvitacionApp";
 
 // Display grotesk para titulares de producto
 const outfit = Outfit({
@@ -84,6 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <Accesibilidad />
         <RegistrarApp />
+        <InvitacionApp />
         <footer className="site-footer">
           <Marca />
           <span>

@@ -93,7 +93,92 @@ export type Barbero = {
   acepta_domicilio: boolean;
   biografia: string;
   activo: boolean;
+  /** Lo que el administrador le permite hacer. Lo que falte toma el valor por defecto. */
+  permisos?: Partial<PermisosBarbero>;
 };
+
+// --- Permisos del equipo ----------------------------------------------------
+
+export type PermisosBarbero = {
+  /** Agendar citas en su propia agenda */
+  crear_citas: boolean;
+  /** Agendar citas en la agenda de otros barberos */
+  agendar_otros: boolean;
+  /** Ver con nombre las citas de todo el equipo (si no, sólo el hueco ocupado) */
+  ver_agenda_completa: boolean;
+  /** Confirmar llegadas (escáner o botón «Llegó») */
+  confirmar_llegadas: boolean;
+  /** Registrar cobros en efectivo o tarjeta */
+  cobrar: boolean;
+  /** Dar de alta clientes nuevos */
+  registrar_clientes: boolean;
+  /** Corregir los datos de los clientes */
+  editar_clientes: boolean;
+  /** Ver el nombre de los clientes */
+  ver_nombres_clientes: boolean;
+  /** Ver teléfono y correo de todos los clientes (siempre ve los que él dio de alta) */
+  ver_contacto_clientes: boolean;
+  /** Poner sellos de visitas sin cita */
+  ajustar_sellos: boolean;
+};
+
+export const PERMISOS_POR_DEFECTO: PermisosBarbero = {
+  crear_citas: true,
+  agendar_otros: false,
+  ver_agenda_completa: false,
+  confirmar_llegadas: true,
+  cobrar: true,
+  registrar_clientes: true,
+  editar_clientes: false,
+  ver_nombres_clientes: true,
+  ver_contacto_clientes: false,
+  ajustar_sellos: true,
+};
+
+export const ETIQUETAS_PERMISOS: { id: keyof PermisosBarbero; label: string; ayuda: string; grupo: string }[] = [
+  { id: "crear_citas", grupo: "Agenda", label: "Crear citas", ayuda: "Agenda clientes en su propia agenda." },
+  { id: "agendar_otros", grupo: "Agenda", label: "Agendar a otros barberos", ayuda: "Puede meter citas en la agenda de sus compañeros." },
+  { id: "ver_agenda_completa", grupo: "Agenda", label: "Ver la agenda de todo el equipo", ayuda: "Ve quién viene con cada barbero. Si no, sólo ve los horarios ocupados." },
+  { id: "confirmar_llegadas", grupo: "Mostrador", label: "Confirmar llegadas", ayuda: "Escanea el QR o marca «Llegó» en sus citas." },
+  { id: "cobrar", grupo: "Mostrador", label: "Registrar cobros", ayuda: "Marca sus citas como pagadas en efectivo o tarjeta." },
+  { id: "ajustar_sellos", grupo: "Mostrador", label: "Poner sellos de lealtad", ayuda: "Suma visitas sin cita a la tarjeta del cliente." },
+  { id: "registrar_clientes", grupo: "Clientes", label: "Dar de alta clientes", ayuda: "Registra clientes nuevos desde su panel." },
+  { id: "editar_clientes", grupo: "Clientes", label: "Editar datos de clientes", ayuda: "Corrige nombre y contacto de los clientes." },
+  { id: "ver_nombres_clientes", grupo: "Privacidad", label: "Ver el nombre de los clientes", ayuda: "Si lo apagas, sólo verá sus iniciales." },
+  { id: "ver_contacto_clientes", grupo: "Privacidad", label: "Ver teléfono y correo de todos", ayuda: "Si está apagado, sólo ve el número de los clientes que él dio de alta." },
+];
+
+export function permisosDe(barbero: Pick<Barbero, "permisos"> | null | undefined): PermisosBarbero {
+  return { ...PERMISOS_POR_DEFECTO, ...(barbero?.permisos ?? {}) };
+}
+
+/** ¿La sesión puede hacer esto? El administrador puede todo; el cliente nada de esto. */
+export function puede(estado: Pick<Estado, "barberos">, s: Sesion | null | undefined, permiso: keyof PermisosBarbero) {
+  if (!s) return false;
+  if (s.rol === "admin") return true;
+  if (s.rol !== "barbero") return false;
+  return permisosDe(estado.barberos.find((b) => b.id === s.id))[permiso];
+}
+
+/** ¿Esta sesión ve el teléfono y correo de este cliente? */
+export function veContactoDe(estado: Pick<Estado, "barberos">, s: Sesion | null | undefined, cliente: Pick<Cliente, "id" | "registrado_por">) {
+  if (!s) return false;
+  if (s.rol === "admin") return true;
+  if (s.rol === "cliente") return cliente.id === s.id;
+  return cliente.registrado_por === s.id || puede(estado, s, "ver_contacto_clientes");
+}
+
+/** "Juan Pérez" → "J. P." */
+export function iniciales(nombre: string) {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  return partes.length ? partes.map((p) => `${p.charAt(0).toUpperCase()}.`).join(" ") : "Cliente";
+}
+
+/** Últimos 10 dígitos: así "+52 55 1234 5678" y "5512345678" son el mismo número. */
+export function normalizarTelefono(valor: string) {
+  const d = String(valor ?? "").replace(/\D/g, "");
+  return d.length > 10 ? d.slice(-10) : d;
+}
 
 export type DiaSemana = "lun" | "mar" | "mie" | "jue" | "vie" | "sab" | "dom";
 
@@ -153,6 +238,14 @@ export type Cliente = {
   telefono: string;
   email: string;
   creado_en: string; // ISO
+  /** Quién lo dio de alta (id del personal). El barbero que lo registró siempre ve su número. */
+  registrado_por?: string;
+  /** Id de su cuenta de acceso (Supabase Auth) cuando ya activó su acceso */
+  cuenta_id?: string;
+  /** Vinculó su cuenta de Google */
+  google?: boolean;
+  /** Sólo en la vista del personal: ya tiene acceso propio (sin exponer el id de la cuenta) */
+  cuenta?: boolean;
 };
 
 export type EstadoTarjeta = "activa" | "suspendida";
@@ -354,11 +447,15 @@ export type Operacion =
       tipo: "actualizarCita";
       id: string;
       cambios: Partial<
-        Pick<Cita, "inicio" | "barbero_id" | "servicio_id" | "estado" | "precio" | "estado_pago" | "notas" | "modalidad" | "direccion_domicilio">
+        Pick<
+          Cita,
+          "inicio" | "barbero_id" | "servicio_id" | "estado" | "precio" | "estado_pago" | "metodo_pago" | "notas" | "modalidad" | "direccion_domicilio"
+        >
       >;
       forzar?: boolean;
     }
   | { tipo: "cobrarEfectivo"; id: string }
+  | { tipo: "cobrarCita"; id: string; metodo: MetodoPago }
   | { tipo: "marcarAsistida"; id: string }
   | { tipo: "cancelarCita"; id: string }
   | { tipo: "eliminarCita"; id: string }
@@ -385,7 +482,9 @@ export type Operacion =
   | { tipo: "actualizarCliente"; id: string; cambios: Partial<Omit<Cliente, "id">> }
   | { tipo: "ajustarSellos"; tarjetaId: string; delta: number }
   | { tipo: "cambiarEstadoTarjeta"; tarjetaId: string; estado: EstadoTarjeta }
-  | { tipo: "marcarWalletGuardada"; tarjetaId: string; fecha: string };
+  | { tipo: "marcarWalletGuardada"; tarjetaId: string; fecha: string }
+  /** Lo usa el servidor al activar el acceso de un cliente (teléfono o Google) */
+  | { tipo: "vincularCuentaCliente"; clienteId: string; cuentaId: string; google?: boolean; email?: string };
 
 /** Error de negocio: el servidor lo devuelve tal cual al navegador. */
 export class ErrorOperacion extends Error {
@@ -519,7 +618,11 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
 
     case "crearCitaPersonal": {
       exigir(esStaff(s), "Sólo el personal agenda a nombre de un cliente.");
-      exigir(s.rol === "admin" || op.barbero_id === s.id, "Sólo puedes agendar en tu propia agenda.");
+      exigir(puede(estado, s, "crear_citas"), "No tienes permiso para crear citas. Pídeselo al administrador.");
+      exigir(
+        s.rol === "admin" || op.barbero_id === s.id || puede(estado, s, "agendar_otros"),
+        "Sólo puedes agendar en tu propia agenda."
+      );
       idNuevo(estado.citas, op.id);
       const cliente = buscar(estado.clientes, op.cliente_id, "Cliente");
       const barbero = buscar(estado.barberos, op.barbero_id, "Barbero");
@@ -600,6 +703,9 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       }
       if (c.estado !== undefined) {
         exigir(c.estado in ETIQUETA_ESTADO_CITA, "Estado inválido.");
+        if (c.estado === "asistida" && cita.estado !== "asistida") {
+          exigir(puede(estado, s, "confirmar_llegadas"), "No tienes permiso para confirmar llegadas.");
+        }
         siguiente.estado = c.estado;
         siguiente.llegada_en = c.estado === "asistida" ? (cita.llegada_en ?? new Date().toISOString()) : null;
       }
@@ -607,7 +713,14 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         exigir(s.rol === "admin", "Sólo el administrador cambia el precio.");
         siguiente.precio = precioValido(c.precio, cita.precio);
       }
-      if (c.estado_pago !== undefined) siguiente.estado_pago = c.estado_pago === "pagado" ? "pagado" : "pendiente";
+      if (c.estado_pago !== undefined && c.estado_pago !== cita.estado_pago) {
+        exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
+        siguiente.estado_pago = c.estado_pago === "pagado" ? "pagado" : "pendiente";
+      }
+      if (c.metodo_pago !== undefined && c.metodo_pago !== cita.metodo_pago) {
+        exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
+        siguiente.metodo_pago = c.metodo_pago === "tarjeta" ? "tarjeta" : "efectivo";
+      }
       if (c.notas !== undefined) siguiente.notas = String(c.notas).slice(0, 500);
       if (c.modalidad !== undefined) {
         siguiente.modalidad = c.modalidad === "domicilio" ? "domicilio" : "presencial";
@@ -622,6 +735,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
     }
 
     case "cobrarEfectivo":
+    case "cobrarCita":
     case "marcarAsistida":
     case "cancelarCita": {
       const cita = buscar(estado.citas, op.id, "Cita");
@@ -629,6 +743,12 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       const propiaDelCliente = s.rol === "cliente" && cita.cliente_id === s.id;
       if (op.tipo === "cancelarCita") exigir(s.rol === "admin" || propiaDelBarbero || propiaDelCliente);
       else exigir(s.rol === "admin" || propiaDelBarbero);
+      if (op.tipo === "cobrarEfectivo" || op.tipo === "cobrarCita") {
+        exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
+      }
+      if (op.tipo === "marcarAsistida") {
+        exigir(puede(estado, s, "confirmar_llegadas"), "No tienes permiso para confirmar llegadas.");
+      }
       if (op.tipo === "marcarAsistida" && cita.estado === "cancelada") {
         throw new ErrorOperacion("La cita está cancelada. Reactívala antes de confirmar la llegada.", 409);
       }
@@ -637,10 +757,12 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       }
       const cambios: Partial<Cita> =
         op.tipo === "cobrarEfectivo"
-          ? { estado_pago: "pagado" }
-          : op.tipo === "marcarAsistida"
-            ? { estado: "asistida", llegada_en: cita.llegada_en ?? new Date().toISOString() }
-            : { estado: "cancelada" };
+          ? { estado_pago: "pagado", metodo_pago: "efectivo" }
+          : op.tipo === "cobrarCita"
+            ? { estado_pago: "pagado", metodo_pago: op.metodo === "tarjeta" ? "tarjeta" : "efectivo" }
+            : op.tipo === "marcarAsistida"
+              ? { estado: "asistida", llegada_en: cita.llegada_en ?? new Date().toISOString() }
+              : { estado: "cancelada" };
       return { citas: estado.citas.map((c) => (c.id === op.id ? { ...c, ...cambios } : c)) };
     }
 
@@ -665,7 +787,17 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       buscar(estado.barberos, op.id, "Barbero");
       const cambios = { ...op.cambios };
       // El barbero edita su perfil, pero su alta y baja la decide el admin.
-      if (s.rol !== "admin") delete cambios.activo;
+      if (s.rol !== "admin") {
+        delete cambios.activo;
+        delete cambios.permisos;
+      } else if (cambios.permisos) {
+        // Sólo se guardan permisos conocidos y como booleanos.
+        const limpio: Partial<PermisosBarbero> = {};
+        for (const k of Object.keys(PERMISOS_POR_DEFECTO) as (keyof PermisosBarbero)[]) {
+          if (typeof cambios.permisos[k] === "boolean") limpio[k] = cambios.permisos[k];
+        }
+        cambios.permisos = limpio;
+      }
       const resultado: Partial<Estado> = {
         barberos: estado.barberos.map((b) => (b.id === op.id ? { ...b, ...cambios, id: b.id } : b)),
       };
@@ -813,10 +945,33 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
     case "registrarCliente": {
       // El personal da de alta a cualquiera; un cliente sólo a sí mismo.
       exigir(esStaff(s) || (s.rol === "cliente" && op.cliente.id === s.id));
+      const nuevo = !estado.clientes.some((c) => c.id === op.cliente.id);
+      if (nuevo && esStaff(s)) {
+        exigir(puede(estado, s, "registrar_clientes"), "No tienes permiso para dar de alta clientes.");
+      }
       const cambios: Partial<Estado> = {};
-      if (!estado.clientes.some((c) => c.id === op.cliente.id)) {
+      if (nuevo) {
         idNuevo(estado.clientes, op.cliente.id);
-        cambios.clientes = [...estado.clientes, op.cliente];
+        const telefono = normalizarTelefono(op.cliente.telefono);
+        if (telefono.length === 10 && estado.clientes.some((c) => normalizarTelefono(c.telefono) === telefono)) {
+          throw new ErrorOperacion("Ya hay un cliente con ese teléfono.", 409);
+        }
+        const cliente: Cliente = {
+          id: op.cliente.id,
+          nombre: String(op.cliente.nombre ?? "").trim().slice(0, 120),
+          telefono: String(op.cliente.telefono ?? "").trim().slice(0, 30),
+          email: String(op.cliente.email ?? "").trim().slice(0, 200),
+          creado_en: op.cliente.creado_en || new Date().toISOString(),
+          ...(op.cliente.google && s.rol === "cliente" ? { google: true } : {}),
+          // Lo pone el servidor, no el navegador: así nadie se adjudica clientes ajenos.
+          ...(esStaff(s) ? { registrado_por: s.id } : {}),
+          ...(s.rol === "cliente"
+            ? { cuenta_id: s.id }
+            : s.rol === "admin" && op.cliente.cuenta_id
+              ? { cuenta_id: String(op.cliente.cuenta_id) }
+              : {}),
+        };
+        cambios.clientes = [...estado.clientes, cliente];
       }
       if (!estado.tarjetas.some((t) => t.cliente_id === op.cliente.id)) {
         idNuevo(estado.tarjetas, op.tarjetaId);
@@ -841,12 +996,27 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
 
     case "actualizarCliente": {
       exigir(esStaff(s));
+      exigir(puede(estado, s, "editar_clientes"), "No tienes permiso para editar clientes.");
       const actual = buscar(estado.clientes, op.id, "Cliente");
+      const permitidos: Partial<Cliente> = {};
+      if (typeof op.cambios.nombre === "string") permitidos.nombre = op.cambios.nombre.trim().slice(0, 120);
+      // Quien no ve el contacto tampoco lo puede pisar.
+      if (veContactoDe(estado, s, actual)) {
+        if (typeof op.cambios.telefono === "string") permitidos.telefono = op.cambios.telefono.trim().slice(0, 30);
+        if (typeof op.cambios.email === "string") permitidos.email = op.cambios.email.trim().slice(0, 200);
+      }
+      const telefono = normalizarTelefono(permitidos.telefono ?? "");
+      if (
+        telefono.length === 10 &&
+        estado.clientes.some((c) => c.id !== op.id && normalizarTelefono(c.telefono) === telefono)
+      ) {
+        throw new ErrorOperacion("Ya hay otro cliente con ese teléfono.", 409);
+      }
       const cambios: Partial<Estado> = {
-        clientes: estado.clientes.map((c) => (c.id === op.id ? { ...c, ...op.cambios, id: c.id } : c)),
+        clientes: estado.clientes.map((c) => (c.id === op.id ? { ...c, ...permitidos, id: c.id } : c)),
       };
       // El nombre corregido también se ve en su agenda.
-      const nombre = op.cambios.nombre?.trim();
+      const nombre = permitidos.nombre?.trim();
       if (nombre && nombre !== actual.nombre) {
         cambios.citas = estado.citas.map((c) => (c.cliente_id === op.id ? { ...c, cliente_nombre: nombre } : c));
       }
@@ -855,6 +1025,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
 
     case "ajustarSellos":
       exigir(esStaff(s));
+      exigir(puede(estado, s, "ajustar_sellos"), "No tienes permiso para poner sellos.");
       buscar(estado.tarjetas, op.tarjetaId, "Tarjeta");
       return {
         tarjetas: estado.tarjetas.map((t) =>
@@ -879,6 +1050,23 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       };
     }
 
+    case "vincularCuentaCliente": {
+      exigir(s.rol === "admin");
+      buscar(estado.clientes, op.clienteId, "Cliente");
+      return {
+        clientes: estado.clientes.map((c) =>
+          c.id === op.clienteId
+            ? {
+                ...c,
+                cuenta_id: op.cuentaId,
+                ...(op.google ? { google: true } : {}),
+                ...(op.email && !c.email ? { email: op.email } : {}),
+              }
+            : c
+        ),
+      };
+    }
+
     default:
       throw new ErrorOperacion("Operación desconocida.", 400);
   }
@@ -898,7 +1086,26 @@ export function vistaPara(estado: Estado, s: Sesion | null): Estado {
     void _c;
     return resto;
   };
-  if (s && esStaff(s)) return { ...estado, servicios, citas: estado.citas.map(sinComision) };
+  if (s && esStaff(s)) {
+    const p = permisosDe(estado.barberos.find((b) => b.id === s.id));
+    const nombreVisible = (nombre: string) => (p.ver_nombres_clientes ? nombre : iniciales(nombre));
+    const citas = estado.citas.map((c) => {
+      const base = sinComision(c);
+      if (c.barbero_id === s.id || p.ver_agenda_completa) return { ...base, cliente_nombre: nombreVisible(c.cliente_nombre) };
+      // De la agenda ajena sólo se ve el hueco ocupado.
+      return { ...base, cliente_id: "", cliente_nombre: "Ocupado", precio: 0, direccion_domicilio: null, notas: "" };
+    });
+    const clientes = estado.clientes.map((c) => {
+      const { cuenta_id: _cuenta, ...resto } = c;
+      void _cuenta;
+      const visible = { ...resto, nombre: nombreVisible(c.nombre), cuenta: Boolean(c.cuenta_id) };
+      return veContactoDe(estado, s, c) ? visible : { ...visible, telefono: "", email: "" };
+    });
+    const fichas = p.ver_nombres_clientes
+      ? estado.fichas
+      : estado.fichas.map((f) => ({ ...f, cliente_nombre: iniciales(f.cliente_nombre) }));
+    return { ...estado, servicios, citas, clientes, fichas };
+  }
 
   const citas = estado.citas
     .filter((c) => citaActiva(c) || c.cliente_id === s?.id)

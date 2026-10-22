@@ -66,9 +66,14 @@ export function sesionDesdeUsuario(usuario: {
     usuario.email?.split("@")[0] ||
     "Mi cuenta";
 
+  // Un cliente dado de alta en mostrador conserva el id de su ficha al activar
+  // su acceso: así sus citas, sellos y tarjeta siguen siendo suyos.
+  const clienteId = usuario.app_metadata?.cliente_id;
+  const id = rol === "cliente" && typeof clienteId === "string" && clienteId ? clienteId : usuario.id;
+
   return {
     rol,
-    id: usuario.id,
+    id,
     principal: esPrincipal(usuario),
     nombre,
     subtitulo:

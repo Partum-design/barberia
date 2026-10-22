@@ -10,6 +10,8 @@ import {
   normalizarEstado,
   nuevoId,
   numeroDeTarjeta,
+  permisosDe,
+  PERMISOS_POR_DEFECTO,
   type Barbero,
   type BarberiaConfig,
   type BloqueHorario,
@@ -21,7 +23,9 @@ import {
   type Ficha,
   type Gasto,
   type HorarioSemanal,
+  type MetodoPago,
   type Operacion,
+  type PermisosBarbero,
   type Producto,
   type RecompensasConfig,
   type Servicio,
@@ -35,6 +39,11 @@ export {
   CATEGORIAS_SERVICIO,
   DIAS_SEMANA,
   ETIQUETA_ESTADO_CITA,
+  ETIQUETAS_PERMISOS,
+  PERMISOS_POR_DEFECTO,
+  permisosDe,
+  iniciales,
+  normalizarTelefono,
   citaActiva,
   enlaceDeCita,
   idDeCitaEnTexto,
@@ -61,6 +70,7 @@ export type {
   Gasto,
   HorarioSemanal,
   MetodoPago,
+  PermisosBarbero,
   Producto,
   RecompensasConfig,
   Rol,
@@ -247,9 +257,18 @@ export function useBarberia() {
     [estado.horarios]
   );
 
+  // Lo que la sesión puede hacer: el administrador todo; el barbero según lo que le dieron.
+  const permisos: PermisosBarbero =
+    sesion?.rol === "admin"
+      ? (Object.fromEntries(Object.keys(PERMISOS_POR_DEFECTO).map((k) => [k, true])) as PermisosBarbero)
+      : sesion?.rol === "barbero"
+        ? permisosDe(estado.barberos.find((b) => b.id === sesion.id))
+        : (Object.fromEntries(Object.keys(PERMISOS_POR_DEFECTO).map((k) => [k, false])) as PermisosBarbero);
+
   return {
     listo,
     sesion,
+    permisos,
     citas: estado.citas,
     barberos: estado.barberos,
     fichas: estado.fichas,
@@ -273,7 +292,8 @@ export function useBarberia() {
     cancelarCita: (id: string) => ejecutar({ tipo: "cancelarCita", id }),
     eliminarCita: (id: string) => ejecutarEnServidor({ tipo: "eliminarCita", id }),
     eliminarTodasLasCitas: () => ejecutarEnServidor({ tipo: "eliminarTodasLasCitas" }),
-    cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarEfectivo", id }),
+    cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarCita", id, metodo: "efectivo" }),
+    cobrar: (id: string, metodo: MetodoPago) => ejecutar({ tipo: "cobrarCita", id, metodo }),
     actualizarBarbero: (id: string, cambios: Partial<Barbero>) => ejecutar({ tipo: "actualizarBarbero", id, cambios }),
     toggleActivoBarbero: (id: string) => ejecutar({ tipo: "toggleActivoBarbero", id }),
     eliminarBarbero: (id: string) => eliminarPersona("barbero", id),

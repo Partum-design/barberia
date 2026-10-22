@@ -26,7 +26,8 @@ import { Modal } from "@/components/panel/Modal";
 import { EditorCita } from "@/components/citas/EditorCita";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
-import { ETIQUETA_ESTADO_CITA, enlaceDeCita, nombreDelNegocio, resumirCitas, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
+import { BotonesCobro } from "@/components/citas/BotonesCobro";
+import { ETIQUETA_ESTADO_CITA, enlaceDeCita, nombreDelNegocio, resumirCitas, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
 
 type Rango = "hoy" | "proximas" | "pasadas" | "todas";
 
@@ -259,9 +260,9 @@ export default function CitasAdminPage() {
                           void cambiarEstado(c, "cancelada", "Cita cancelada.");
                         }
                       }}
-                      onCobrar={() => {
-                        store.cobrarEfectivo(c.id);
-                        setAviso(`Cobro de ${moneda.format(c.precio)} registrado.`);
+                      onCobrar={(metodo) => {
+                        store.cobrar(c.id, metodo);
+                        setAviso(`Cobro de ${moneda.format(c.precio)} en ${metodo === "tarjeta" ? "tarjeta" : "efectivo"} registrado.`);
                       }}
                       onEditar={() => setEditor({ cita: c })}
                       onEliminar={() => void eliminar(c)}
@@ -351,7 +352,7 @@ function FilaCita({
   onLlego: () => void;
   onFalta: () => void;
   onCancelar: () => void;
-  onCobrar: () => void;
+  onCobrar: (metodo: MetodoPago) => void;
   onEditar: () => void;
   onEliminar: () => void;
   onQr: () => void;
@@ -386,7 +387,7 @@ function FilaCita({
           </span>
           {c.estado !== "cancelada" && c.estado !== "no_asistio" && (
             <span className={`badge ${c.estado_pago === "pagado" ? "badge-gold" : "badge-neutral"}`}>
-              {c.estado_pago === "pagado" ? "Pagada" : "Sin pagar"}
+              {c.estado_pago === "pagado" ? `Pagada · ${c.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"}` : "Sin pagar"}
             </span>
           )}
           {c.estado === "confirmada" && pasada && <span className="badge badge-warm">Hora pasada</span>}
@@ -405,9 +406,7 @@ function FilaCita({
           </>
         )}
         {c.estado === "asistida" && c.estado_pago === "pendiente" && (
-          <button type="button" className="btn-gold is-sm" onClick={onCobrar}>
-            <Banknote className="h-4 w-4" /> Cobrar
-          </button>
+          <BotonesCobro compacto precio={c.precio} onCobrar={onCobrar} />
         )}
         <button type="button" className="btn-icono" onClick={onEditar} aria-label="Editar o reprogramar" title="Editar o reprogramar">
           <Pencil className="h-4 w-4" />

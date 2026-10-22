@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Check, Home, Loader2, MapPin, Search, UserPlus } from "lucide-react";
+import { Banknote, Check, CreditCard, Home, Loader2, MapPin, Search, UserPlus } from "lucide-react";
 import { Campo, Interruptor } from "@/components/panel/Modal";
 import { FormularioCliente } from "@/components/citas/FormularioCliente";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
-import { ETIQUETA_ESTADO_CITA, useBarberia, type Cita, type EstadoCita } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
 
 const ESTADOS: EstadoCita[] = ["confirmada", "asistida", "no_asistio", "cancelada"];
 
@@ -27,7 +27,7 @@ export function EditorCita({
   onCancelar: () => void;
 }) {
   const store = useBarberia();
-  const { clientes, barberos, citas, barberiaConfig, horarioDeBarbero, sesion, servicios } = store;
+  const { clientes, barberos, citas, barberiaConfig, horarioDeBarbero, sesion, servicios, permisos } = store;
   const catalogo = servicios.filter((x) => x.activo || x.id === cita?.servicio_id);
   const [servicioId, setServicioId] = useState<string>(cita ? (cita.servicio_id ?? "") : (catalogo[0]?.id ?? ""));
   const servicio = servicios.find((x) => x.id === servicioId);
@@ -48,6 +48,7 @@ export function EditorCita({
   const [precio, setPrecio] = useState<string>(cita ? String(cita.precio) : "");
   const [estado, setEstado] = useState<EstadoCita>(cita?.estado ?? "confirmada");
   const [pagado, setPagado] = useState(cita?.estado_pago === "pagado");
+  const [metodo, setMetodo] = useState<MetodoPago>(cita?.metodo_pago ?? "efectivo");
   const [notas, setNotas] = useState(cita?.notas ?? "");
   const [forzar, setForzar] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -139,6 +140,7 @@ export function EditorCita({
     if (estado !== cita.estado) cambios.estado = estado;
     if (esAdmin && precioNum !== undefined && precioNum !== cita.precio) cambios.precio = precioNum;
     if (pagado !== (cita.estado_pago === "pagado")) cambios.estado_pago = pagado ? "pagado" : "pendiente";
+    if (pagado && metodo !== cita.metodo_pago) cambios.metodo_pago = metodo;
     if (notas.trim() !== (cita.notas ?? "")) cambios.notas = notas.trim();
     if (modalidad !== cita.modalidad) cambios.modalidad = modalidad;
     if (modalidad === "domicilio" && direccion.trim() !== (cita.direccion_domicilio ?? "")) {
@@ -165,7 +167,7 @@ export function EditorCita({
           <div className="min-w-0">
             <p className="truncate font-semibold">{cita.cliente_nombre}</p>
             <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
-              {cliente?.telefono || "Sin teléfono"}
+              {cliente?.telefono || (esAdmin ? "Sin teléfono" : "Contacto privado")}
             </p>
           </div>
         </div>
@@ -177,7 +179,9 @@ export function EditorCita({
               <span className="client-avatar">{cliente.nombre.charAt(0)}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{cliente.nombre}</p>
-                <p className="text-xs" style={{ color: "var(--ink-muted)" }}>{cliente.telefono || cliente.email || "Sin contacto"}</p>
+                <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
+                  {cliente.telefono || cliente.email || (esAdmin ? "Sin contacto" : "Contacto privado")}
+                </p>
               </div>
               <button type="button" className="btn-linea is-sm" onClick={() => setClienteId("")}>
                 Cambiar
@@ -210,9 +214,11 @@ export function EditorCita({
                   <li className="selector-vacio">{clientes.length === 0 ? "Aún no hay clientes registrados." : "Nadie coincide."}</li>
                 )}
               </ul>
-              <button type="button" className="btn-linea mt-2 w-full justify-center" onClick={() => setNuevoCliente(true)}>
-                <UserPlus className="h-4 w-4" /> Registrar cliente nuevo
-              </button>
+              {permisos.registrar_clientes && (
+                <button type="button" className="btn-linea mt-2 w-full justify-center" onClick={() => setNuevoCliente(true)}>
+                  <UserPlus className="h-4 w-4" /> Registrar cliente nuevo
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -230,7 +236,7 @@ export function EditorCita({
           </option>
           {barberos
             .filter((b) => b.activo || b.id === barberoId)
-            .filter((b) => esAdmin || b.id === sesion?.id || b.id === cita?.barbero_id)
+            .filter((b) => esAdmin || b.id === sesion?.id || b.id === cita?.barbero_id || (!cita && permisos.agendar_otros))
             .map((b) => (
               <option key={b.id} value={b.id}>
                 {b.nombre}
@@ -348,9 +354,19 @@ export function EditorCita({
         </div>
       )}
 
-      {cita && (
+      {cita && permisos.cobrar && (
         <div className="is-full">
           <Interruptor activo={pagado} onChange={setPagado} label="Pagada" ayuda="Marca si ya se cobró en caja." />
+          {pagado && (
+            <div className="segmentado mt-2">
+              {(["efectivo", "tarjeta"] as const).map((m) => (
+                <button key={m} type="button" className={metodo === m ? "is-active" : ""} onClick={() => setMetodo(m)}>
+                  {m === "efectivo" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
+                  {m === "efectivo" ? "Efectivo" : "Tarjeta"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

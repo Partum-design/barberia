@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { format, isThisMonth, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { Banknote, CalendarDays, CheckCircle2, CreditCard, Home, MapPin, ScanLine, UserX, Users } from "lucide-react";
+import { Banknote, CalendarDays, CalendarPlus, CheckCircle2, CreditCard, Home, MapPin, ScanLine, UserX, Users } from "lucide-react";
+import { Modal } from "@/components/panel/Modal";
+import { EditorCita } from "@/components/citas/EditorCita";
+import { BotonesCobro } from "@/components/citas/BotonesCobro";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
@@ -17,8 +20,10 @@ const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN",
 // y alimenta el programa de lealtad del cliente).
 export default function DashboardBarberoPage() {
   const store = useBarberia();
-  const { listo, citas, sesion } = store;
+  const { listo, citas, sesion, permisos } = store;
   const [vista, setVista] = useState<"hoy" | "semana">("hoy");
+  const [nueva, setNueva] = useState(false);
+  const [aviso, setAviso] = useState("");
 
   const propias = useMemo(
     () =>
@@ -61,9 +66,16 @@ export default function DashboardBarberoPage() {
         lead={<span className="capitalize">{format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}</span>}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-          <Link href="/dashboard/barbero/confirmar" className="btn-gold px-4 py-2 text-sm">
-            <ScanLine className="h-4 w-4" /> Escanear QR
-          </Link>
+          {permisos.crear_citas && (
+            <button type="button" onClick={() => setNueva(true)} className="btn-gold px-4 py-2 text-sm">
+              <CalendarPlus className="h-4 w-4" /> Nueva cita
+            </button>
+          )}
+          {permisos.confirmar_llegadas && (
+            <Link href="/dashboard/barbero/confirmar" className="btn-linea px-4 py-2 text-sm">
+              <ScanLine className="h-4 w-4" /> Escanear QR
+            </Link>
+          )}
           <div className="flex rounded-full bg-white p-1 shadow-sm">
             {(["hoy", "semana"] as const).map((v) => (
               <button
@@ -82,6 +94,12 @@ export default function DashboardBarberoPage() {
           </div>
         }
       />
+
+      {aviso && (
+        <p className="aviso-ok anim-pop mb-4" role="status">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> {aviso}
+        </p>
+      )}
 
       {/* KPIs pastel estilo referencia */}
       <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -148,20 +166,18 @@ export default function DashboardBarberoPage() {
               </p>
               <span className={`badge mt-1.5 ${cita.estado_pago === "pagado" ? "badge-gold" : "badge-warm"}`}>
                 {cita.estado_pago === "pagado" ? (
-                  <><CreditCard className="h-3 w-3" /> Pagado</>
+                  <>
+                    {cita.metodo_pago === "tarjeta" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />} Pagado ·{" "}
+                    {cita.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"}
+                  </>
                 ) : (
-                  <><Banknote className="h-3 w-3" /> Efectivo pendiente</>
+                  <><Banknote className="h-3 w-3" /> Pago pendiente</>
                 )}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {cita.estado_pago === "pendiente" && (
-                <button
-                  onClick={() => store.cobrarEfectivo(cita.id)}
-                  className="card-hover rounded-full bg-gradient-to-r from-accent-400 to-accent-500 px-4 py-2 text-sm font-semibold text-brand-900 shadow-sm"
-                >
-                  Cobrar efectivo
-                </button>
+              {cita.estado_pago === "pendiente" && cita.estado !== "cancelada" && cita.estado !== "no_asistio" && permisos.cobrar && (
+                <BotonesCobro compacto precio={cita.precio} onCobrar={(metodo) => store.cobrar(cita.id, metodo)} />
               )}
               {cita.modalidad === "domicilio" &&
                 cita.direccion_domicilio &&
@@ -175,7 +191,7 @@ export default function DashboardBarberoPage() {
                     Ver dirección
                   </a>
                 )}
-              {cita.estado === "confirmada" ? (
+              {cita.estado === "confirmada" && permisos.confirmar_llegadas ? (
                 <>
                   <button
                     onClick={() => store.marcarAsistida(cita.id)}
@@ -202,6 +218,18 @@ export default function DashboardBarberoPage() {
           </article>
         ))}
       </section>
+
+      {nueva && (
+        <Modal titulo="Nueva cita" descripcion="Agenda a un cliente en tu agenda." onCerrar={() => setNueva(false)} ancho="lg">
+          <EditorCita
+            onCancelar={() => setNueva(false)}
+            onListo={(m) => {
+              setNueva(false);
+              setAviso(m);
+            }}
+          />
+        </Modal>
+      )}
     </PanelShell>
   );
 }

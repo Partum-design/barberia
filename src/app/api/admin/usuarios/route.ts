@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { esPrincipal, resolverRol } from "@/lib/auth/roles";
 import { ErrorOperacion, nuevoId, numeroDeTarjeta, type Barbero, type Rol, type Sesion } from "@/lib/datos/modelo";
-import { ejecutarOperacion, sesionDePeticion } from "@/lib/datos/servidor";
+import { ejecutarOperacion, leerEstado, sesionDePeticion } from "@/lib/datos/servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
             telefono: body.telefono?.trim().slice(0, 30) ?? "",
             email,
             creado_en: new Date().toISOString(),
+            cuenta_id: data.user.id,
           },
           tarjetaId: nuevoId("tlc"),
           numeroTarjeta: numeroDeTarjeta(new Set()),
@@ -194,7 +195,13 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Falta el usuario." }, { status: 400 });
   if (id === sesion.id) return prohibido("No puedes eliminar tu propia cuenta.");
 
-  const objetivo = await buscarUsuario(id);
+  let objetivo = await buscarUsuario(id);
+  if (!objetivo) {
+    // Cliente de mostrador que ya activó su acceso: la ficha apunta a su cuenta.
+    const { estado } = await leerEstado();
+    const cuentaId = estado.clientes.find((c) => c.id === id)?.cuenta_id;
+    if (cuentaId) objetivo = await buscarUsuario(cuentaId);
+  }
   if (!objetivo) return NextResponse.json({ error: "La cuenta no existe." }, { status: 404 });
   if (esPrincipal(objetivo)) return prohibido("El administrador principal no se puede eliminar.");
   if (!puedeGestionar(sesion, objetivo)) {
@@ -213,8 +220,13 @@ export async function DELETE(req: NextRequest) {
   }
 
   const admin = createAdminClient();
-  await admin.from("usuarios").delete().eq("id", id);
-  const { error } = await admin.auth.admin.deleteUser(id);
+  await admin.from("usuarios").delete().eq("id", objetivo.id);
+  await Promise.all([
+    admin.from("push_suscripciones").delete().eq("usuario_id", id),
+    admin.from("google_calendario").delete().eq("usuario_id", id),
+    admin.from("notificaciones").delete().eq("usuario_id", id),
+  ]);
+  const { error } = await admin.auth.admin.deleteUser(objetivo.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

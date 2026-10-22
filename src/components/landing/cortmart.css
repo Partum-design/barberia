@@ -773,3 +773,124 @@ body:has(.cm) .site-footer { display: none; }
 .cm-menu-precio small { font-family: inherit; font-size: 0.85rem; color: var(--cm-mute); letter-spacing: 0.08em; }
 .cm-menu-cta { justify-self: center; }
 @media (min-width: 768px) { .cm-menu-cta { grid-column: 1 / -1; } }
+
+/* ── Llamados a la acción: Agendar e Iniciar sesión ─────────────── */
+.cm-nav-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.5rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--cm-line);
+  background: rgb(12 8 6 / 0.45);
+  backdrop-filter: blur(8px);
+  color: var(--cm-ink);
+  font-family: var(--cm-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.cm-nav-login svg { width: 1.05rem; height: 1.05rem; color: var(--cm-orange); }
+.cm-nav-login:hover { border-color: var(--cm-orange); background: rgb(247 147 30 / 0.12); }
+.cm-nav-login:active { transform: scale(0.96); }
+.cm-nav-agendar { gap: 0.4rem; }
+@media (max-width: 639px) {
+  .cm-nav-login { width: 2.5rem; padding: 0; justify-content: center; }
+  .cm-nav-login span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+
+.cm-cta {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 2.1rem;
+  max-width: 40rem;
+}
+@media (min-width: 640px) { .cm-cta { grid-template-columns: 1.25fr 1fr; } }
+.cm-cta-agendar, .cm-cta-login {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 4.6rem;
+  padding: 0.85rem 1.1rem;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), filter 220ms ease, background 220ms ease;
+}
+.cm-cta-agendar {
+  color: #120802;
+  background: linear-gradient(180deg, #ffb347, var(--cm-orange) 55%, var(--cm-orange-deep));
+  box-shadow: 0 18px 50px -18px rgb(247 147 30 / 0.75);
+}
+.cm-cta-agendar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.5) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: cm-cta-brillo 4.5s ease-in-out 2.2s infinite;
+}
+@keyframes cm-cta-brillo {
+  0%, 70% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.cm-cta-login {
+  color: var(--cm-ink);
+  background: rgb(18 12 8 / 0.55);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1.5px rgb(247 147 30 / 0.55);
+}
+.cm-cta-agendar:hover { transform: translateY(-3px); filter: brightness(1.07); }
+.cm-cta-login:hover { transform: translateY(-3px); background: rgb(247 147 30 / 0.14); }
+.cm-cta-agendar:active, .cm-cta-login:active { transform: translateY(0) scale(0.98); }
+.cm-cta-icono {
+  display: inline-flex;
+  height: 2.8rem;
+  width: 2.8rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+.cm-cta-icono svg { width: 1.35rem; height: 1.35rem; }
+.cm-cta-agendar .cm-cta-icono { background: #120802; color: var(--cm-orange); }
+.cm-cta-login .cm-cta-icono { background: rgb(247 147 30 / 0.15); color: var(--cm-orange); }
+.cm-cta-texto { display: grid; min-width: 0; flex: 1; text-align: left; }
+.cm-cta-texto b {
+  font-family: var(--cm-display);
+  font-weight: 400;
+  font-size: 1.45rem;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.cm-cta-texto small { font-size: 0.78rem; opacity: 0.78; }
+.cm-cta-flecha { width: 1.4rem; height: 1.4rem; flex-shrink: 0; transition: transform 220ms ease; }
+.cm-cta-agendar:hover .cm-cta-flecha { transform: translateX(4px); }
+
+.cm-cta-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.2rem; margin-top: 1rem; }
+.cm-cta-extra a, .cm-instalar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--cm-mute);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-decoration-color: rgb(247 147 30 / 0.5);
+  text-underline-offset: 4px;
+  transition: color 160ms ease;
+}
+.cm-cta-extra svg { width: 1rem; height: 1rem; color: var(--cm-orange); }
+.cm-cta-extra a:hover, .cm-instalar button:hover { color: var(--cm-ink); }
+.cm-instalar { display: inline-flex; flex-direction: column; gap: 0.3rem; }
+.cm-instalar small { font-size: 0.75rem; color: var(--cm-ink); }
+.cm-instalar small svg { width: 0.85rem; height: 0.85rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-cta-agendar::after { animation: none; }
+  .cm-cta-agendar:hover, .cm-cta-login:hover { transform: none; }
+}

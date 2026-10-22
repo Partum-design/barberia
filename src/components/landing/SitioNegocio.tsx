@@ -25,8 +25,11 @@ import {
   Sparkles,
   Star,
   TrainFront,
+  UserRound,
   X,
 } from "lucide-react";
+import { BotonInstalarApp } from "@/components/app/BotonInstalarApp";
+import { DESTINO_POR_ROL } from "@/lib/auth/roles";
 import { Reveal } from "@/components/marketing/Reveal";
 import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual";
 import { Brocha, Maquina, Navaja, Navajazo, Peine, Tijeras } from "@/components/landing/Iconos";
@@ -140,7 +143,11 @@ function Estrellas({ className = "" }: { className?: string }) {
  * Google Maps (`PERFIL`).
  */
 export function SitioNegocio() {
-  const { listo, barberiaConfig: cfg, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
+  const { listo, sesion, barberiaConfig: cfg, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
+  // Con sesión abierta el botón lleva directo a su cuenta o a su panel.
+  const cuenta = sesion
+    ? { href: DESTINO_POR_ROL[sesion.rol], label: sesion.rol === "cliente" ? "Mi cuenta" : "Mi panel", nota: `Hola, ${sesion.nombre.split(" ")[0]}` }
+    : { href: "/login", label: "Iniciar sesión", nota: "Tus citas, QR y sellos" };
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [ahora, setAhora] = useState<Date | null>(null);
   const [resena, setResena] = useState(0);
@@ -284,8 +291,12 @@ export function SitioNegocio() {
           ))}
         </nav>
         <div className="cm-nav-actions">
-          <Link href="/reservar" className="cm-btn cm-btn-sm">
-            Reservar
+          <Link href={cuenta.href} className="cm-nav-login" aria-label={cuenta.label}>
+            <UserRound />
+            <span>{cuenta.label}</span>
+          </Link>
+          <Link href="/reservar" className="cm-btn cm-btn-sm cm-nav-agendar">
+            <CalendarCheck /> Agendar
           </Link>
           <button
             type="button"
@@ -304,7 +315,10 @@ export function SitioNegocio() {
                 {e.label}
               </a>
             ))}
-            <Link href="/login">Mi cuenta</Link>
+            <Link href="/reservar" onClick={() => setMenuAbierto(false)}>
+              Agendar cita
+            </Link>
+            <Link href={cuenta.href}>{cuenta.label}</Link>
           </div>
         )}
       </header>
@@ -342,19 +356,38 @@ export function SitioNegocio() {
             {eslogan}
           </p>
 
-          <div className="cm-hero-actions cm-in" style={{ animationDelay: "1050ms" }}>
-            <Link href="/reservar" className="cm-btn">
-              <CalendarCheck /> Reservar cita
+          <div className="cm-cta cm-in" style={{ animationDelay: "1050ms" }}>
+            <Link href="/reservar" className="cm-cta-agendar">
+              <span className="cm-cta-icono" aria-hidden>
+                <CalendarCheck />
+              </span>
+              <span className="cm-cta-texto">
+                <b>Agendar cita</b>
+                <small>Elige barbero y hora en un minuto</small>
+              </span>
+              <ArrowRight className="cm-cta-flecha" aria-hidden />
             </Link>
+            <Link href={cuenta.href} className="cm-cta-login">
+              <span className="cm-cta-icono" aria-hidden>
+                <UserRound />
+              </span>
+              <span className="cm-cta-texto">
+                <b>{cuenta.label}</b>
+                <small>{cuenta.nota}</small>
+              </span>
+            </Link>
+          </div>
+          <div className="cm-cta-extra cm-in" style={{ animationDelay: "1150ms" }}>
             {whatsapp ? (
-              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="cm-btn cm-btn-ghost">
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer">
                 <MessageCircle /> WhatsApp
               </a>
             ) : (
-              <a href={`tel:+52${soloDigitos(telefono)}`} className="cm-btn cm-btn-ghost">
+              <a href={`tel:+52${soloDigitos(telefono)}`}>
                 <Phone /> {telefono}
               </a>
             )}
+            <BotonInstalarApp />
           </div>
 
           <div className="cm-hero-facts cm-in" style={{ animationDelay: "1200ms" }}>
@@ -712,8 +745,8 @@ export function SitioNegocio() {
             <Link href="/reservar" className="cm-btn">
               <CalendarCheck /> Reservar cita
             </Link>
-            <Link href="/login" className="cm-btn cm-btn-ghost">
-              Mi cuenta
+            <Link href={cuenta.href} className="cm-btn cm-btn-ghost">
+              <UserRound /> {cuenta.label}
             </Link>
           </div>
         </Reveal>

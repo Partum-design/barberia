@@ -6,6 +6,7 @@ import { Check, Home, Save, Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
+import { TarjetaGoogle } from "@/components/app/TarjetaGoogle";
 
 const DURACIONES = [15, 20, 30, 45, 60];
 
@@ -166,6 +167,9 @@ export default function ConfiguracionBarberoPage() {
             </div>
           </div>
         </section>
+      </div>
+      <div className="mt-6 max-w-xl">
+        <TarjetaGoogle volverA="/dashboard/barbero/configuracion" />
       </div>
     </PanelShell>
   );

@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { EscanerQR } from "@/components/citas/EscanerQR";
+import { BotonesCobro } from "@/components/citas/BotonesCobro";
 import {
   calcularLealtad,
   ETIQUETA_ESTADO_CITA,
@@ -23,6 +24,7 @@ import {
   resumirCitas,
   useBarberia,
   type Cita,
+  type MetodoPago,
 } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -43,7 +45,7 @@ const hora = (iso: string) => format(new Date(iso), "HH:mm");
  */
 export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) {
   const store = useBarberia();
-  const { citas, clientes, tarjetas, recompensasConfig, canjes, sesion } = store;
+  const { citas, clientes, tarjetas, recompensasConfig, canjes, sesion, permisos } = store;
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [manual, setManual] = useState("");
@@ -150,10 +152,16 @@ export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) 
   const llegadasHoy = useMemo(
     () =>
       citas
-        .filter((c) => c.estado === "asistida" && c.llegada_en && isToday(new Date(c.llegada_en)))
+        .filter(
+          (c) =>
+            c.estado === "asistida" &&
+            c.llegada_en &&
+            isToday(new Date(c.llegada_en)) &&
+            (sesion?.rol === "admin" || c.barbero_id === sesion?.id)
+        )
         .sort((a, b) => (b.llegada_en ?? "").localeCompare(a.llegada_en ?? ""))
         .slice(0, 6),
-    [citas]
+    [citas, sesion]
   );
 
   function lealtadDe(clienteId: string) {
@@ -245,8 +253,10 @@ export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) 
               }}
               onCerrar={() => setResultado(null)}
               puedeAgendar={sesion?.rol === "admin"}
+              puedeCobrar={permisos.cobrar}
+              puedeSellar={permisos.ajustar_sellos}
               citaActual={(id) => citas.find((c) => c.id === id)}
-              onCobrar={(id) => store.cobrarEfectivo(id)}
+              onCobrar={(id, metodo) => store.cobrar(id, metodo)}
               resumenDe={(cita) => ({
                 cliente: resumirCitas(citas.filter((c) => c.cliente_id === cita.cliente_id)),
                 barberoHoy: resumirCitas(
@@ -316,13 +326,17 @@ function ResultadoEscaneo({
   onSello,
   onCerrar,
   puedeAgendar,
+  puedeCobrar,
+  puedeSellar,
   citaActual,
   onCobrar,
   resumenDe,
 }: {
   puedeAgendar: boolean;
+  puedeCobrar: boolean;
+  puedeSellar: boolean;
   citaActual: (id: string) => Cita | undefined;
-  onCobrar: (id: string) => void;
+  onCobrar: (id: string, metodo: MetodoPago) => void;
   resumenDe: (cita: Cita) => { cliente: ReturnType<typeof resumirCitas>; barberoHoy: ReturnType<typeof resumirCitas> };
   resultado: Resultado;
   lealtadDe: (clienteId: string) => ReturnType<typeof calcularLealtad> & { disponibles: number };
@@ -376,13 +390,16 @@ function ResultadoEscaneo({
               <b>{mxn.format(cita.precio)}</b>
             </span>
             {cita.estado_pago === "pagado" ? (
-              <span className="badge badge-ok">Pagado</span>
-            ) : (
-              <button type="button" className="btn-gold is-sm" onClick={() => onCobrar(cita.id)}>
-                <Banknote className="h-4 w-4" /> Cobrar {mxn.format(cita.precio)}
-              </button>
-            )}
+              <span className="badge badge-ok">
+                <Banknote className="h-3.5 w-3.5" /> Pagado · {cita.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"}
+              </span>
+            ) : !puedeCobrar ? (
+              <span className="badge badge-warm">Pendiente de cobro</span>
+            ) : null}
           </div>
+        )}
+        {cita.barbero_id && cita.estado_pago !== "pagado" && puedeCobrar && (
+          <BotonesCobro precio={cita.precio} onCobrar={(metodo) => onCobrar(cita.id, metodo)} />
         )}
         {r && (
           <dl className="resultado-datos">
@@ -459,9 +476,11 @@ function ResultadoEscaneo({
         <>
           <p>No tiene cita agendada para hoy.</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <button type="button" className="btn-gold is-sm" onClick={() => onSello(tarjetaId, clienteId)}>
-              <Stamp className="h-4 w-4" /> Registrar visita sin cita (+1 sello)
-            </button>
+            {puedeSellar && (
+              <button type="button" className="btn-gold is-sm" onClick={() => onSello(tarjetaId, clienteId)}>
+                <Stamp className="h-4 w-4" /> Registrar visita sin cita (+1 sello)
+              </button>
+            )}
             {puedeAgendar && (
               <a className="btn-linea is-sm" href={`/dashboard/admin/citas?nueva=${encodeURIComponent(clienteId)}`}>
                 <CalendarPlus className="h-4 w-4" /> Agendarle cita

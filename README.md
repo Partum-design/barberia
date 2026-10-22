@@ -50,6 +50,7 @@ Google de Supabase Auth.
 | `00001_init.sql` | Esquema base, RLS multi-tenant, fidelización y bloqueo de slots |
 | `00002_metodo_pago.sql` | Pago en efectivo |
 | `00003_lealtad_y_portada.sql` | `clientes`, `tarjetas_lealtad` (emisión automática, sellos de mostrador) y campos de portada en `barberias` |
+| `00007_notificaciones_y_calendario.sql` | Bandeja de avisos, suscripciones push y vínculo con Google Calendar |
 
 ## Portada del negocio
 
@@ -101,6 +102,59 @@ pase es informativo: el canje se valida siempre contra el sistema con el QR.
 - El QR abre `/confirmar?cita=…`, que lleva al personal a su escáner.
 - Estados de cita: Agendada, Asistió, No asistió y Cancelada. Las faltas y
   cancelaciones no cuentan como ingreso ni ocupan horario.
+
+## Acceso de clientes
+
+- **Con su número**: en `/login` el cliente escribe su celular. Si el personal
+  ya lo había dado de alta y es su primera vez, se le pide **crear su
+  contraseña** y su cuenta queda unida a su ficha (citas, sellos y tarjeta).
+  Si el número no existe, crea su cuenta ahí mismo.
+- **Con Google**: «Continuar con Google» entra o crea la cuenta. Si en
+  mostrador ya lo habían registrado con ese correo, se une a esa ficha.
+- **Google Calendar**: en «Mi cuenta» (y en Configuración del barbero) se
+  vincula Google y cada cita se escribe sola en su calendario. Sin vínculo,
+  cada cita tiene el botón «Calendario» para agregarla a mano.
+- Con Twilio Verify configurado, crear la contraseña pide un código por SMS.
+
+Las cuentas de teléfono usan un correo interno `<10 dígitos>@telefono.invalid`
+(dominio reservado que nunca recibe correo). Si olvidan su contraseña, el
+administrador la cambia en **Usuarios**.
+
+### Activar Google (una sola vez)
+
+1. Google Cloud → *APIs y servicios* → crea un **ID de cliente OAuth (Web)** y
+   habilita la **Google Calendar API**. URI de redirección:
+   `https://hlifkzmiqkqpphddtunw.supabase.co/auth/v1/callback`.
+2. Supabase → *Authentication → Sign In / Providers → Google*: actívalo con ese
+   ID y secreto.
+3. Supabase → *Authentication → Sign In / Providers*: activa **Allow manual
+   linking** (para que quien entra con su número pueda vincular Google).
+4. Supabase → *Authentication → URL Configuration*: agrega
+   `https://<dominio>/auth/callback` a las Redirect URLs.
+5. En Vercel define `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` (los mismos)
+   para que las citas se escriban solas en Google Calendar.
+
+## Permisos del equipo y privacidad
+
+En **Equipo de barberos → Permisos** el administrador decide qué puede hacer
+cada barbero. Por defecto: crea citas en su agenda, confirma llegadas, cobra,
+da de alta clientes y pone sellos; ve el **nombre** de los clientes pero sólo
+el **teléfono y correo de los clientes que él dio de alta**. Se puede abrir
+agendar a otros barberos, ver la agenda completa, editar clientes, ver el
+contacto de todos u ocultar los nombres (sólo iniciales). El servidor aplica
+cada permiso: no basta con esconder botones.
+
+Al cobrar una cita (escáner, agenda o lista de citas) se elige **efectivo o
+tarjeta**; Caja y Reportes lo separan.
+
+## App instalable y avisos
+
+La página se instala como app (Android, iPhone, computadora) desde el botón
+«Descargar app» de la portada o la tarjeta del panel. Con las notificaciones
+activadas llegan avisos de reservas nuevas, cambios, cancelaciones, llegadas y
+un recordatorio cada mañana (Vercel Cron, 8:00 a.m. CDMX). La campana del panel
+guarda el historial. Requiere `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY` y `CRON_SECRET` (migración `00007`).
 
 ## Módulos del panel de administración
 

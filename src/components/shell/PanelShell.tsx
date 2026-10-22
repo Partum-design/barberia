@@ -31,6 +31,8 @@ import {
 import type { Rol, Sesion } from "@/lib/store";
 import { Marca } from "@/components/shell/Marca";
 import { ValorVivo } from "@/components/panel/ModuleUI";
+import { CampanaAvisos } from "@/components/app/CampanaAvisos";
+import { TarjetaApp } from "@/components/app/TarjetaApp";
 
 type NavItem = { label: string; corto?: string; href: string; icon: React.ReactNode };
 
@@ -148,10 +150,11 @@ export function PanelShell({
         <div className="app-user-card">
           <div className="flex items-center gap-3">
             <div className="app-user-avatar">{inicial}</div>
-            <div className="min-w-0 text-left">
+            <div className="min-w-0 flex-1 text-left">
               <p className="truncate text-sm font-semibold text-white">{sesion.nombre}</p>
               <p className="truncate text-[11px] text-white/48">{sesion.subtitulo}</p>
             </div>
+            <CampanaAvisos className="is-arriba" />
           </div>
           <button
             type="button"
@@ -172,17 +175,23 @@ export function PanelShell({
             <span className="app-mobile-mark"><Scissors className="h-3.5 w-3.5" /></span>
             <Marca className="max-w-[11rem] truncate uppercase" />
           </Link>
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event("accesibilidad:abrir"))}
-            className="app-mobile-a11y"
-            aria-label="Accesibilidad"
-          >
-            <Accessibility className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <CampanaAvisos />
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("accesibilidad:abrir"))}
+              className="app-mobile-a11y"
+              aria-label="Accesibilidad"
+            >
+              <Accessibility className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
-        <div className="app-page">{children}</div>
+        <div className="app-page">
+          <TarjetaApp rol={sesion.rol} />
+          {children}
+        </div>
 
         <nav className="app-mobile-nav" aria-label="Navegación móvil">
           {principales.map((item) => (

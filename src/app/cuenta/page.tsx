@@ -13,6 +13,9 @@ import { Modal } from "@/components/panel/Modal";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { OtroRol } from "@/components/panel/ModuleUI";
+import { TarjetaGoogle } from "@/components/app/TarjetaGoogle";
+import { LogoGoogle } from "@/components/app/LogoGoogle";
+import { enlaceGoogleCalendar } from "@/lib/auth/google";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -141,7 +144,7 @@ export default function CuentaPage() {
                   {c.estado_pago === "pagado" ? (
                     <><CreditCard className="h-3 w-3" /> Pagado</>
                   ) : (
-                    <><Banknote className="h-3 w-3" /> Paga en efectivo al llegar</>
+                    <><Banknote className="h-3 w-3" /> Paga al llegar · efectivo o tarjeta</>
                   )}
                 </span>
               </div>
@@ -159,6 +162,21 @@ export default function CuentaPage() {
                 <button type="button" onClick={() => setQr(c)} className="btn-gold is-sm">
                   <QrCode className="h-4 w-4" /> Mi QR
                 </button>
+                <a
+                  href={enlaceGoogleCalendar({
+                    inicio: c.inicio,
+                    fin: c.fin,
+                    titulo: `${c.servicio_nombre || "Cita"} · ${nombreDelNegocio(barberiaConfig)}`,
+                    lugar: c.modalidad === "domicilio" && c.direccion_domicilio ? c.direccion_domicilio : barberiaConfig.direccion,
+                    detalle: `Con ${c.barbero_nombre}. Muestra tu QR al llegar.`,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-linea is-sm"
+                  title="Agregar a Google Calendar"
+                >
+                  <LogoGoogle className="h-4 w-4" /> Calendario
+                </a>
                 <button
                   onClick={() => {
                     if (window.confirm("¿Cancelar esta cita?")) store.cancelarCita(c.id);
@@ -205,7 +223,7 @@ export default function CuentaPage() {
         </section>
 
         {/* Programa de lealtad */}
-        <section className="anim-in anim-d3">
+        <section className="anim-in anim-d3 space-y-4">
           <div className="card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-white shadow-md">
             <div className="mb-4 flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
@@ -247,6 +265,7 @@ export default function CuentaPage() {
               Ver mi historial de recompensas →
             </Link>
           </div>
+          <TarjetaGoogle />
         </section>
       </div>
 

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Home, KeyRound, Loader2, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Home, KeyRound, Loader2, LockKeyhole, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Modal } from "@/components/panel/Modal";
 import { EditorBarbero } from "@/components/citas/EditorBarbero";
-import { resumirBarberos, useBarberia, type Barbero } from "@/lib/store";
+import { EditorPermisos } from "@/components/panel/EditorPermisos";
+import { ETIQUETAS_PERMISOS, permisosDe, resumirBarberos, useBarberia, type Barbero } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -45,6 +46,7 @@ export default function EquipoBarberoPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
   const [editando, setEditando] = useState<Barbero | null>(null);
+  const [permisosDeQuien, setPermisosDeQuien] = useState<Barbero | null>(null);
   const esAdmin = sesion?.rol === "admin";
 
   const cargarCuentas = useCallback(async () => {
@@ -322,6 +324,14 @@ export default function EquipoBarberoPage() {
             >
               <Settings2 className="h-4 w-4" /> Editar configuración
             </button>
+            <button
+              type="button"
+              onClick={() => setPermisosDeQuien(m)}
+              className="btn-linea mb-2 w-full justify-center px-4 py-2 text-sm"
+            >
+              <LockKeyhole className="h-4 w-4" /> Permisos ·{" "}
+              {ETIQUETAS_PERMISOS.filter((p) => permisosDe(m)[p.id]).length}/{ETIQUETAS_PERMISOS.length}
+            </button>
             {correoDe(m.id) && (
               <button
                 onClick={() => cambiarClave(m.id, m.nombre)}
@@ -364,6 +374,25 @@ export default function EquipoBarberoPage() {
             onCancelar={() => setEditando(null)}
             onListo={(m) => {
               setEditando(null);
+              setError(null);
+              setAviso(m);
+            }}
+          />
+        </Modal>
+      )}
+
+      {permisosDeQuien && (
+        <Modal
+          titulo={`Permisos de ${permisosDeQuien.nombre}`}
+          descripcion="Decide qué puede ver y hacer en su panel. Por defecto puede crear citas y ve el nombre de los clientes, pero sólo el teléfono de quienes él dio de alta."
+          onCerrar={() => setPermisosDeQuien(null)}
+          ancho="lg"
+        >
+          <EditorPermisos
+            barbero={permisosDeQuien}
+            onCancelar={() => setPermisosDeQuien(null)}
+            onListo={(m) => {
+              setPermisosDeQuien(null);
               setError(null);
               setAviso(m);
             }}

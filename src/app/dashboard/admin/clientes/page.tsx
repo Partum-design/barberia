@@ -230,6 +230,7 @@ export default function ClientesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>
                       {c.nombre}
+                      {c.registro && <EstadoAcceso cliente={c.registro} />}
                       {c.enRiesgo && (
                         <span className="badge badge-warm ml-2 align-middle">
                           <AlertTriangle /> {c.diasDesdeUltima} días sin volver
@@ -330,4 +331,26 @@ export default function ClientesPage() {
       )}
     </PanelShell>
   );
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** ¿Ya puede entrar a su cuenta? Los de mostrador la activan con su número la primera vez. */
+function EstadoAcceso({ cliente }: { cliente: Cliente }) {
+  const conCuenta = Boolean(cliente.cuenta_id || cliente.cuenta || UUID.test(cliente.id));
+  if (conCuenta) {
+    return (
+      <span className="badge badge-ok ml-2 align-middle" title="Ya tiene contraseña o entra con Google">
+        {cliente.google ? "Google" : "Con acceso"}
+      </span>
+    );
+  }
+  if (cliente.telefono.replace(/\D/g, "").length >= 10) {
+    return (
+      <span className="badge badge-neutral ml-2 align-middle" title="Puede entrar con su número y crear su contraseña">
+        Activa con su número
+      </span>
+    );
+  }
+  return null;
 }

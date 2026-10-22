@@ -77,19 +77,24 @@ async function cargarMenuImpreso(estado: Estado, versiones: Leido["versiones"]):
  * lo cambió en medio; si hubo carrera, vuelve a leer y reintenta.
  */
 export async function ejecutarOperacion(op: Operacion, sesion: Sesion): Promise<Estado> {
+  return (await ejecutarYComparar(op, sesion)).despues;
+}
+
+/** Igual que `ejecutarOperacion`, pero devuelve también el estado de antes (para avisos y calendario). */
+export async function ejecutarYComparar(op: Operacion, sesion: Sesion): Promise<{ antes: Estado; despues: Estado }> {
   const admin = createAdminClient();
   for (let intento = 0; intento < 5; intento++) {
     const { estado, versiones } = await leerEstado();
     const cambios = aplicarOperacion(estado, op, sesion);
     const claves = Object.keys(cambios) as Clave[];
-    if (claves.length === 0) return estado;
+    if (claves.length === 0) return { antes: estado, despues: estado };
 
     const { data: ok, error } = await admin.rpc("fn_guardar_estado", {
       p_cambios: cambios,
       p_versiones: Object.fromEntries(claves.map((k) => [k, versiones[k] ?? 0])),
     });
     if (error) throw new Error(`No se pudo guardar: ${error.message}`);
-    if (ok) return { ...estado, ...cambios };
+    if (ok) return { antes: estado, despues: { ...estado, ...cambios } };
   }
   throw new ErrorOperacion("Hay demasiados cambios simultáneos. Intenta de nuevo.", 409);
 }

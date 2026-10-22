@@ -134,6 +134,7 @@ export const config = {
     "/api/bookings/:path*",
     "/api/search/:path*",
     "/api/auth/registro",
+    "/api/auth/telefono",
     "/dashboard/:path*",
     "/cuenta/:path*",
     "/login",

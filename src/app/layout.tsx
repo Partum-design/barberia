@@ -4,6 +4,7 @@ import "./globals.css";
 import "./tema-cortmart.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
+import { RegistrarApp } from "@/components/app/RegistrarApp";
 
 // Display grotesk para titulares de producto
 const outfit = Outfit({
@@ -51,6 +52,9 @@ export const metadata: Metadata = {
   description:
     process.env.NEXT_PUBLIC_DESCRIPCION_NEGOCIO ||
     `${NOMBRE}: servicios, equipo, horario y reservas en línea. Suma sellos en tu tarjeta de lealtad con cada visita.`,
+  applicationName: NOMBRE,
+  appleWebApp: { capable: true, title: "CortMart", statusBarStyle: "black-translucent" },
+  icons: { icon: "/pwa/icono?t=192", apple: "/pwa/icono?t=180&m=1" },
 };
 
 export const viewport: Viewport = {
@@ -79,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </div>
         <Accesibilidad />
+        <RegistrarApp />
         <footer className="site-footer">
           <Marca />
           <span>

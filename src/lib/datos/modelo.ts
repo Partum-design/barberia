@@ -95,7 +95,30 @@ export type Barbero = {
   activo: boolean;
   /** Lo que el administrador le permite hacer. Lo que falte toma el valor por defecto. */
   permisos?: Partial<PermisosBarbero>;
+  /**
+   * Precio especial por servicio (id del servicio → MXN). Lo que no aparece
+   * se cobra al precio de lista del catálogo. Sólo lo cambia el administrador.
+   */
+  precios?: Record<string, number>;
 };
+
+/** Lo que cobra este barbero por el servicio: su precio especial o el de lista. */
+export function precioDe(servicio: Pick<Servicio, "id" | "precio">, barbero?: Pick<Barbero, "precios"> | null) {
+  const especial = barbero?.precios?.[servicio.id];
+  return typeof especial === "number" && Number.isFinite(especial) && especial >= 0 ? especial : servicio.precio;
+}
+
+/** Deja sólo precios válidos de servicios que existen y distintos del de lista. */
+export function limpiarPrecios(precios: unknown, servicios: Pick<Servicio, "id" | "precio">[]): Record<string, number> {
+  const limpio: Record<string, number> = {};
+  if (!precios || typeof precios !== "object") return limpio;
+  for (const sv of servicios) {
+    const n = Number((precios as Record<string, unknown>)[sv.id]);
+    if ((precios as Record<string, unknown>)[sv.id] === null || (precios as Record<string, unknown>)[sv.id] === "") continue;
+    if (Number.isFinite(n) && n >= 0 && n <= 1_000_000 && Math.round(n) !== sv.precio) limpio[sv.id] = Math.round(n);
+  }
+  return limpio;
+}
 
 // --- Permisos del equipo ----------------------------------------------------
 
@@ -513,7 +536,7 @@ function servicioParaCita(estado: Estado, servicioId: string | null | undefined,
   if (!servicio) throw new ErrorOperacion("Ese servicio ya no existe.", 400);
   return {
     servicio,
-    precio: servicio.precio,
+    precio: precioDe(servicio, barbero),
     duracion: Math.max(5, servicio.duracion_min),
     comision: Math.min(100, Math.max(0, servicio.comision_pct)),
   };
@@ -669,6 +692,10 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         siguiente.barbero_id = otro.id;
         siguiente.barbero_nombre = otro.nombre;
         siguiente.especialidad = otro.especialidad;
+        // Si el precio era el del barbero anterior, pasa al del nuevo.
+        const sv = estado.servicios.find((x) => x.id === cita.servicio_id);
+        const anterior = estado.barberos.find((b) => b.id === cita.barbero_id);
+        if (sv && cita.precio === precioDe(sv, anterior)) siguiente.precio = precioDe(sv, otro);
       }
       let duracion = Math.max(5 * 60_000, new Date(cita.fin).getTime() - new Date(cita.inicio).getTime());
       if (c.servicio_id !== undefined && c.servicio_id !== (cita.servicio_id ?? null)) {
@@ -790,6 +817,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       if (s.rol !== "admin") {
         delete cambios.activo;
         delete cambios.permisos;
+        delete cambios.precios;
       } else if (cambios.permisos) {
         // Sólo se guardan permisos conocidos y como booleanos.
         const limpio: Partial<PermisosBarbero> = {};
@@ -798,6 +826,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         }
         cambios.permisos = limpio;
       }
+      if (cambios.precios !== undefined) cambios.precios = limpiarPrecios(cambios.precios, estado.servicios);
       const resultado: Partial<Estado> = {
         barberos: estado.barberos.map((b) => (b.id === op.id ? { ...b, ...cambios, id: b.id } : b)),
       };

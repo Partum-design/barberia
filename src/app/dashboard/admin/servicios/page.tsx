@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, CheckCircle2, Clock3, ListPlus, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
+import { BadgeDollarSign, Check, CheckCircle2, Clock3, ListPlus, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EmptyState, Metric, ModulePanel, SinAcceso, moneda, numero } from "@/components/panel/ModuleUI";
 import { Campo, Modal } from "@/components/panel/Modal";
-import { CATEGORIAS_SERVICIO, useBarberia, type Servicio } from "@/lib/store";
+import { EditorPrecios } from "@/components/panel/EditorPrecios";
+import { CATEGORIAS_SERVICIO, precioDe, useBarberia, type Servicio } from "@/lib/store";
 import { PERFIL } from "@/lib/negocio/perfil";
 
 const VACIO = {
@@ -19,14 +20,15 @@ const VACIO = {
 };
 
 /**
- * Catálogo de servicios. Aquí vive el precio: la reserva y el mostrador lo
- * toman del servicio elegido, no del barbero. La comisión sólo la ve el
- * administrador.
+ * Catálogo de servicios. Aquí vive el precio de lista; cada barbero puede
+ * tener un precio especial por servicio («Precios por barbero»). La comisión
+ * sólo la ve el administrador.
  */
 export default function ServiciosPage() {
   const store = useBarberia();
-  const { listo, sesion, servicios, citas } = store;
+  const { listo, sesion, servicios, citas, barberos } = store;
   const [editando, setEditando] = useState<{ servicio?: Servicio } | null>(null);
+  const [precios, setPrecios] = useState(false);
   const [aviso, setAviso] = useState("");
 
   useEffect(() => {
@@ -97,13 +99,18 @@ export default function ServiciosPage() {
           <p className="kicker">Catálogo y precios</p>
           <h1 className="font-display text-2xl font-bold tracking-tight">Servicios</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-            El precio y la duración de cada cita salen de aquí. La comisión del barbero sólo la ves tú.
+            El precio y la duración de cada cita salen de aquí. Si un barbero cobra distinto, ponlo en «Precios por barbero».
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {faltantes.length > 0 && (
             <button type="button" className="btn-linea" onClick={cargarMenu} title="Agrega los servicios del menú impreso que faltan">
               <ListPlus className="h-4 w-4" /> Cargar menú ({faltantes.length})
+            </button>
+          )}
+          {servicios.length > 0 && barberos.length > 0 && (
+            <button type="button" className="btn-linea" onClick={() => setPrecios(true)}>
+              <BadgeDollarSign className="h-4 w-4" /> Precios por barbero
             </button>
           )}
           <button type="button" className="btn-gold px-5 py-2.5 text-sm" onClick={() => setEditando({})}>
@@ -152,6 +159,17 @@ export default function ServiciosPage() {
                       {moneda.format(caja)}
                       {v ? ` · vendido ${v.veces} ${v.veces === 1 ? "vez" : "veces"} (${moneda.format(v.ingresos)})` : ""}
                     </p>
+                    {barberos.some((b) => precioDe(s, b) !== s.precio) && (
+                      <button type="button" className="servicio-especiales" onClick={() => setPrecios(true)} title="Editar precios por barbero">
+                        {barberos
+                          .filter((b) => precioDe(s, b) !== s.precio)
+                          .map((b) => (
+                            <span key={b.id}>
+                              {b.nombre.split(" ")[0]} {moneda.format(precioDe(s, b))}
+                            </span>
+                          ))}
+                      </button>
+                    )}
                   </div>
                   <strong className="fila-servicio-precio">
                     {s.desde && <small className="mr-1 font-normal">desde</small>}
@@ -180,6 +198,23 @@ export default function ServiciosPage() {
           </div>
         )}
       </ModulePanel>
+
+      {precios && (
+        <Modal
+          titulo="Precios por barbero"
+          descripcion="Deja vacío para cobrar el precio de lista. Aplica a las citas nuevas; las ya agendadas conservan su precio."
+          onCerrar={() => setPrecios(false)}
+          ancho="lg"
+        >
+          <EditorPrecios
+            onCancelar={() => setPrecios(false)}
+            onListo={(m) => {
+              setPrecios(false);
+              setAviso(m);
+            }}
+          />
+        </Modal>
+      )}
 
       {editando && (
         <Modal

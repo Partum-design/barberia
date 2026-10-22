@@ -42,6 +42,7 @@ export {
   ETIQUETAS_PERMISOS,
   PERMISOS_POR_DEFECTO,
   permisosDe,
+  precioDe,
   iniciales,
   normalizarTelefono,
   citaActiva,

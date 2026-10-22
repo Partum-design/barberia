@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Home, KeyRound, Loader2, LockKeyhole, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
+import { BadgeDollarSign, CheckCircle2, Home, KeyRound, Loader2, LockKeyhole, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Modal } from "@/components/panel/Modal";
 import { EditorBarbero } from "@/components/citas/EditorBarbero";
 import { EditorPermisos } from "@/components/panel/EditorPermisos";
+import { EditorPrecios } from "@/components/panel/EditorPrecios";
 import { ETIQUETAS_PERMISOS, permisosDe, resumirBarberos, useBarberia, type Barbero } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -47,6 +48,7 @@ export default function EquipoBarberoPage() {
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
   const [editando, setEditando] = useState<Barbero | null>(null);
   const [permisosDeQuien, setPermisosDeQuien] = useState<Barbero | null>(null);
+  const [preciosDe, setPreciosDe] = useState<string | null>(null);
   const esAdmin = sesion?.rol === "admin";
 
   const cargarCuentas = useCallback(async () => {
@@ -332,6 +334,17 @@ export default function EquipoBarberoPage() {
               <LockKeyhole className="h-4 w-4" /> Permisos ·{" "}
               {ETIQUETAS_PERMISOS.filter((p) => permisosDe(m)[p.id]).length}/{ETIQUETAS_PERMISOS.length}
             </button>
+            <button
+              type="button"
+              onClick={() => setPreciosDe(m.id)}
+              className="btn-linea mb-2 w-full justify-center px-4 py-2 text-sm"
+            >
+              <BadgeDollarSign className="h-4 w-4" /> Precios ·{" "}
+              {(() => {
+                const n = store.servicios.filter((s) => s.activo && m.precios?.[s.id] !== undefined && m.precios[s.id] !== s.precio).length;
+                return n === 0 ? "de lista" : `${n} especial${n === 1 ? "" : "es"}`;
+              })()}
+            </button>
             {correoDe(m.id) && (
               <button
                 onClick={() => cambiarClave(m.id, m.nombre)}
@@ -376,6 +389,25 @@ export default function EquipoBarberoPage() {
               setEditando(null);
               setError(null);
               setAviso(m);
+            }}
+          />
+        </Modal>
+      )}
+
+      {preciosDe && (
+        <Modal
+          titulo="Precios por barbero"
+          descripcion="Deja vacío para cobrar el precio de lista. Aplica a las citas nuevas; las ya agendadas conservan su precio."
+          onCerrar={() => setPreciosDe(null)}
+          ancho="lg"
+        >
+          <EditorPrecios
+            barberoInicial={preciosDe}
+            onCancelar={() => setPreciosDe(null)}
+            onListo={(msg) => {
+              setPreciosDe(null);
+              setError(null);
+              setAviso(msg);
             }}
           />
         </Modal>

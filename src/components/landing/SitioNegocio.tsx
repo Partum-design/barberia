@@ -35,7 +35,7 @@ import { TarjetaLealtadVisual } from "@/components/lealtad/TarjetaLealtadVisual"
 import { Brocha, Maquina, Navaja, Navajazo, Peine, Tijeras } from "@/components/landing/Iconos";
 import { horarioConPersonal } from "@/lib/datos/disponibilidad";
 import { PERFIL } from "@/lib/negocio/perfil";
-import { DIAS_SEMANA, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
+import { DIAS_SEMANA, precioDe, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
 import "./cortmart.css";
 import { WALLET_VISIBLE } from "@/lib/modo";
 
@@ -211,8 +211,20 @@ export function SitioNegocio() {
   const telefono = cfg.telefono.trim() || PERFIL.telefono;
   const mapa = cfg.mapa_url.trim() || PERFIL.mapa_url;
 
-  const activos = useMemo(() => servicios.filter((s) => s.activo), [servicios]);
   const equipoPanel = useMemo(() => barberos.filter((b) => b.activo), [barberos]);
+  // Si algún barbero cobra distinto, la portada muestra el menor «desde».
+  const activos = useMemo(
+    () =>
+      servicios
+        .filter((s) => s.activo)
+        .map((s) => {
+          const precios = equipoPanel.map((b) => precioDe(s, b));
+          if (precios.length === 0) return s;
+          const min = Math.min(...precios);
+          return { ...s, precio: min, desde: s.desde || precios.some((p) => p !== min) };
+        }),
+    [servicios, equipoPanel]
+  );
 
   const horarioPanel = useMemo(
     () => horarioConPersonal(cfg, barberos, horarioDeBarbero),

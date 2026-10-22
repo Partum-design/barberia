@@ -6,7 +6,7 @@ import { Banknote, Check, CreditCard, Home, Loader2, MapPin, Search, UserPlus } 
 import { Campo, Interruptor } from "@/components/panel/Modal";
 import { FormularioCliente } from "@/components/citas/FormularioCliente";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
-import { ETIQUETA_ESTADO_CITA, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, precioDe, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
 
 const ESTADOS: EstadoCita[] = ["confirmada", "asistida", "no_asistio", "cancelada"];
 
@@ -228,7 +228,12 @@ export function EditorCita({
         <select
           className="campo-input"
           value={barberoId}
-          onChange={(e) => setBarberoId(e.target.value)}
+          onChange={(e) => {
+            // Si el precio era el del barbero anterior, pasa al del nuevo.
+            const nuevo = barberos.find((b) => b.id === e.target.value);
+            if (cita && servicio && precio === String(precioDe(servicio, barbero))) setPrecio(String(precioDe(servicio, nuevo)));
+            setBarberoId(e.target.value);
+          }}
           disabled={Boolean(cita) && !esAdmin}
         >
           <option value="" disabled>
@@ -246,14 +251,14 @@ export function EditorCita({
         </select>
       </Campo>
 
-      <Campo label="Servicio" ayuda={servicio ? `${servicio.duracion_min} min · precio de lista $${servicio.precio}` : catalogo.length === 0 ? "Da de alta servicios en «Servicios» para fijar precios." : undefined}>
+      <Campo label="Servicio" ayuda={servicio ? `${servicio.duracion_min} min · ${precioDe(servicio, barbero) !== servicio.precio ? `precio de ${barbero?.nombre.split(" ")[0]} $${precioDe(servicio, barbero)} (lista $${servicio.precio})` : `precio de lista $${servicio.precio}`}` : catalogo.length === 0 ? "Da de alta servicios en «Servicios» para fijar precios." : undefined}>
         <select
           className="campo-input"
           value={servicioId}
           onChange={(e) => {
             setServicioId(e.target.value);
             const nuevo = servicios.find((x) => x.id === e.target.value);
-            setPrecio(cita && nuevo ? String(nuevo.precio) : "");
+            setPrecio(cita && nuevo ? String(precioDe(nuevo, barbero)) : "");
           }}
           disabled={catalogo.length === 0}
         >
@@ -265,13 +270,13 @@ export function EditorCita({
           )}
           {catalogo.map((x) => (
             <option key={x.id} value={x.id}>
-              {x.nombre} — ${x.precio}
+              {x.nombre} — ${precioDe(x, barbero)}
             </option>
           ))}
         </select>
       </Campo>
 
-      <Campo ancho="completo" label="Precio a cobrar" ayuda={esAdmin ? "Cámbialo sólo para descuentos o cargos extra." : "Lo fija el servicio."}>
+      <Campo ancho="completo" label="Precio a cobrar" ayuda={esAdmin ? "Cámbialo sólo para descuentos o cargos extra." : "Lo fija el servicio y el barbero."}>
         <input
           className="campo-input"
           type="number"
@@ -279,7 +284,7 @@ export function EditorCita({
           min={0}
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
-          placeholder={String(servicio?.precio ?? 0)}
+          placeholder={String(servicio ? precioDe(servicio, barbero) : 0)}
           disabled={!esAdmin}
         />
       </Campo>

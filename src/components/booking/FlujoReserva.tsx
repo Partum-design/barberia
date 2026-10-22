@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
-import { calcularLealtad, enlaceDeCita, nombreDelNegocio, useBarberia, type Barbero, type Servicio } from "@/lib/store";
+import { calcularLealtad, enlaceDeCita, nombreDelNegocio, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
@@ -54,7 +54,14 @@ export function FlujoReserva() {
         .filter((x) => x.slots.length > 0),
     [barberos, citas, barberiaConfig, horarioDeBarbero, servicio]
   );
-  const precio = servicio?.precio ?? 0;
+  const precio = servicio ? precioDe(servicio, barbero) : 0;
+  // Antes de elegir barbero: si alguno cobra distinto, se muestra «desde».
+  const precioLista = (x: Servicio) => {
+    const precios = barberos.filter((b) => b.activo).map((b) => precioDe(x, b));
+    const min = precios.length ? Math.min(...precios) : x.precio;
+    const varia = precios.some((p) => p !== min);
+    return `${varia || x.desde ? "desde " : ""}${mxn.format(min)}`;
+  };
   const duracion = servicio?.duracion_min;
   const slots = disponibles.find((x) => x.barbero.id === barbero?.id)?.slots ?? [];
 
@@ -127,7 +134,7 @@ export function FlujoReserva() {
                 <span className="block truncate font-semibold">{x.nombre}</span>
                 <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{x.duracion_min} min</span>
               </span>
-              <span className="reserva-servicio-precio">{mxn.format(x.precio)}</span>
+              <span className="reserva-servicio-precio">{precioLista(x)}</span>
             </button>
           ))}
         </div>
@@ -136,7 +143,7 @@ export function FlujoReserva() {
       {paso === "barbero" && servicio && (
         <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ring-1 ring-[var(--line)]" style={{ background: "var(--card)" }}>
           <span className="min-w-0 truncate">
-            <b>{servicio.nombre}</b> · {servicio.duracion_min} min · {mxn.format(servicio.precio)}
+            <b>{servicio.nombre}</b> · {servicio.duracion_min} min · {precioLista(servicio)}
           </span>
           <button onClick={() => setPaso("servicio")} className="shrink-0 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
             ← Cambiar servicio
@@ -177,6 +184,9 @@ export function FlujoReserva() {
                   Próximo: {format(libres[0], "EEE d MMM, HH:mm", { locale: es })}
                 </p>
               </div>
+              {servicio && (
+                <span className="reserva-servicio-precio shrink-0">{mxn.format(precioDe(servicio, m))}</span>
+              )}
               <span className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>Elegir →</span>
             </button>
           ))}

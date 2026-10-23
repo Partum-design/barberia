@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nuevoId, numeroDeTarjeta } from "@/lib/datos/modelo";
 import { ejecutarOperacion } from "@/lib/datos/servidor";
+import { dentroDelLimite, ESPERA, ipDe } from "@/lib/limites";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,11 @@ export async function POST(req: NextRequest) {
   const email = body.email?.trim().toLowerCase() ?? "";
   const password = body.password ?? "";
 
+  if (!(await dentroDelLimite(`registro:ip:${ipDe(req)}`, 10, 60))) {
+    return NextResponse.json({ error: `Demasiados intentos. ${ESPERA}` }, { status: 429 });
+  }
   if (nombre.length < 2) return NextResponse.json({ error: "Escribe tu nombre." }, { status: 400 });
-  if (!EMAIL.test(email)) return NextResponse.json({ error: "El correo no es válido." }, { status: 400 });
+  if (!EMAIL.test(email)) return NextResponse.json({ error: "Escribe un correo válido." }, { status: 400 });
   if (password.length < 8) {
     return NextResponse.json({ error: "La contraseña debe tener al menos 8 caracteres." }, { status: 400 });
   }
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
     email,
     password,
     email_confirm: true,
-    app_metadata: { rol: "cliente" },
+    app_metadata: { rol: "cliente", clave_cambiada_en: new Date().toISOString() },
     user_metadata: { full_name: nombre },
   });
   if (error || !data.user) {

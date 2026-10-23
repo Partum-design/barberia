@@ -5,6 +5,7 @@ import { correoDeTelefono, esCorreoInterno } from "@/lib/auth/telefono";
 import { codigoValido, enviarCodigo, smsDisponible } from "@/lib/auth/sms";
 import { ejecutarOperacion, leerEstado } from "@/lib/datos/servidor";
 import { normalizarTelefono, nuevoId, numeroDeTarjeta } from "@/lib/datos/modelo";
+import { dentroDelLimite, ESPERA, ipDe } from "@/lib/limites";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +18,11 @@ export const dynamic = "force-dynamic";
  *     contraseña y le abre una cuenta unida a su ficha (citas, sellos, tarjeta).
  *   · registrar → cliente nuevo que se da de alta sólo con su número.
  *
- * La cuenta usa un correo interno derivado del número, así que el navegador
- * inicia sesión por su cuenta con signInWithPassword: el servidor nunca
- * maneja la contraseña de nadie más que al crearla.
+ * La cuenta usa un correo interno derivado del número. El inicio de sesión
+ * con contraseña pasa por /api/auth/entrar, que limita los intentos.
+ *
+ * Límite: 10 consultas por minuto por IP (se permite decir si un número ya es
+ * cliente, así que hay que frenar a quien pruebe números en serie).
  */
 type Peticion = {
   accion?: "consultar" | "activar" | "registrar";
@@ -40,7 +43,10 @@ function pistaDeCorreo(email: string) {
 export async function POST(req: NextRequest) {
   const body = ((await req.json().catch(() => null)) ?? {}) as Peticion;
   const telefono = normalizarTelefono(body.telefono ?? "");
-  if (telefono.length !== 10) return error("Escribe tu número a 10 dígitos.");
+  if (telefono.length !== 10) return error("Escribe un celular de 10 dígitos.");
+  if (!(await dentroDelLimite(`telefono:ip:${ipDe(req)}`, 10, 60))) {
+    return error(`Demasiadas consultas. ${ESPERA}`, 429);
+  }
 
   const { estado } = await leerEstado();
   const cliente = clientePorTelefono(estado, telefono);
@@ -50,14 +56,13 @@ export async function POST(req: NextRequest) {
 
   if (body.accion === "consultar") {
     if (usuario) {
-      // Cuenta con correo real (se registró con correo y luego dio su número):
-      // se le pide entrar con su correo, sin revelarlo completo.
-      if (usuario.email && !esCorreoInterno(usuario.email)) {
-        const soloGoogle = (usuario.identities ?? []).every((i) => i.provider === "google");
-        return NextResponse.json({ estado: "correo", pista: pistaDeCorreo(usuario.email), google: soloGoogle });
+      // Cuenta sólo de Google (sin contraseña): se le pide entrar con Google.
+      const soloGoogle = (usuario.identities ?? []).length > 0 && (usuario.identities ?? []).every((i) => i.provider === "google");
+      if (soloGoogle && usuario.email && !esCorreoInterno(usuario.email)) {
+        return NextResponse.json({ estado: "correo", pista: pistaDeCorreo(usuario.email), google: true });
       }
-      // Correo interno (derivado del número con el que se dio de alta).
-      return NextResponse.json({ estado: "entrar", correo: usuario.email });
+      // Tiene contraseña: entra con su número aunque haya agregado un correo.
+      return NextResponse.json({ estado: "entrar" });
     }
     const estadoNumero = cliente ? "activar" : "nuevo";
     if (sms) await enviarCodigo(telefono);
@@ -82,7 +87,7 @@ export async function POST(req: NextRequest) {
       email: correoDeTelefono(telefono),
       password,
       email_confirm: true,
-      app_metadata: { rol: "cliente", cliente_id: cliente.id },
+      app_metadata: { rol: "cliente", cliente_id: cliente.id, clave_cambiada_en: new Date().toISOString() },
       user_metadata: { full_name: cliente.nombre, telefono },
     });
     if (err || !data.user) {
@@ -108,7 +113,7 @@ export async function POST(req: NextRequest) {
     email: correoDeTelefono(telefono),
     password,
     email_confirm: true,
-    app_metadata: { rol: "cliente" },
+    app_metadata: { rol: "cliente", clave_cambiada_en: new Date().toISOString() },
     user_metadata: { full_name: nombre, telefono },
   });
   if (err || !data.user) {

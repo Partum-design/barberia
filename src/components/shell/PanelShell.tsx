@@ -14,6 +14,7 @@ import {
   Clock3,
   IdCard,
   CreditCard,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -52,6 +53,7 @@ const NAV: Record<Rol, NavItem[]> = {
     { label: "Clientes", href: "/dashboard/admin/clientes", icon: <Users className="h-4 w-4" /> },
     { label: "Tarjetas de lealtad", corto: "Lealtad", href: "/dashboard/admin/lealtad", icon: <IdCard className="h-4 w-4" /> },
     { label: "Usuarios", href: "/dashboard/admin/usuarios", icon: <UserCog className="h-4 w-4" /> },
+    { label: "Restablecer contraseñas", corto: "Contraseñas", href: "/dashboard/admin/restablecer", icon: <KeyRound className="h-4 w-4" /> },
     { label: "Equipo de barberos", corto: "Equipo", href: "/dashboard/admin/equipo", icon: <Scissors className="h-4 w-4" /> },
     { label: "Disponibilidad", corto: "Horarios", href: "/dashboard/admin/disponibilidad", icon: <Clock3 className="h-4 w-4" /> },
     { label: "Servicios", href: "/dashboard/admin/servicios", icon: <Tags className="h-4 w-4" /> },
@@ -99,6 +101,22 @@ export function PanelShell({
   const hayMas = true;
   const activoEnMas = !principales.some((i) => i.label === activo);
 
+  // Solicitudes de contraseña sin atender: contador junto a la sección.
+  const [pendientes, setPendientes] = useState(0);
+  useEffect(() => {
+    if (sesion.rol !== "admin") return;
+    fetch("/api/admin/restablecer?conteo=1", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { pendientes: 0 }))
+      .then((d: { pendientes?: number }) => setPendientes(d.pendientes ?? 0))
+      .catch(() => {});
+  }, [sesion.rol, activo]);
+  const contador = (item: NavItem) =>
+    item.href === "/dashboard/admin/restablecer" && pendientes > 0 ? (
+      <span className="app-nav-contador" aria-label={`${pendientes} pendientes`}>
+        {pendientes}
+      </span>
+    ) : null;
+
   // La hoja "Más" se cierra con Escape y bloquea el scroll de fondo.
   useEffect(() => {
     if (!masAbierto) return;
@@ -143,6 +161,7 @@ export function PanelShell({
             >
               <span className="app-nav-icon">{item.icon}</span>
               {item.label}
+              {contador(item)}
             </Link>
           ))}
         </nav>
@@ -244,6 +263,7 @@ export function PanelShell({
                   >
                     <span className="app-sheet-icono">{item.icon}</span>
                     <span>{item.label}</span>
+                    {contador(item)}
                   </Link>
                 ))}
               </div>

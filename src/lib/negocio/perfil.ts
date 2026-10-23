@@ -69,6 +69,8 @@ export const PERFIL = {
   whatsapp: "56 4338 8834",
   instagram: "barberiacortmart",
   tiktok: "barberiacortmart",
+  /** Página de Facebook: la única red que se publica en la portada */
+  facebook: "https://www.facebook.com/profile.php?id=61556293636551",
   mapa_url: "https://maps.app.goo.gl/kxM54X3zWtwRYZC89",
   mapa_embed: "https://www.google.com/maps?q=19.4801165,-99.125262&z=17&hl=es&output=embed",
   calificacion: 5.0,
@@ -90,18 +92,17 @@ export const PERFIL = {
   },
   /** Menú impreso de la barbería (octubre 2026) */
   menu: MENU,
-  /** Barberos que los clientes mencionan en sus reseñas */
-  equipo: [
-    { nombre: "Christian", rol: "Barbero", nota: "“El mejor de la zona”, según sus clientes." },
-    { nombre: "Lupita", rol: "Barbera", nota: "Te deja el corte justo como lo quieres." },
-  ],
-  /** Reseñas públicas de Google Maps, tal como las escribieron */
+  /**
+   * Respaldo del equipo mientras el panel no tenga barberos. Christian ya no
+   * trabaja en la barbería (octubre 2026): no se publica.
+   */
+  equipo: [{ nombre: "Lupita", rol: "Barbera", nota: "Te deja el corte justo como lo quieres." }],
+  /**
+   * Reseñas públicas de Google Maps, tal como las escribieron. Se quitaron
+   * las que hablan del barbero Christian (ya no trabaja aquí); "Christian"
+   * de abajo es un cliente. `total_resenas` sigue siendo el total de Google.
+   */
   resenas: [
-    {
-      autor: "Guillermo Pizzarro",
-      texto:
-        "Excelente servicio y atención en la barbería, siempre quedo más que satisfecho. Gracias a mi barber Christian por su profesionalismo y el detalle que pone en cada corte. Sin duda, el mejor de la zona 👌",
-    },
     {
       autor: "Omar Castellanos",
       texto:
@@ -112,7 +113,6 @@ export const PERFIL = {
       texto:
         "De lujo la atención y el servicio! Todas las veces que he ido termino satisfecho con el corte de cabello ✋🏻",
     },
-    { autor: "Donovan González", texto: "Excelente servicio. Con Chris muy buen corte y buena atención ⭐⭐⭐⭐⭐" },
     { autor: "Eduardo López López", texto: "Está muy bien. Se toma el tiempo para cortarlo." },
   ],
 } as const;

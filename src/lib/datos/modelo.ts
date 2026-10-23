@@ -432,6 +432,19 @@ export function numeroDeTarjeta(existentes: Set<string>) {
   return numero;
 }
 
+function tarjetaNueva(estado: Estado, id: string, numero: string, clienteId: string): TarjetaLealtad {
+  const usados = new Set(estado.tarjetas.map((t) => t.numero));
+  return {
+    id,
+    numero: usados.has(numero) ? numeroDeTarjeta(usados) : numero,
+    cliente_id: clienteId,
+    emitida_en: new Date().toISOString(),
+    sellos_extra: 0,
+    estado: "activa",
+    wallet_guardada_en: null,
+  };
+}
+
 export function nuevoId(prefijo: string) {
   return `${prefijo}-${crypto.randomUUID().slice(0, 8)}`;
 }
@@ -507,7 +520,26 @@ export type Operacion =
   | { tipo: "cambiarEstadoTarjeta"; tarjetaId: string; estado: EstadoTarjeta }
   | { tipo: "marcarWalletGuardada"; tarjetaId: string; fecha: string }
   /** Lo usa el servidor al activar el acceso de un cliente (teléfono o Google) */
-  | { tipo: "vincularCuentaCliente"; clienteId: string; cuentaId: string; google?: boolean; email?: string };
+  | { tipo: "vincularCuentaCliente"; clienteId: string; cuentaId: string; google?: boolean; email?: string }
+  /**
+   * Reserva sin cuenta (sólo nombre y celular). La usa /api/reservas con la
+   * sesión del sistema: si el número es nuevo crea la ficha, su tarjeta de
+   * lealtad y la cita en una sola escritura; si ya existe, agenda en su ficha.
+   */
+  | {
+      tipo: "reservarInvitado";
+      id: string;
+      nombre: string;
+      telefono: string;
+      barbero_id: string;
+      servicio_id?: string | null;
+      inicio: string;
+      modalidad: "presencial" | "domicilio";
+      direccion_domicilio?: string;
+      clienteId: string;
+      tarjetaId: string;
+      numeroTarjeta: string;
+    };
 
 /** Error de negocio: el servidor lo devuelve tal cual al navegador. */
 export class ErrorOperacion extends Error {
@@ -568,6 +600,74 @@ function validarHueco(estado: Estado, barbero: Barbero, inicio: number, fin: num
   }
 }
 
+/** Citas por venir que puede tener un mismo cliente al reservar en línea. */
+export const MAX_CITAS_FUTURAS = 2;
+
+function exigirCupoDeCitas(estado: Estado, clienteId: string) {
+  const ahora = Date.now();
+  const futuras = estado.citas.filter(
+    (c) => c.cliente_id === clienteId && c.estado === "confirmada" && new Date(c.fin).getTime() > ahora
+  ).length;
+  if (futuras >= MAX_CITAS_FUTURAS) {
+    throw new ErrorOperacion(
+      `Ya tienes ${futuras} citas por venir. Para agendar otra, llama o escribe por WhatsApp a la barbería.`,
+      409
+    );
+  }
+}
+
+/**
+ * Cita que agenda el propio cliente (con o sin cuenta). Precio y duración los
+ * pone el servicio, no el navegador; el hueco debe seguir libre al guardar.
+ */
+function citaDeCliente(
+  estado: Estado,
+  datos: { id: string; barbero_id: string; servicio_id?: string | null; inicio: string; modalidad: "presencial" | "domicilio"; direccion_domicilio?: string },
+  cliente: { id: string; nombre: string }
+): Cita {
+  idNuevo(estado.citas, datos.id);
+  const barbero = estado.barberos.find((b) => b.id === datos.barbero_id);
+  if (!barbero) throw new ErrorOperacion("El barbero no está disponible.", 400);
+  const inicio = new Date(datos.inicio).getTime();
+  if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
+  const sv = servicioParaCita(estado, datos.servicio_id, barbero);
+  if (sv.servicio && !sv.servicio.activo) throw new ErrorOperacion("Ese servicio no está disponible.", 400);
+  const fin = inicio + sv.duracion * 60_000;
+  const problema = horarioReservable(
+    {
+      barbero: { ...barbero, duracion_cita_min: sv.duracion },
+      horario: estado.horarios[barbero.id] ?? horarioPorDefecto(),
+      barberia: estado.barberia,
+      citas: estado.citas,
+    },
+    inicio
+  );
+  if (problema) throw new ErrorOperacion(problema, 409);
+  const domicilio = datos.modalidad === "domicilio" && barbero.acepta_domicilio;
+  return {
+    id: datos.id,
+    cliente_id: cliente.id,
+    cliente_nombre: cliente.nombre,
+    barbero_id: barbero.id,
+    barbero_nombre: barbero.nombre,
+    especialidad: barbero.especialidad,
+    inicio: new Date(inicio).toISOString(),
+    fin: new Date(fin).toISOString(),
+    modalidad: domicilio ? "domicilio" : "presencial",
+    estado: "confirmada",
+    precio: sv.precio,
+    servicio_id: sv.servicio?.id ?? null,
+    servicio_nombre: sv.servicio?.nombre ?? "",
+    comision_pct: sv.comision,
+    direccion_domicilio: domicilio ? String(datos.direccion_domicilio || "Domicilio del cliente").slice(0, 300) : null,
+    // De momento sólo se cobra en efectivo en la barbería: el pago en
+    // línea no está conectado y no se puede dar una cita por pagada.
+    metodo_pago: "efectivo",
+    estado_pago: "pendiente",
+    creada_por: "cliente",
+  };
+}
+
 function exigir(condicion: unknown, mensaje = "No tienes permiso para esta acción."): asserts condicion {
   if (!condicion) throw new ErrorOperacion(mensaje, 403);
 }
@@ -592,51 +692,42 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
   switch (op.tipo) {
     case "crearCita": {
       exigir(s.rol === "cliente", "Sólo los clientes pueden reservar.");
-      idNuevo(estado.citas, op.id);
-      const barbero = estado.barberos.find((b) => b.id === op.barbero_id);
-      if (!barbero) throw new ErrorOperacion("El barbero no está disponible.", 400);
-      const inicio = new Date(op.inicio).getTime();
-      if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-      // Precio y duración los pone el servicio, no el navegador.
-      const sv = servicioParaCita(estado, op.servicio_id, barbero);
-      if (sv.servicio && !sv.servicio.activo) throw new ErrorOperacion("Ese servicio no está disponible.", 400);
-      const fin = inicio + sv.duracion * 60_000;
-      const problema = horarioReservable(
-        {
-          barbero: { ...barbero, duracion_cita_min: sv.duracion },
-          horario: estado.horarios[barbero.id] ?? horarioPorDefecto(),
-          barberia: estado.barberia,
-          citas: estado.citas,
-        },
-        inicio
-      );
-      if (problema) throw new ErrorOperacion(problema, 409);
-      const nueva: Cita = {
-        id: op.id,
-        cliente_id: s.id,
-        cliente_nombre: s.nombre,
-        barbero_id: barbero.id,
-        barbero_nombre: barbero.nombre,
-        especialidad: barbero.especialidad,
-        inicio: new Date(inicio).toISOString(),
-        fin: new Date(fin).toISOString(),
-        modalidad: op.modalidad === "domicilio" && barbero.acepta_domicilio ? "domicilio" : "presencial",
-        estado: "confirmada",
-        precio: sv.precio,
-        servicio_id: sv.servicio?.id ?? null,
-        servicio_nombre: sv.servicio?.nombre ?? "",
-        comision_pct: sv.comision,
-        direccion_domicilio:
-          op.modalidad === "domicilio" && barbero.acepta_domicilio
-            ? String(op.direccion_domicilio || "Domicilio del cliente").slice(0, 300)
-            : null,
-        // De momento sólo se cobra en efectivo en la barbería: el pago en
-        // línea no está conectado y no se puede dar una cita por pagada.
-        metodo_pago: "efectivo",
-        estado_pago: "pendiente",
-        creada_por: "cliente",
-      };
+      exigirCupoDeCitas(estado, s.id);
+      const nueva = citaDeCliente(estado, op, { id: s.id, nombre: s.nombre });
       return { citas: [...estado.citas, nueva] };
+    }
+
+    case "reservarInvitado": {
+      // Sólo el servidor (sesión del sistema) la ejecuta, tras sus límites.
+      exigir(s.rol === "admin" && s.id === "sistema", "Operación reservada al servidor.");
+      const telefono = normalizarTelefono(op.telefono);
+      if (telefono.length !== 10) throw new ErrorOperacion("Escribe un celular de 10 dígitos.", 400);
+      const nombre = String(op.nombre ?? "").trim().replace(/\s+/g, " ").slice(0, 120);
+      if (nombre.length < 2) throw new ErrorOperacion("Escribe tu nombre.", 400);
+
+      const existente = estado.clientes.find((c) => normalizarTelefono(c.telefono) === telefono);
+      if (existente) {
+        exigirCupoDeCitas(estado, existente.id);
+        const nueva = citaDeCliente(estado, op, { id: existente.id, nombre: existente.nombre });
+        const cambios: Partial<Estado> = { citas: [...estado.citas, nueva] };
+        // Ficha sin tarjeta (datos viejos): se le emite de paso.
+        if (!estado.tarjetas.some((t) => t.cliente_id === existente.id)) {
+          idNuevo(estado.tarjetas, op.tarjetaId);
+          cambios.tarjetas = [...estado.tarjetas, tarjetaNueva(estado, op.tarjetaId, op.numeroTarjeta, existente.id)];
+        }
+        return cambios;
+      }
+
+      idNuevo(estado.clientes, op.clienteId);
+      idNuevo(estado.tarjetas, op.tarjetaId);
+      const creado = new Date().toISOString();
+      const cliente: Cliente = { id: op.clienteId, nombre, telefono, email: "", creado_en: creado };
+      const nueva = citaDeCliente(estado, op, { id: cliente.id, nombre });
+      return {
+        clientes: [...estado.clientes, cliente],
+        tarjetas: [...estado.tarjetas, tarjetaNueva(estado, op.tarjetaId, op.numeroTarjeta, cliente.id)],
+        citas: [...estado.citas, nueva],
+      };
     }
 
     case "crearCitaPersonal": {

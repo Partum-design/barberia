@@ -1,390 +1,639 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Banknote, CheckCircle2, Gift, Home, Loader2, MapPin, UserRound } from "lucide-react";
-import { calcularLealtad, enlaceDeCita, nombreDelNegocio, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Banknote,
+  CalendarPlus,
+  CheckCircle2,
+  Home,
+  IdCard,
+  KeyRound,
+  Loader2,
+  MapPin,
+  UserRound,
+} from "lucide-react";
+import { enlaceDeCita, nombreDelNegocio, normalizarTelefono, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
+import { PERFIL } from "@/lib/negocio/perfil";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
+import { BotonesContacto } from "@/components/contacto/BotonesContacto";
+import { Campo, enfocarPrimerError, errorDeNombre, errorDeTelefono, hayErrores, type Errores } from "@/components/formularios/Campo";
 
-type Paso = "servicio" | "barbero" | "horario" | "confirmar" | "confirmada";
+type Paso = "barbero" | "servicio" | "horario" | "datos" | "confirmada";
+
+type Confirmacion = {
+  id: string;
+  inicio: string;
+  fin: string;
+  barbero: string;
+  servicio: string;
+  precio: number;
+  /** Reservó sin sesión */
+  invitado: boolean;
+  /** El número ya era cliente: no se muestra nada privado */
+  yaEraCliente: boolean;
+  nombre: string;
+  telefono: string;
+  tarjeta: string | null;
+};
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
+/** "Zuriel Hernández" → "zuriel-hernandez" */
+export const slug = (texto: string) =>
+  texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+/** Acepta el id, el nombre completo o sólo el primer nombre ("lupita"). */
+function coincide(valor: string | null, item: { id: string; nombre: string }) {
+  if (!valor) return false;
+  const v = slug(valor);
+  return item.id === valor || slug(item.nombre) === v || slug(item.nombre.split(" ")[0]) === v;
+}
+
+/** Archivo .ics para "Agregar a mi calendario". */
+function descargarIcs(c: Confirmacion) {
+  const f = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const esc = (t: string) => t.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//CortMart//Reservas//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${c.id}@cortmart`,
+    `DTSTAMP:${f(new Date().toISOString())}`,
+    `DTSTART:${f(c.inicio)}`,
+    `DTEND:${f(c.fin)}`,
+    `SUMMARY:${esc(`${c.servicio || "Cita"} con ${c.barbero} · CortMart`)}`,
+    `DESCRIPTION:${esc(`Pagas en la barbería. ¿Necesitas cambiarla? Llama al ${PERFIL.telefono}.`)}`,
+    `LOCATION:${esc(PERFIL.direccion)}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT2H",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Tu cita en CortMart",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cita-cortmart-${format(new Date(c.inicio), "yyyy-MM-dd-HHmm")}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /**
- * Reserva en cuatro pasos: servicio (que fija precio y duración), barbero,
- * horario y confirmación. Sólo se ofrecen
- * barberos con horarios libres en la semana y sólo horas con personal (ver
- * lib/datos/disponibilidad). De momento el pago es en efectivo en la barbería.
+ * Reserva en cuatro pasos: barbero, servicio (fija precio y duración),
+ * fecha y hora, y tus datos. No hace falta cuenta: sin sesión basta con
+ * nombre y celular, y al confirmar se crea la ficha con su tarjeta de
+ * lealtad (ver /api/reservas). El pago es en efectivo en la barbería.
+ *
+ * Acepta ?barbero=, ?servicio= e ?inicio= para llegar con algo ya elegido
+ * (los botones "Agendar con…" de la portada y el regreso del login).
  */
 export function FlujoReserva() {
   const store = useBarberia();
-  const { barberos, citas, barberiaConfig, horarioDeBarbero, servicios } = store;
+  const params = useSearchParams();
+  const { barberos, citas, barberiaConfig, horarioDeBarbero, servicios, sesion } = store;
   const catalogo = useMemo(() => servicios.filter((x) => x.activo), [servicios]);
-  const [paso, setPaso] = useState<Paso>(catalogo.length > 0 ? "servicio" : "barbero");
-  const [servicio, setServicio] = useState<Servicio | null>(null);
-  // El catálogo puede llegar después del primer render: entonces se empieza por él.
-  useEffect(() => {
-    if (catalogo.length > 0 && !servicio && paso === "barbero") setPaso("servicio");
-  }, [catalogo.length, servicio, paso]);
+  const activos = useMemo(() => barberos.filter((b) => b.activo), [barberos]);
+
+  const [paso, setPaso] = useState<Paso>("barbero");
   const [barbero, setBarbero] = useState<Barbero | null>(null);
+  const [servicio, setServicio] = useState<Servicio | null>(null);
   const [slot, setSlot] = useState<Date | null>(null);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">("presencial");
   const [direccion, setDireccion] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [errores, setErrores] = useState<Errores>({});
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [citaId, setCitaId] = useState<string | null>(null);
+  const [hecha, setHecha] = useState<Confirmacion | null>(null);
+  const preseleccion = useRef(false);
+  const tituloRef = useRef<HTMLHeadingElement>(null);
 
-  // Horarios libres de los próximos 7 días por barbero activo, con la
-  // duración del servicio elegido.
+  const conDuracion = (b: Barbero) => (servicio ? { ...b, duracion_cita_min: servicio.duracion_min } : b);
+  const slotsDe = (b: Barbero) =>
+    slotsDisponibles({ barbero: conDuracion(b), horario: horarioDeBarbero(b.id), barberia: barberiaConfig, citas });
+
+  // Horarios libres de los próximos 7 días por barbero activo.
   const disponibles = useMemo(
-    () =>
-      barberos
-        .filter((b) => b.activo)
-        .map((b) => {
-          const conDuracion = servicio ? { ...b, duracion_cita_min: servicio.duracion_min } : b;
-          return {
-            barbero: b,
-            slots: slotsDisponibles({ barbero: conDuracion, horario: horarioDeBarbero(b.id), barberia: barberiaConfig, citas }),
-          };
-        })
-        .filter((x) => x.slots.length > 0),
-    [barberos, citas, barberiaConfig, horarioDeBarbero, servicio]
+    () => activos.map((b) => ({ barbero: b, slots: slotsDe(b) })).filter((x) => x.slots.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activos, citas, barberiaConfig, horarioDeBarbero, servicio]
   );
+  const slots = useMemo(() => (barbero ? slotsDe(barbero) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [barbero, citas, barberiaConfig, horarioDeBarbero, servicio]);
+  const porDia = useMemo(() => {
+    const m = new Map<string, Date[]>();
+    for (const s of slots) {
+      const k = format(s, "yyyy-MM-dd");
+      m.set(k, [...(m.get(k) ?? []), s]);
+    }
+    return [...m.values()];
+  }, [slots]);
+
+  // Llegó con barbero, servicio u hora en la dirección: se dejan elegidos.
+  useEffect(() => {
+    if (preseleccion.current || !store.listo || activos.length === 0) return;
+    preseleccion.current = true;
+    const b = activos.find((x) => coincide(params.get("barbero"), x)) ?? null;
+    const sv = catalogo.find((x) => coincide(params.get("servicio"), x)) ?? null;
+    const inicio = params.get("inicio");
+    if (b) setBarbero(b);
+    if (sv) setServicio(sv);
+    if (b && (sv || catalogo.length === 0) && inicio && !Number.isNaN(Date.parse(inicio))) {
+      setSlot(new Date(inicio));
+      setPaso("datos");
+    } else if (b && (sv || catalogo.length === 0)) setPaso("horario");
+    else if (b) setPaso("servicio");
+  }, [store.listo, activos, catalogo, params]);
+
+  // Cada paso lleva el foco a su título: quien usa lector de pantalla oye dónde está.
+  const montado = useRef(false);
+  useEffect(() => {
+    if (!montado.current) {
+      montado.current = true;
+      return;
+    }
+    tituloRef.current?.focus();
+  }, [paso]);
+
   const precio = servicio ? precioDe(servicio, barbero) : 0;
-  // Antes de elegir barbero: si alguno cobra distinto, se muestra «desde».
   const precioLista = (x: Servicio) => {
-    const precios = barberos.filter((b) => b.activo).map((b) => precioDe(x, b));
+    if (barbero) return `${x.desde ? "desde " : ""}${mxn.format(precioDe(x, barbero))}`;
+    const precios = activos.map((b) => precioDe(x, b));
     const min = precios.length ? Math.min(...precios) : x.precio;
-    const varia = precios.some((p) => p !== min);
-    return `${varia || x.desde ? "desde " : ""}${mxn.format(min)}`;
+    return `${x.desde || precios.some((p) => p !== min) ? "desde " : ""}${mxn.format(min)}`;
   };
-  const duracion = servicio?.duracion_min;
-  const slots = disponibles.find((x) => x.barbero.id === barbero?.id)?.slots ?? [];
 
-  const esCliente = store.sesion?.rol === "cliente";
+  const esCliente = sesion?.rol === "cliente";
+  const esPersonal = sesion && sesion.rol !== "cliente";
 
-  if (!esCliente) {
-    return (
-      <div className="booking-flow">
-        <div className="rounded-2xl p-8 text-center shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <UserRound className="mx-auto mb-3 h-10 w-10 text-accent-500" />
-          <h2 className="text-lg font-semibold">Inicia sesión para reservar</h2>
-          <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: "var(--ink-muted)" }}>
-            Así tu cita queda a tu nombre y cada visita suma sellos en tu tarjeta de lealtad.
-          </p>
-          <Link
-            href="/login?next=/reservar"
-            className="card-hover mt-5 inline-flex rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
-          >
-            Entrar o crear cuenta
-          </Link>
-        </div>
-      </div>
-    );
+  function elegirBarbero(b: Barbero) {
+    setBarbero(b);
+    setSlot(null);
+    setModalidad("presencial");
+    setError("");
+    setPaso(catalogo.length > 0 && !servicio ? "servicio" : "horario");
   }
 
-  async function confirmar() {
+  function elegirServicio(x: Servicio) {
+    setServicio(x);
+    setSlot(null);
+    setError("");
+    setPaso("horario");
+  }
+
+  const volverA = (p: Paso) => {
+    setError("");
+    setPaso(p);
+  };
+
+  /** Enlace al login que regresa aquí con todo lo elegido. */
+  const enlaceLogin = () => {
+    const q = new URLSearchParams();
+    if (barbero) q.set("barbero", barbero.id);
+    if (servicio) q.set("servicio", servicio.id);
+    if (slot) q.set("inicio", slot.toISOString());
+    return `/login?next=${encodeURIComponent(`/reservar?${q.toString()}`)}`;
+  };
+
+  async function confirmar(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!barbero || !slot) return;
     setError("");
+
+    if (!esCliente) {
+      const errs: Errores = { nombre: errorDeNombre(nombre), telefono: errorDeTelefono(telefono) };
+      if (modalidad === "domicilio" && direccion.trim().length < 8) errs.direccion = "Escribe la dirección completa.";
+      setErrores(errs);
+      if (hayErrores(errs)) {
+        enfocarPrimerError(errs, ["direccion", "nombre", "telefono"]);
+        return;
+      }
+    }
+
     setCargando(true);
-    const { cita, error: err } = await store.crearCita({
+    const datos = {
       barbero_id: barbero.id,
       servicio_id: servicio?.id ?? null,
       inicio: slot.toISOString(),
       modalidad,
       direccion_domicilio: direccion.trim(),
-    });
-    setCargando(false);
-    if (err) {
-      setError(err);
-      // Si el horario se ocupó, se vuelve a elegir con la disponibilidad fresca.
-      setSlot(null);
-      setPaso("horario");
+    };
+
+    if (esCliente) {
+      const { cita, error: err } = await store.crearCita(datos);
+      setCargando(false);
+      if (err || !cita) return fallo(err ?? "No se pudo reservar.");
+      setHecha({
+        id: cita.id,
+        inicio: cita.inicio,
+        fin: cita.fin,
+        barbero: cita.barbero_nombre,
+        servicio: cita.servicio_nombre ?? "",
+        precio: cita.precio,
+        invitado: false,
+        yaEraCliente: true,
+        nombre: sesion!.nombre.split(" ")[0],
+        telefono: "",
+        tarjeta: store.tarjetas.find((t) => t.cliente_id === sesion!.id)?.numero ?? null,
+      });
+      setPaso("confirmada");
       return;
     }
-    setCitaId(cita?.id ?? null);
-    setPaso("confirmada");
+
+    try {
+      const res = await fetch("/api/reservas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...datos, nombre: nombre.trim(), telefono: normalizarTelefono(telefono) }),
+      });
+      const r = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        campo?: string;
+        cita?: Omit<Confirmacion, "invitado" | "yaEraCliente" | "nombre" | "telefono" | "tarjeta">;
+        yaEraCliente?: boolean;
+        nombre?: string;
+        telefono?: string;
+        tarjeta?: string | null;
+      };
+      setCargando(false);
+      if (!res.ok || !r.cita) {
+        if (r.campo) {
+          setErrores({ [r.campo]: r.error });
+          document.getElementById(r.campo)?.focus();
+          return;
+        }
+        return fallo(r.error ?? "No se pudo reservar.", res.status === 409);
+      }
+      setHecha({
+        ...r.cita,
+        invitado: true,
+        yaEraCliente: Boolean(r.yaEraCliente),
+        nombre: r.nombre ?? nombre.split(" ")[0],
+        telefono: r.telefono ?? normalizarTelefono(telefono),
+        tarjeta: r.tarjeta ?? null,
+      });
+      void store.recargar();
+      setPaso("confirmada");
+    } catch {
+      setCargando(false);
+      fallo("Sin conexión. Revisa tu internet e inténtalo de nuevo.");
+    }
   }
+
+  /** Si el horario se ocupó, se vuelve a elegir con la disponibilidad fresca. */
+  function fallo(mensaje: string, ocupado = true) {
+    setError(mensaje);
+    if (ocupado && /ocupad|ya tiene una cita|ya pasó|horario/i.test(mensaje)) {
+      setSlot(null);
+      void store.recargar();
+      setPaso("horario");
+    }
+  }
+
+  const resumen = (
+    <p className="reserva-resumen">
+      {barbero && (
+        <span>
+          <b>Barbero:</b> {barbero.nombre}
+        </span>
+      )}
+      {servicio && (
+        <span>
+          <b>Servicio:</b> {servicio.nombre} · {servicio.duracion_min} min · {precioLista(servicio)}
+        </span>
+      )}
+      {slot && (
+        <span className="capitalize">
+          <b>Cuándo:</b> {format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
+        </span>
+      )}
+    </p>
+  );
+
+  const titulo = (texto: string) => (
+    <h2 ref={tituloRef} tabIndex={-1} className="reserva-titulo">
+      {texto}
+    </h2>
+  );
 
   return (
     <div className="booking-flow space-y-4">
-      <Stepper actual={paso} />
+      {paso !== "confirmada" && <Stepper actual={paso} conServicio={catalogo.length > 0} />}
 
       {error && (
-        <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700 ring-1 ring-brand-500/20">
-          {error}
+        <p className="login-alert is-error" role="alert">
+          <AlertCircle aria-hidden /> {error}
         </p>
       )}
 
-      {/* Paso 1: elegir servicio */}
-      {paso === "servicio" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {catalogo.map((x) => (
-            <button
-              key={x.id}
-              onClick={() => { setServicio(x); setBarbero(null); setSlot(null); setError(""); setPaso("barbero"); }}
-              className="reserva-servicio"
-            >
-              <span className="min-w-0">
-                <span className="reserva-servicio-cat">{x.categoria}</span>
-                <span className="block truncate font-semibold">{x.nombre}</span>
-                <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{x.duracion_min} min</span>
-              </span>
-              <span className="reserva-servicio-precio">{precioLista(x)}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {paso === "barbero" && servicio && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ring-1 ring-[var(--line)]" style={{ background: "var(--card)" }}>
-          <span className="min-w-0 truncate">
-            <b>{servicio.nombre}</b> · {servicio.duracion_min} min · {precioLista(servicio)}
-          </span>
-          <button onClick={() => setPaso("servicio")} className="shrink-0 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-            ← Cambiar servicio
-          </button>
-        </div>
-      )}
-
-      {/* Paso 2: elegir barbero */}
-      {paso === "barbero" && disponibles.length === 0 && (
-        <div className="rounded-2xl p-8 text-center text-sm shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)", color: "var(--ink-muted)" }}>
-          No hay barberos con horarios disponibles esta semana. Vuelve pronto o llámanos para apartar tu lugar.
-        </div>
-      )}
-
+      {/* Paso 1: barbero */}
       {paso === "barbero" && (
         <div className="space-y-3">
+          {titulo("¿Con quién quieres tu cita?")}
+          {disponibles.length === 0 && (
+            <div className="reserva-vacio">
+              No hay barberos con horarios disponibles esta semana. Llámanos o escríbenos para apartar tu lugar.
+              <BotonesContacto />
+            </div>
+          )}
           {disponibles.map(({ barbero: m, slots: libres }) => (
-            <button
-              key={m.id}
-              onClick={() => { setBarbero(m); setModalidad("presencial"); setError(""); setPaso("horario"); }}
-              className="flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-sm ring-1 ring-slate-900/5 transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-accent-500/50 dark:ring-white/10"
-              style={{ background: "var(--card)" }}
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-semibold text-white">
-                {m.nombre.replace(/^Dra?\.\s*/, "").charAt(0)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{m.nombre}</p>
-                <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            <button key={m.id} type="button" onClick={() => elegirBarbero(m)} className="reserva-opcion">
+              <span className="reserva-avatar" aria-hidden>
+                {m.nombre.charAt(0)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="reserva-opcion-titulo">{m.nombre}</span>
+                <span className="reserva-opcion-sub">
                   {m.especialidad}
                   {m.acepta_domicilio && (
-                    <span className="ml-2 inline-flex items-center gap-1 text-accent-600">
-                      <Home className="h-3.5 w-3.5" /> Domicilio
+                    <span className="ml-2 inline-flex items-center gap-1">
+                      <Home className="h-4 w-4" aria-hidden /> Domicilio
                     </span>
                   )}
-                </p>
-                <p className="text-xs capitalize" style={{ color: "var(--ink-muted)" }}>
-                  Próximo: {format(libres[0], "EEE d MMM, HH:mm", { locale: es })}
-                </p>
-              </div>
-              {servicio && (
-                <span className="reserva-servicio-precio shrink-0">{mxn.format(precioDe(servicio, m))}</span>
-              )}
-              <span className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>Elegir →</span>
+                </span>
+                <span className="reserva-opcion-sub capitalize">
+                  Próximo horario: {format(libres[0], "EEEE d MMM, HH:mm", { locale: es })}
+                </span>
+              </span>
+              <span className="reserva-opcion-accion" aria-hidden>
+                Elegir →
+              </span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Paso 2: elegir horario */}
-      {paso === "horario" && barbero && (
-        <div className="rounded-2xl p-5 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="text-sm">
-              Disponibilidad de <span className="font-medium">{barbero.nombre}</span>
-            </p>
-            <button onClick={() => { setPaso("barbero"); setError(""); }} className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-              ← Cambiar barbero
-            </button>
-          </div>
-          {slots.length === 0 && (
-            <p className="rounded-xl border border-dashed border-brand-500/30 p-5 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
-              No hay horarios libres en los próximos 7 días.
-            </p>
-          )}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {slots.map((s) => (
-              <button
-                key={s.toISOString()}
-                onClick={() => { setSlot(s); setError(""); setPaso("confirmar"); }}
-                className="rounded-xl border border-brand-500/25 px-2 py-2.5 text-center text-sm transition-colors hover:border-accent-500 hover:bg-accent-100/50 dark:hover:bg-accent-500/10"
-              >
-                <span className="block text-[11px] capitalize" style={{ color: "var(--ink-muted)" }}>
-                  {format(s, "EEE d MMM", { locale: es })}
+      {/* Paso 2: servicio */}
+      {paso === "servicio" && (
+        <div className="space-y-3">
+          {titulo("¿Qué servicio quieres?")}
+          {resumen}
+          <button type="button" onClick={() => volverA("barbero")} className="reserva-volver">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Cambiar barbero
+          </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {catalogo.map((x) => (
+              <button key={x.id} type="button" onClick={() => elegirServicio(x)} className="reserva-servicio">
+                <span className="min-w-0">
+                  <span className="reserva-servicio-cat">{x.categoria}</span>
+                  <span className="reserva-opcion-titulo">{x.nombre}</span>
+                  <span className="reserva-opcion-sub">{x.duracion_min} min</span>
                 </span>
-                <span className="font-medium">{format(s, "HH:mm")}</span>
+                <span className="reserva-servicio-precio">{precioLista(x)}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Paso 3: confirmar (pago en efectivo) */}
-      {paso === "confirmar" && barbero && slot && (
-        <div className="rounded-2xl p-6 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="font-semibold">Confirma tu cita</h2>
-            <button onClick={() => setPaso("horario")} className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
-              ← Cambiar horario
-            </button>
-          </div>
-          {barbero.acepta_domicilio && (
-            <div className="mb-4 flex gap-2">
-              {(["presencial", "domicilio"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setModalidad(m)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-                    modalidad === m
-                      ? "border-accent-500 bg-accent-100/50 text-accent-600 dark:bg-accent-500/10"
-                      : "border-slate-200 dark:border-white/10"
-                  }`}
-                >
-                  {m === "presencial" ? <MapPin className="h-4 w-4" /> : <Home className="h-4 w-4" />}
-                  {m === "presencial" ? "En barbería" : "A domicilio"}
-                </button>
-              ))}
+      {/* Paso 3: fecha y hora */}
+      {paso === "horario" && barbero && (
+        <div className="space-y-3">
+          {titulo("Elige día y hora")}
+          {resumen}
+          <button type="button" onClick={() => volverA(catalogo.length > 0 ? "servicio" : "barbero")} className="reserva-volver">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> {catalogo.length > 0 ? "Cambiar servicio" : "Cambiar barbero"}
+          </button>
+          {slots.length === 0 && (
+            <div className="reserva-vacio">
+              {barbero.nombre} no tiene horarios libres en los próximos 7 días.{" "}
+              <button type="button" className="reserva-volver" onClick={() => volverA("barbero")}>
+                Elegir otro barbero
+              </button>
             </div>
           )}
-          {modalidad === "domicilio" && (
-            <input
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              placeholder="Dirección completa del domicilio"
-              className="mb-4 w-full rounded-xl border border-slate-300/70 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-accent-500 dark:border-white/15"
-            />
-          )}
-          <dl className="mb-5 space-y-2 text-sm">
-            {servicio && <Fila k="Servicio" v={`${servicio.nombre} · ${duracion} min`} />}
-            <Fila k="Barbero" v={barbero.nombre} />
-            <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
-            <Fila k="Modalidad" v={modalidad === "presencial" ? "En barbería" : "A domicilio"} />
-            <Fila k="Pago" v="Efectivo en la barbería" />
-            <Fila k="Total" v={servicio ? mxn.format(precio) : "Se cotiza en la barbería"} destacado />
-          </dl>
-
-          <p className="mb-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-100">
-            <Banknote className="mt-0.5 h-4 w-4 shrink-0" />
-            Tu horario queda apartado al confirmar. Paga el total en efectivo al llegar a tu cita.
-          </p>
-
-          <button
-            disabled={cargando || (modalidad === "domicilio" && direccion.trim().length < 8)}
-            onClick={confirmar}
-            className="card-hover flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 py-2.5 font-medium text-white disabled:opacity-40"
-          >
-            {cargando && <Loader2 className="h-4 w-4 animate-spin" />}
-            Confirmar cita — pago en efectivo
-          </button>
+          {porDia.map((dia) => (
+            <section key={dia[0].toISOString()} className="reserva-dia" aria-label={format(dia[0], "EEEE d 'de' MMMM", { locale: es })}>
+              <h3 className="capitalize">{format(dia[0], "EEEE d 'de' MMMM", { locale: es })}</h3>
+              <div className="reserva-horas">
+                {dia.map((s) => (
+                  <button
+                    key={s.toISOString()}
+                    type="button"
+                    onClick={() => {
+                      setSlot(s);
+                      setError("");
+                      setPaso("datos");
+                    }}
+                    className="reserva-hora"
+                  >
+                    {format(s, "HH:mm")}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
-      {/* Paso 4: confirmación */}
-      {paso === "confirmada" && barbero && slot && (() => {
-        const clienteId = store.sesion?.id ?? "";
-        const tarjeta = store.tarjetas.find((t) => t.cliente_id === clienteId);
-        const lealtad = calcularLealtad(
-          store.citas,
-          clienteId,
-          store.recompensasConfig.citas_requeridas,
-          tarjeta?.sellos_extra ?? 0
-        );
-        return (
-          <div className="anim-pop rounded-2xl p-8 text-center shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-            <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-accent-500" />
-            <h2 className="text-lg font-semibold">¡Cita confirmada!</h2>
-            <p className="mt-1 text-sm capitalize" style={{ color: "var(--ink-muted)" }}>
-              {barbero.nombre} · {format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })}
+      {/* Paso 4: tus datos y confirmar */}
+      {paso === "datos" && barbero && slot && (
+        <form onSubmit={confirmar} noValidate className="reserva-datos">
+          {titulo("Tus datos")}
+          <button type="button" onClick={() => volverA("horario")} className="reserva-volver">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Cambiar horario
+          </button>
+
+          <dl className="reserva-dl">
+            {servicio && <Fila k="Servicio" v={`${servicio.nombre} · ${servicio.duracion_min} min`} />}
+            <Fila k="Barbero" v={barbero.nombre} />
+            <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
+            <Fila k="Total" v={servicio ? mxn.format(precio) : "Se cotiza en la barbería"} destacado />
+            <Fila k="Pago" v="En efectivo, en la barbería" />
+          </dl>
+
+          {barbero.acepta_domicilio && (
+            <fieldset className="reserva-modalidad">
+              <legend>¿Dónde?</legend>
+              {(["presencial", "domicilio"] as const).map((m) => (
+                <button key={m} type="button" aria-pressed={modalidad === m} onClick={() => setModalidad(m)}>
+                  {m === "presencial" ? <MapPin className="h-5 w-5" aria-hidden /> : <Home className="h-5 w-5" aria-hidden />}
+                  {m === "presencial" ? "En la barbería" : "A domicilio"}
+                </button>
+              ))}
+            </fieldset>
+          )}
+          {modalidad === "domicilio" && (
+            <Campo id="direccion" label="Dirección del domicilio" error={errores.direccion}>
+              {(aria) => (
+                <input {...aria} value={direccion} onChange={(e) => setDireccion(e.target.value)} autoComplete="street-address" />
+              )}
+            </Campo>
+          )}
+
+          {esCliente ? (
+            <p className="reserva-quien">
+              <UserRound aria-hidden /> La cita queda a nombre de <b>{sesion!.nombre}</b>.
             </p>
-            {citaId && (
-              <div className="mx-auto mt-5 flex w-fit flex-col items-center gap-2">
-                <QrCita citaId={citaId} tamano={190} />
-                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
-                  Código: <b>{citaId}</b>
-                  {tarjeta && <> · Tarjeta: <b>{tarjeta.numero}</b></>}
-                </p>
-                <BotonGuardarQr
-                  datos={{
-                    contenido: enlaceDeCita(citaId, window.location.origin),
-                    titulo: nombreDelNegocio(barberiaConfig),
-                    subtitulo: "Tu cita",
-                    codigo: citaId,
-                    detalles: [
-                      `${barbero.nombre} · ${format(slot, "d MMM yyyy, HH:mm 'h'", { locale: es })}`,
-                      ...(tarjeta ? [`Tarjeta de lealtad ${tarjeta.numero}`] : []),
-                    ],
-                    archivo: `cita-${citaId}`,
-                  }}
-                />
-                <p className="max-w-xs text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Muestra este QR al llegar: confirma tu cita y suma la visita a tu tarjeta. También lo tienes en «Mi cuenta».
-                </p>
-              </div>
-            )}
-            <p className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">
-              <Banknote className="h-4 w-4 shrink-0" />
-              {servicio ? `Recuerda llevar ${mxn.format(precio)} en efectivo el día de tu cita` : "El pago es en efectivo en la barbería"}
+          ) : esPersonal ? (
+            <p className="login-alert is-error">
+              <AlertCircle aria-hidden /> Entraste con una cuenta del personal. Para agendar a un cliente usa el panel (Citas).
             </p>
-            <p className="badge mx-auto mt-4 badge-gold px-4 py-1.5 text-xs">
-              <Gift className="h-3.5 w-3.5" />
-              Tarjeta de lealtad: {lealtad.progreso} de {lealtad.requerido} sellos — te faltan {lealtad.faltan} para tu recompensa
+          ) : (
+            <>
+              <p className="reserva-quien">Sólo necesitamos tu nombre y tu celular. No hace falta crear cuenta.</p>
+              <Campo id="nombre" label="Nombre" error={errores.nombre}>
+                {(aria) => (
+                  <input {...aria} value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="name" placeholder="Tu nombre" />
+                )}
+              </Campo>
+              <Campo id="telefono" label="Celular (10 dígitos)" ayuda="Por si necesitamos avisarte de un cambio." error={errores.telefono}>
+                {(aria) => (
+                  <input
+                    {...aria}
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="55 1234 5678"
+                  />
+                )}
+              </Campo>
+            </>
+          )}
+
+          <p className="reserva-nota">
+            <Banknote aria-hidden /> Tu horario queda apartado al confirmar. Pagas en efectivo al llegar a la barbería.
+          </p>
+
+          {!esPersonal && (
+            <button type="submit" disabled={cargando} className="btn-gold login-submit">
+              {cargando && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirmar cita
+            </button>
+          )}
+
+          {!sesion && (
+            <p className="reserva-quien">
+              ¿Ya tienes cuenta? <Link href={enlaceLogin()}>Inicia sesión</Link> y regresas aquí con tu cita elegida.
             </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/cuenta"
-                className="card-hover rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md"
-              >
-                Ver en mi cuenta
-              </Link>
-              <Link
-                href="/cuenta/tarjeta"
-                className="rounded-full border border-accent-500/40 px-5 py-2.5 text-sm font-medium text-accent-600"
-              >
-                Mi tarjeta de lealtad
-              </Link>
-              <Link
-                href="/"
-                className="rounded-full px-5 py-2.5 text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-white/5"
-                style={{ color: "var(--ink-muted)" }}
-              >
-                Volver al inicio
-              </Link>
-            </div>
-          </div>
-        );
-      })()}
+          )}
+        </form>
+      )}
+
+      {/* Confirmación */}
+      {paso === "confirmada" && hecha && <Confirmada c={hecha} negocio={nombreDelNegocio(barberiaConfig)} tituloRef={tituloRef} />}
     </div>
   );
 }
 
-function Stepper({ actual }: { actual: Paso }) {
+function Confirmada({
+  c,
+  negocio,
+  tituloRef,
+}: {
+  c: Confirmacion;
+  negocio: string;
+  tituloRef: React.RefObject<HTMLHeadingElement | null>;
+}) {
+  const inicio = new Date(c.inicio);
+  return (
+    <div className="reserva-confirmada anim-pop" role="status">
+      <CheckCircle2 className="reserva-check" aria-hidden />
+      <h2 ref={tituloRef} tabIndex={-1} className="reserva-titulo">
+        {c.invitado && c.yaEraCliente ? `Ya eres cliente, ${c.nombre}. ¡Cita confirmada!` : `¡Cita confirmada${c.nombre ? `, ${c.nombre}` : ""}!`}
+      </h2>
+
+      <dl className="reserva-dl">
+        <Fila k="Barbero" v={c.barbero} />
+        {c.servicio && <Fila k="Servicio" v={c.servicio} />}
+        <Fila k="Fecha" v={format(inicio, "EEEE d 'de' MMMM", { locale: es })} />
+        <Fila k="Hora" v={format(inicio, "HH:mm 'h'")} />
+        <Fila k="Precio" v={c.servicio ? mxn.format(c.precio) : "Se cotiza en la barbería"} destacado />
+        <Fila k="Pago" v="Pagas en la barbería" />
+      </dl>
+
+      <button type="button" className="contacto-boton" onClick={() => descargarIcs(c)}>
+        <CalendarPlus aria-hidden /> Agregar a mi calendario
+      </button>
+
+      <div className="reserva-qr">
+        <QrCita citaId={c.id} tamano={180} />
+        <p>Muestra este código al llegar: confirma tu cita{c.invitado && c.yaEraCliente ? "" : " y suma un sello a tu tarjeta"}.</p>
+        {c.tarjeta && (
+          <p>
+            <IdCard className="inline h-4 w-4" aria-hidden /> Tu tarjeta de lealtad: <b>{c.tarjeta}</b>
+          </p>
+        )}
+        <BotonGuardarQr
+          datos={{
+            contenido: enlaceDeCita(c.id, window.location.origin),
+            titulo: negocio,
+            subtitulo: "Tu cita",
+            codigo: c.id,
+            detalles: [`${c.barbero} · ${format(inicio, "d MMM yyyy, HH:mm 'h'", { locale: es })}`, ...(c.tarjeta ? [`Tarjeta de lealtad ${c.tarjeta}`] : [])],
+            archivo: `cita-${c.id}`,
+          }}
+        />
+      </div>
+
+      {c.invitado ? (
+        <div className="reserva-cuenta">
+          <p>
+            {c.yaEraCliente
+              ? "Para ver todas tus citas, tu QR y tus sellos, inicia sesión con tu número."
+              : "Opcional: crea tu contraseña para ver después tus citas, tu QR y tus sellos."}
+          </p>
+          <Link href={`/login?tel=${encodeURIComponent(c.telefono)}`} className="btn-gold login-submit">
+            <KeyRound className="h-4 w-4" aria-hidden /> {c.yaEraCliente ? "Iniciar sesión" : "Guardar mi cuenta: crea tu contraseña"}
+          </Link>
+        </div>
+      ) : (
+        <div className="reserva-cuenta">
+          <Link href="/cuenta" className="btn-gold login-submit">
+            Ver en mi cuenta
+          </Link>
+          <Link href="/cuenta/tarjeta" className="contacto-boton">
+            <IdCard aria-hidden /> Mi tarjeta de lealtad
+          </Link>
+        </div>
+      )}
+
+      <p className="reserva-quien">¿Necesitas cambiarla? Llámanos o escríbenos:</p>
+      <BotonesContacto
+        textoWhatsApp={`Hola CortMart, quiero cambiar mi cita del ${format(inicio, "d 'de' MMMM 'a las' HH:mm", { locale: es })} con ${c.barbero}.`}
+      />
+    </div>
+  );
+}
+
+function Stepper({ actual, conServicio }: { actual: Paso; conServicio: boolean }) {
   const pasos: { id: Paso; label: string }[] = [
-    { id: "servicio", label: "Servicio" },
     { id: "barbero", label: "Barbero" },
-    { id: "horario", label: "Horario" },
-    { id: "confirmar", label: "Confirmar" },
+    ...(conServicio ? [{ id: "servicio" as Paso, label: "Servicio" }] : []),
+    { id: "horario", label: "Día y hora" },
+    { id: "datos", label: "Tus datos" },
   ];
   const idx = pasos.findIndex((p) => p.id === actual);
-  const activo = actual === "confirmada" ? pasos.length : idx;
   return (
-    <ol className="flex items-center gap-2">
+    <ol className="reserva-stepper" aria-label={`Paso ${idx + 1} de ${pasos.length}`}>
       {pasos.map((p, i) => (
-        <li key={p.id} className="flex flex-1 flex-col gap-1.5">
-          <span
-            className={`h-1.5 rounded-full transition-colors ${
-              i <= activo ? "bg-gradient-to-r from-brand-500 to-accent-500" : "bg-slate-200 dark:bg-white/10"
-            }`}
-          />
-          <span className="text-[11px] font-medium" style={{ color: i <= activo ? undefined : "var(--ink-muted)" }}>
-            {p.label}
-          </span>
+        <li key={p.id} className={i <= idx ? "is-hecho" : ""} aria-current={i === idx ? "step" : undefined}>
+          <span aria-hidden />
+          {p.label}
         </li>
       ))}
     </ol>
@@ -393,9 +642,9 @@ function Stepper({ actual }: { actual: Paso }) {
 
 function Fila({ k, v, destacado }: { k: string; v: string; destacado?: boolean }) {
   return (
-    <div className="flex justify-between">
-      <dt style={{ color: "var(--ink-muted)" }}>{k}</dt>
-      <dd className={destacado ? "font-semibold text-brand-600" : "font-medium"}>{v}</dd>
+    <div>
+      <dt>{k}</dt>
+      <dd className={destacado ? "is-destacado" : ""}>{v}</dd>
     </div>
   );
 }

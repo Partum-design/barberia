@@ -84,7 +84,8 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
   const servicio = (c: Cita) => c.servicio_nombre || "Cita";
 
   switch (op.tipo) {
-    case "crearCita": {
+    case "crearCita":
+    case "reservarInvitado": {
       const c = citaDe(despues, op.id);
       if (!c) break;
       const admins = await idsDeAdmins();

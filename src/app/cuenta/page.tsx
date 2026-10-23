@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Banknote, CalendarPlus, CreditCard, Gift, Home, MapPin, QrCode, Sparkles } from "lucide-react";
@@ -16,6 +16,7 @@ import { OtroRol } from "@/components/panel/ModuleUI";
 import { TarjetaGoogle } from "@/components/app/TarjetaGoogle";
 import { LogoGoogle } from "@/components/app/LogoGoogle";
 import { enlaceGoogleCalendar } from "@/lib/auth/google";
+import { SeguridadCuenta } from "@/components/cuenta/SeguridadCuenta";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -268,6 +269,10 @@ export default function CuentaPage() {
           <TarjetaGoogle />
         </section>
       </div>
+
+      <Suspense fallback={null}>
+        <SeguridadCuenta />
+      </Suspense>
 
       {qr && (
         <Modal titulo="Tu código de cita" descripcion="Muéstralo en recepción al llegar." onCerrar={() => setQr(null)}>

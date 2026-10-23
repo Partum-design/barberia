@@ -3,6 +3,7 @@ import { Anton, Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakart
 import "./globals.css";
 import "./tema-cortmart.css";
 import "./correcciones-qa.css";
+import "./experiencia-movil.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 import { RegistrarApp } from "@/components/app/RegistrarApp";
@@ -55,7 +56,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_DESCRIPCION_NEGOCIO ||
     `${NOMBRE}: servicios, equipo, horario y reservas en línea. Suma sellos en tu tarjeta de lealtad con cada visita.`,
   applicationName: NOMBRE,
-  appleWebApp: { capable: true, title: "CortMart", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "CortMart", statusBarStyle: "black" },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -69,6 +70,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#0c0806",
   colorScheme: "dark",
+  // Para respetar la barra del iPhone (zona segura) en la app instalada.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

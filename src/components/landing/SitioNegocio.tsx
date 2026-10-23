@@ -157,6 +157,7 @@ export function SitioNegocio() {
   const [resena, setResena] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [pausado, setPausado] = useState(false);
+  const [barra, setBarra] = useState(false);
   const raiz = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
@@ -217,10 +218,16 @@ export function SitioNegocio() {
     const el = raiz.current;
     if (!el) return;
     let raf = 0;
-    const capas = Array.from(el.querySelectorAll<HTMLElement>("[data-parallax]"));
+    // En el teléfono no hay parallax: recalcular estilos en cada cuadro de
+    // scroll es lo que hace que una página se sienta trabada.
+    const conParallax = window.matchMedia("(hover: hover) and (pointer: fine)").matches && !sinMovimiento();
+    const capas = conParallax ? Array.from(el.querySelectorAll<HTMLElement>("[data-parallax]")) : [];
+    const portada = el.querySelector<HTMLElement>(".cm-hero");
     const pintar = () => {
       raf = 0;
       const vh = window.innerHeight;
+      // Barra inferior del teléfono: aparece al dejar atrás la portada.
+      setBarra(window.scrollY > (portada?.offsetHeight ?? vh) * 0.75);
       for (const c of capas) {
         const r = c.getBoundingClientRect();
         const p = (r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2);
@@ -347,6 +354,7 @@ export function SitioNegocio() {
           ))}
         </nav>
         <div className="cm-nav-actions">
+          <BotonInstalarApp variante="icono" className="cm-nav-instalar" />
           <Link href={cuenta.href} className="cm-nav-login" aria-label={cuenta.label}>
             <UserRound />
             <span>{cuenta.label}</span>
@@ -366,6 +374,7 @@ export function SitioNegocio() {
             {menuAbierto ? <X /> : <Menu />}
           </button>
         </div>
+        {menuAbierto && <div className="cm-menu-fondo" aria-hidden />}
         {menuAbierto && (
           <div className="cm-mobile-menu" id="menu-movil" ref={menuRef}>
             {enlaces.map((e) => (
@@ -454,7 +463,7 @@ export function SitioNegocio() {
             )}
           </div>
           <div className="cm-cta-extra">
-            <BotonInstalarApp />
+            <BotonInstalarApp variante="tarjeta" />
           </div>
 
           <div className="cm-hero-facts">
@@ -883,10 +892,26 @@ export function SitioNegocio() {
             Partum Design
           </a>
         </p>
+        <BotonInstalarApp variante="enlace" className="cm-footer-instalar" />
         <Link href="/login" className="cm-admin-link">
           <LockKeyhole /> Administración
         </Link>
       </footer>
+
+      {/* Barra de acciones del teléfono: lo importante siempre a un toque */}
+      <nav className={`cm-barra ${barra && !menuAbierto ? "is-visible" : ""}`} aria-label="Acciones rápidas" aria-hidden={!barra || menuAbierto}>
+        <Link href="/reservar" className="cm-barra-agendar" tabIndex={barra ? 0 : -1}>
+          <CalendarCheck aria-hidden /> Agendar cita
+        </Link>
+        <a href={tel} className="cm-barra-icono" aria-label={`Llamar: ${telefono}`} tabIndex={barra ? 0 : -1}>
+          <Phone aria-hidden />
+        </a>
+        {whatsapp && (
+          <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="cm-barra-icono is-whatsapp" aria-label="WhatsApp" tabIndex={barra ? 0 : -1}>
+            <MessageCircle aria-hidden />
+          </a>
+        )}
+      </nav>
       {!listo && <span className="sr-only">Cargando información del negocio…</span>}
     </main>
   );

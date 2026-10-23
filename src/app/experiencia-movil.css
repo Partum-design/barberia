@@ -1,0 +1,549 @@
+/* ==========================================================================
+   Experiencia en el teléfono: fluida, con animaciones que tienen propósito.
+
+   Principios:
+   · Sólo se anima transform y opacity (no tocan el layout, van en la GPU).
+   · Salidas más rápidas que las entradas; curvas ease-out fuertes.
+   · Cada toque responde al instante (escala 0.97) y el hover no se queda
+     "pegado" en pantallas táctiles.
+   · En el teléfono se quitan los efectos caros que sólo decoran: desenfoques
+     de fondo, mezcla de grano a pantalla completa y parallax.
+   ========================================================================== */
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html { background: #0c0806; -webkit-tap-highlight-color: transparent; }
+a, button, summary, label, [role="button"], input, select, textarea { touch-action: manipulation; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-movimiento="reducido"]) { scroll-behavior: smooth; }
+}
+/* Al saltar a una sección, el menú fijo no la tapa */
+main.cm section[id] { scroll-margin-top: 4.75rem; }
+/* App instalada: sin rebote que deje ver bordes vacíos */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}
+
+/* ── Respuesta al tocar ───────────────────────────────────────────────── */
+.cm .cm-btn,
+.cm .cm-cta-agendar,
+.cm .cm-cta-login,
+.cm .cm-cta-tel,
+.cm .cm-nav-login,
+.cm .cm-burger,
+.cm .cm-arrow,
+.cm .cm-barra a,
+.btn-gold,
+.contacto-boton,
+.google-boton,
+.reserva-opcion,
+.reserva-servicio,
+.reserva-hora,
+.reserva-modalidad button,
+.instalar-principal,
+.instalar-secundario,
+.instalar-boton-icono,
+.instalar-boton-tarjeta,
+.a11y-fab {
+  transition-property: transform, background-color, border-color, color, filter, box-shadow, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
+}
+.cm .cm-btn:active,
+.cm .cm-cta-agendar:active,
+.cm .cm-cta-login:active,
+.cm .cm-cta-tel:active,
+.cm .cm-nav-login:active,
+.cm .cm-burger:active,
+.cm .cm-arrow:active,
+.cm .cm-barra a:active,
+.btn-gold:active,
+.contacto-boton:active,
+.google-boton:active,
+.reserva-opcion:active,
+.reserva-servicio:active,
+.reserva-hora:active,
+.reserva-modalidad button:active,
+.instalar-principal:active,
+.instalar-secundario:active,
+.instalar-boton-icono:active,
+.instalar-boton-tarjeta:active,
+.a11y-fab:active { transform: scale(0.97); }
+
+/* En pantallas táctiles el hover se queda puesto tras tocar: se neutraliza */
+@media (hover: none) {
+  .cm .cm-btn:hover,
+  .cm .cm-rating:hover,
+  .cm .cm-service:hover,
+  .cm .cm-barber:hover,
+  .cm .cm-arrow:hover,
+  .cm .cm-cta-agendar:hover,
+  .cm .cm-cta-login:hover,
+  .cm .cm-frame.tilt-l:hover,
+  .cm .cm-frame.tilt-r:hover,
+  .btn-gold:hover,
+  .reserva-opcion:hover { transform: none; filter: none; }
+  .cm .cm-service:hover .cm-service-icon,
+  .cm .cm-frame:hover img,
+  .cm .cm-cta-agendar:hover .cm-cta-flecha { transform: none; }
+}
+
+/* ── Animaciones de la portada, más limpias ───────────────────────────── */
+/* Las letras entran sin desenfoque: el blur en texto grande cuesta cuadros. */
+@keyframes cm-letra {
+  from { opacity: 0; transform: translateY(35%); }
+  to { opacity: 1; transform: none; }
+}
+.cm .cm-hero-title span { animation-name: cm-letra; animation-timing-function: var(--ease-out); }
+.cm .cm-in { animation-timing-function: var(--ease-out); }
+/* Secciones que aparecen al hacer scroll: suben poco y rápido */
+.reveal { transition: transform 600ms var(--ease-out), opacity 600ms var(--ease-out); }
+
+/* ── Teléfono y tableta: fuera lo que cuesta y no aporta ──────────────── */
+@media (max-width: 1023px), (pointer: coarse) {
+  .grain-layer { display: none; }
+  .cm .cm-nav.is-scrolled { background: rgb(12 8 6 / 0.97); backdrop-filter: none; }
+  .cm .cm-btn-ghost,
+  .cm .cm-cta-login,
+  .cm .cm-cta-tel,
+  .cm .cm-nav-login,
+  .cm .cm-rating,
+  .cm .cm-chip,
+  .cm .cm-about-badge,
+  .app-mobile-header { backdrop-filter: none; }
+  .cm .cm-cta-login,
+  .cm .cm-cta-tel { background: rgb(18 12 8 / 0.82); }
+  .cm .cm-nav-login,
+  .cm .cm-rating,
+  .cm .cm-chip { background: rgb(12 8 6 / 0.78); }
+  .cm .cm-review.is-left,
+  .cm .cm-review.is-right { filter: none; }
+  /* Herramientas flotantes y giros decorativos: quietos en el teléfono */
+  .cm .cm-float,
+  .cm .cm-deco { display: none; }
+  .cm .cm-barber-avatar,
+  .cm .cm-barber-avatar span,
+  .cm .cm-loyalty-card,
+  .cm .cm-about-badge { animation: none; }
+  .cm .cm-kenburns { animation-duration: 30s; will-change: transform; }
+}
+
+/* ── Menú del teléfono: hoja que baja con fondo ───────────────────────── */
+@keyframes menu-fondo { from { opacity: 0; } }
+@keyframes menu-entra { from { opacity: 0; transform: translateY(-10px) scale(0.98); } }
+@keyframes menu-item { from { opacity: 0; transform: translateY(-6px); } }
+.cm .cm-menu-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgb(0 0 0 / 0.6);
+  animation: menu-fondo 200ms var(--ease-out);
+}
+.cm .cm-mobile-menu {
+  transform-origin: top right;
+  animation: menu-entra 240ms var(--ease-out);
+  box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.9);
+  max-height: calc(100dvh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cm .cm-mobile-menu > * { animation: menu-item 260ms var(--ease-out) both; }
+.cm .cm-mobile-menu > *:nth-child(2) { animation-delay: 25ms; }
+.cm .cm-mobile-menu > *:nth-child(3) { animation-delay: 50ms; }
+.cm .cm-mobile-menu > *:nth-child(4) { animation-delay: 75ms; }
+.cm .cm-mobile-menu > *:nth-child(5) { animation-delay: 100ms; }
+.cm .cm-mobile-menu > *:nth-child(6) { animation-delay: 125ms; }
+.cm .cm-mobile-menu > *:nth-child(n + 7) { animation-delay: 150ms; }
+@media (min-width: 1024px) {
+  html:not([data-texto="grande"]):not([data-texto="muygrande"]) .cm .cm-menu-fondo { display: none; }
+}
+
+/* ── Barra de acciones del teléfono ───────────────────────────────────── */
+.cm .cm-barra {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: none;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
+  background: rgb(12 8 6 / 0.97);
+  border-top: 1px solid rgb(247 147 30 / 0.35);
+  box-shadow: 0 -18px 40px -20px rgb(0 0 0 / 0.9);
+  transform: translateY(110%);
+  transition: transform 220ms var(--ease-out);
+}
+.cm .cm-barra.is-visible { transform: none; transition: transform 380ms var(--ease-drawer); }
+@media (max-width: 767px) {
+  .cm .cm-barra { display: flex; }
+  /* El botón de accesibilidad sube para no tapar la barra */
+  .a11y-fab { transition: transform 380ms var(--ease-drawer); }
+  body:has(.cm-barra.is-visible) .a11y-fab { transform: translateY(calc(-4.6rem)); }
+  body:has(.cm-barra.is-visible) .a11y-fab:active { transform: translateY(calc(-4.6rem)) scale(0.97); }
+}
+.cm .cm-barra-agendar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 3.25rem;
+  background: linear-gradient(180deg, #ffab3d, var(--cm-orange) 55%, var(--cm-orange-deep));
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  font-family: var(--cm-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #120802;
+}
+.cm .cm-barra-agendar svg { width: 1.3rem; height: 1.3rem; }
+.cm .cm-barra-icono {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: none;
+  border: 2px solid rgb(247 147 30 / 0.6);
+  border-radius: 0.75rem;
+  color: var(--cm-orange);
+}
+.cm .cm-barra-icono.is-whatsapp { color: #5fd38a; border-color: rgb(95 211 138 / 0.55); }
+.cm .cm-barra-icono svg { width: 1.4rem; height: 1.4rem; }
+
+/* ==========================================================================
+   Instalar la app
+   ========================================================================== */
+
+/* Ícono del menú: siempre a la mano */
+.instalar-boton-icono {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border: 1px solid rgb(247 147 30 / 0.55);
+  border-radius: 999px;
+  background: rgb(247 147 30 / 0.12);
+  color: var(--cm-orange, #f7931e);
+}
+.instalar-boton-icono svg { width: 1.2rem; height: 1.2rem; }
+.instalar-boton-icono:hover { background: rgb(247 147 30 / 0.22); }
+/* Punto que llama la atención tres veces y luego se queda quieto */
+.instalar-punto {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #5fd38a;
+  box-shadow: 0 0 0 2px #0c0806;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-movimiento="reducido"]) .instalar-punto { animation: instalar-latido 1.4s var(--ease-out) 1.5s 3; }
+}
+@keyframes instalar-latido {
+  0% { box-shadow: 0 0 0 2px #0c0806, 0 0 0 2px rgb(95 211 138 / 0.7); }
+  100% { box-shadow: 0 0 0 2px #0c0806, 0 0 0 12px rgb(95 211 138 / 0); }
+}
+
+/* Tarjeta de la portada */
+.instalar-boton-tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 40rem;
+  min-height: 4.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgb(247 147 30 / 0.45);
+  border-radius: 1rem;
+  background:
+    linear-gradient(120deg, rgb(247 147 30 / 0.16), rgb(247 147 30 / 0.02) 60%),
+    rgb(12 8 6 / 0.82);
+  text-align: left;
+  color: #f6eee4;
+}
+.instalar-boton-tarjeta:hover { border-color: var(--cm-orange, #f7931e); }
+.instalar-boton-logo img {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
+  box-shadow: 0 8px 20px -8px rgb(247 147 30 / 0.7);
+}
+.instalar-boton-texto { display: grid; flex: 1; min-width: 0; }
+.instalar-boton-texto b { font-size: 1.05rem; font-weight: 800; }
+.instalar-boton-texto small { font-size: 0.875rem; color: #c9c2ba; }
+.instalar-boton-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 999px;
+  background: var(--cm-orange, #f7931e);
+  color: #120802;
+}
+.instalar-boton-accion svg { width: 1.1rem; height: 1.1rem; }
+.instalar-boton-accion svg:last-child { width: 0.95rem; }
+
+/* Enlace (pie de la portada y hoja "Más" del panel) */
+.instalar-boton-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cm-orange, #f7931e);
+}
+.instalar-boton-enlace svg { width: 1.1rem; height: 1.1rem; }
+
+/* ── Ventana / hoja ───────────────────────────────────────────────────── */
+.instalar-capa {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: end stretch;
+}
+.instalar-fondo {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.62);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.instalar-capa.is-abierta .instalar-fondo { opacity: 1; transition-duration: 300ms; }
+
+.instalar-hoja {
+  position: relative;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.4rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  border: 1px solid rgb(247 147 30 / 0.3);
+  border-bottom: 0;
+  border-radius: 1.6rem 1.6rem 0 0;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(247 147 30 / 0.16), transparent 60%),
+    #120a06;
+  color: #f6eee4;
+  box-shadow: 0 -30px 80px -20px rgb(0 0 0 / 0.9);
+  transform: translateY(100%);
+  /* Salida: rápida */
+  transition: transform 240ms var(--ease-out);
+}
+/* Entrada: como una hoja de iOS */
+.instalar-capa.is-abierta .instalar-hoja { transform: translateY(0); transition: transform 460ms var(--ease-drawer); }
+.instalar-hoja.is-arrastrando { transition: none !important; }
+
+@media (min-width: 768px) {
+  .instalar-capa { place-items: center; padding: 1.5rem; }
+  .instalar-hoja {
+    width: min(28rem, 100%);
+    border-bottom: 1px solid rgb(247 147 30 / 0.3);
+    border-radius: 1.6rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+    transform: translateY(12px) scale(0.97);
+    opacity: 0;
+    transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
+  }
+  .instalar-capa.is-abierta .instalar-hoja {
+    transform: none;
+    opacity: 1;
+    transition: transform 320ms var(--ease-out), opacity 240ms var(--ease-out);
+  }
+  .instalar-agarre { display: none; }
+}
+
+.instalar-agarre { display: grid; place-items: center; height: 1.75rem; margin: 0 -1.25rem; cursor: grab; touch-action: none; }
+.instalar-asa { width: 2.75rem; height: 0.32rem; border-radius: 999px; background: rgb(255 255 255 / 0.25); }
+.instalar-cerrar {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: #d9d2c9;
+}
+.instalar-cerrar svg { width: 1.2rem; height: 1.2rem; }
+.instalar-cerrar:hover { background: rgb(255 255 255 / 0.12); color: #fff; }
+
+/* Ficha tipo tienda de apps */
+.instalar-ficha { display: flex; align-items: center; gap: 1rem; padding: 0.25rem 3rem 0.25rem 0; touch-action: none; }
+.instalar-icono img {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1.1rem;
+  box-shadow: 0 0 0 1px rgb(247 147 30 / 0.35), 0 14px 34px -10px rgb(247 147 30 / 0.65);
+}
+.instalar-nombre { font-family: var(--cm-sign, var(--font-display)); font-size: 1.9rem; line-height: 1; letter-spacing: 0.03em; }
+.instalar-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.instalar-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.07);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #d9d2c9;
+}
+.instalar-meta svg { width: 0.85rem; height: 0.85rem; fill: #f7931e; color: #f7931e; }
+
+@keyframes instalar-aparece { from { opacity: 0; transform: translateY(6px); } }
+.instalar-cuerpo { animation: instalar-aparece 260ms var(--ease-out); }
+.instalar-cuerpo h2 { margin-top: 1.1rem; font-size: 1.35rem; font-weight: 800; line-height: 1.2; }
+
+.instalar-beneficios { display: grid; gap: 0.5rem; margin-top: 0.9rem; }
+.instalar-beneficios li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.9rem;
+  background: rgb(255 255 255 / 0.035);
+  animation: instalar-aparece 300ms var(--ease-out) both;
+}
+.instalar-beneficios li > span {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: none;
+  border-radius: 0.7rem;
+  background: rgb(247 147 30 / 0.14);
+  color: #f7931e;
+}
+.instalar-beneficios li > span svg { width: 1.15rem; height: 1.15rem; }
+.instalar-beneficios b { display: block; font-size: 1rem; }
+.instalar-beneficios small { display: block; margin-top: 0.1rem; font-size: 0.9rem; line-height: 1.4; color: #c9c2ba; }
+
+.instalar-acciones { display: grid; gap: 0.4rem; margin-top: 1.1rem; }
+.instalar-principal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 3.4rem;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffab3d, #f7931e 55%, #c25e0a);
+  box-shadow: 0 14px 30px -14px rgb(247 147 30 / 0.9);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #120802;
+}
+.instalar-principal svg { width: 1.3rem; height: 1.3rem; }
+.instalar-principal:disabled { opacity: 0.7; }
+.instalar-secundario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.9rem;
+  border-radius: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #d9d2c9;
+}
+.instalar-secundario svg { width: 1.1rem; height: 1.1rem; }
+.instalar-secundario.is-borde { width: 100%; margin-top: 0.75rem; border: 1px solid rgb(247 147 30 / 0.4); }
+.instalar-nota { margin-top: 0.6rem; text-align: center; font-size: 0.875rem; line-height: 1.45; color: #b5ada4; }
+.instalar-nota svg { width: 0.95rem; height: 0.95rem; vertical-align: -0.15em; color: #f7931e; }
+
+.instalar-pasos { display: grid; gap: 0.6rem; margin-top: 1rem; }
+.instalar-pasos li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid rgb(247 147 30 / 0.18);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.03);
+  animation: instalar-aparece 300ms var(--ease-out) both;
+}
+.instalar-num {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+  border-radius: 999px;
+  background: #f7931e;
+  font-weight: 800;
+  color: #120802;
+}
+.instalar-paso-icono {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 0.08);
+  color: #6db3ff;
+}
+.instalar-paso-icono svg { width: 1.3rem; height: 1.3rem; }
+.instalar-pasos p { font-size: 1rem; line-height: 1.45; color: #e9e2d9; }
+.instalar-pasos b { color: #fff; }
+.instalar-qr {
+  width: 11rem;
+  height: 11rem;
+  margin: 1rem auto 0;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  background: #fff;
+}
+.instalar-qr svg { display: block; width: 100%; height: 100%; }
+.instalar-lista { display: grid; justify-items: center; text-align: center; }
+.instalar-lista p { margin-top: 0.4rem; font-size: 1rem; color: #d9d2c9; }
+.instalar-lista .instalar-acciones { width: 100%; }
+@keyframes instalar-check { from { opacity: 0; transform: scale(0.85); } }
+.instalar-check {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-top: 1rem;
+  border-radius: 999px;
+  background: rgb(95 211 138 / 0.16);
+  color: #5fd38a;
+  animation: instalar-check 360ms var(--ease-out);
+}
+.instalar-check svg { width: 2rem; height: 2rem; }
+
+/* Portada: la tarjeta de instalar ocupa su renglón */
+.cm .cm-cta-extra { margin-top: 0.8rem; }
+.cm .cm-nav-instalar { order: -1; }
+.cm .cm-footer-instalar { color: var(--cm-orange); }
+@media (max-width: 379px) {
+  .cm .cm-nav-instalar { display: none; }
+}
+
+/* Menos movimiento: sin desplazamientos, sólo cambios de opacidad */
+html[data-movimiento="reducido"] .instalar-hoja,
+html[data-movimiento="reducido"] .cm .cm-barra { transition-property: opacity; transform: none !important; }
+html[data-movimiento="reducido"] .instalar-capa:not(.is-abierta) .instalar-hoja { opacity: 0; }
+html[data-movimiento="reducido"] .cm .cm-barra:not(.is-visible) { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .instalar-hoja, .cm .cm-barra { transition-property: opacity; transform: none !important; }
+  .instalar-capa:not(.is-abierta) .instalar-hoja { opacity: 0; }
+  .cm .cm-barra:not(.is-visible) { opacity: 0; pointer-events: none; }
+}
+.instalar-hoja:focus { outline: none; }
+/* Los íconos de la tarjeta no heredan el naranja de .cm-cta-extra */
+.cm .cm-cta-extra .instalar-boton-accion svg { width: 1.1rem; height: 1.1rem; color: #120802; }
+.cm .cm-cta-extra .instalar-boton-accion svg:last-child { width: 0.95rem; }

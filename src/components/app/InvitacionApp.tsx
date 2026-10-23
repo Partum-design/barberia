@@ -134,7 +134,7 @@ export function InvitacionApp() {
 
         <div className="invitacion-cabeza">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/pwa/icono?t=192" alt="" width={64} height={64} className="invitacion-icono" />
+          <img src="/iconos/icono-192.png" alt="" width={64} height={64} className="invitacion-icono" />
           <div className="min-w-0">
             <p className="invitacion-kicker">
               <Smartphone className="h-3.5 w-3.5" /> App gratis · sin tienda

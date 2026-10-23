@@ -14,8 +14,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(titulo, {
       body: datos.cuerpo || "",
-      icon: "/pwa/icono?t=192",
-      badge: "/pwa/icono?t=96&m=1",
+      icon: "/iconos/icono-192.png",
+      badge: "/iconos/insignia-96.png",
       data: { url: datos.url || "/" },
       tag: datos.url || undefined,
       renotify: true,

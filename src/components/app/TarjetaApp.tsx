@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing, Download, Share, Smartphone, X } from "lucide-react";
-import { useInstalar, useNotificaciones } from "@/lib/app-nativa";
+import { BellRing, Download, Smartphone, X } from "lucide-react";
+import { abrirInstalacion, useInstalar, useNotificaciones } from "@/lib/app-nativa";
 import "./app.css";
 
 const CLAVE = "cortmart-tarjeta-app-oculta";
@@ -15,7 +15,6 @@ export function TarjetaApp({ rol }: { rol: "cliente" | "barbero" | "admin" }) {
   const app = useInstalar();
   const push = useNotificaciones();
   const [oculta, setOculta] = useState(true);
-  const [pasosIos, setPasosIos] = useState(false);
 
   useEffect(() => {
     try {
@@ -25,7 +24,7 @@ export function TarjetaApp({ rol }: { rol: "cliente" | "barbero" | "admin" }) {
     }
   }, []);
 
-  const puedeInstalar = !app.instalada && (app.lista || app.ios);
+  const puedeInstalar = !app.instalada;
   const puedeAvisar = push.estado === "apagado";
   if (oculta || (!puedeInstalar && !puedeAvisar)) return null;
 
@@ -51,24 +50,13 @@ export function TarjetaApp({ rol }: { rol: "cliente" | "barbero" | "admin" }) {
       <div className="min-w-0 flex-1">
         <p className="tarjeta-app-titulo">Lleva CortMart en tu teléfono</p>
         <p className="tarjeta-app-texto">{texto}</p>
-        {pasosIos && (
-          <p className="tarjeta-app-ios">
-            En Safari toca <Share className="inline h-3.5 w-3.5" /> <b>Compartir</b> y luego <b>«Agregar a inicio»</b>.
-            {puedeAvisar && " Ábrela desde tu inicio para activar los avisos."}
-          </p>
-        )}
         {push.error && <p className="tarjeta-app-ios">{push.error}</p>}
         <div className="tarjeta-app-acciones">
-          {puedeInstalar &&
-            (app.lista ? (
-              <button type="button" className="btn-gold is-sm" onClick={() => void app.instalar()}>
-                <Download className="h-4 w-4" /> Instalar app
-              </button>
-            ) : (
-              <button type="button" className="btn-gold is-sm" onClick={() => setPasosIos((v) => !v)}>
-                <Download className="h-4 w-4" /> Instalar en iPhone
-              </button>
-            ))}
+          {puedeInstalar && (
+            <button type="button" className="btn-gold is-sm" onClick={abrirInstalacion}>
+              <Download className="h-4 w-4" /> Instalar app
+            </button>
+          )}
           {puedeAvisar && (
             <button type="button" className="btn-linea is-sm" onClick={() => void push.activar()}>
               <BellRing className="h-4 w-4" /> Activar notificaciones

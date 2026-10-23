@@ -84,6 +84,51 @@ export function useInstalar() {
   };
 }
 
+// --- Cómo se instala en cada teléfono --------------------------------------
+
+/**
+ * Dónde está la persona y, por tanto, qué pasos ver:
+ *   · directa   → el navegador ofrece instalar con un toque (Chrome/Edge)
+ *   · ios-safari / ios-otro → iPhone o iPad: desde «Compartir»
+ *   · android-samsung / android-firefox / android-chrome → menú del navegador
+ *   · en-app    → navegador interno de Facebook, Instagram, etc.: ahí no se
+ *                 puede instalar, hay que abrir la página en el navegador
+ *   · escritorio → computadora sin instalación directa: QR para el teléfono
+ */
+export type Plataforma =
+  | "directa"
+  | "ios-safari"
+  | "ios-otro"
+  | "android-samsung"
+  | "android-firefox"
+  | "android-chrome"
+  | "en-app"
+  | "escritorio";
+
+export function plataformaDe(ua: string, lista: boolean, ios: boolean): Plataforma {
+  if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|TikTok|musical_ly|WhatsApp|\bwv\b/i.test(ua)) return "en-app";
+  if (lista) return "directa";
+  if (ios) return /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//i.test(ua) ? "ios-otro" : "ios-safari";
+  if (/Android/i.test(ua)) {
+    if (/SamsungBrowser/i.test(ua)) return "android-samsung";
+    if (/Firefox/i.test(ua)) return "android-firefox";
+    return "android-chrome";
+  }
+  return "escritorio";
+}
+
+const EVENTO_ABRIR = "cortmart:instalar-app";
+
+/** Abre la ventana de "Instalar la app" desde cualquier botón. */
+export function abrirInstalacion() {
+  window.dispatchEvent(new Event(EVENTO_ABRIR));
+}
+
+export function alPedirInstalacion(f: () => void) {
+  window.addEventListener(EVENTO_ABRIR, f);
+  return () => window.removeEventListener(EVENTO_ABRIR, f);
+}
+
 // --- Notificaciones push ----------------------------------------------------
 
 const CLAVE_PUBLICA = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";

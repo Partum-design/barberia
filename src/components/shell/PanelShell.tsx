@@ -34,6 +34,7 @@ import { Marca } from "@/components/shell/Marca";
 import { ValorVivo } from "@/components/panel/ModuleUI";
 import { CampanaAvisos } from "@/components/app/CampanaAvisos";
 import { TarjetaApp } from "@/components/app/TarjetaApp";
+import { BotonInstalarApp } from "@/components/app/BotonInstalarApp";
 
 type NavItem = { label: string; corto?: string; href: string; icon: React.ReactNode };
 
@@ -268,6 +269,7 @@ export function PanelShell({
                 ))}
               </div>
               <div className="app-sheet-extra">
+                <BotonInstalarApp variante="enlace" />
                 <Link href="/" onClick={() => setMasAbierto(false)}>
                   <ExternalLink className="h-4 w-4" /> Ver página pública
                 </Link>

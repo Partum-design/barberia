@@ -13,25 +13,36 @@ import {
   EyeOff,
   KeyRound,
   Loader2,
-  Scissors,
   ShieldCheck,
   Smartphone,
   Sparkles,
 } from "lucide-react";
 import { authDisponible, getSupabaseBrowser } from "@/lib/supabase/client";
 import { DESTINO_POR_ROL } from "@/lib/auth/roles";
-import { correoDeTelefono, pareceTelefono } from "@/lib/auth/telefono";
+import { pareceTelefono } from "@/lib/auth/telefono";
 import { entrarConGoogle } from "@/lib/auth/google";
 import { normalizarTelefono, type Rol } from "@/lib/store";
 import { Marca } from "@/components/shell/Marca";
+import { LogoCM } from "@/components/shell/LogoCM";
 import { LogoGoogle } from "@/components/app/LogoGoogle";
+import {
+  Campo,
+  enfocarPrimerError,
+  errorDeClaveNueva,
+  errorDeIdentificador,
+  errorDeNombre,
+  errorDeRepetir,
+  hayErrores,
+  type Errores,
+} from "@/components/formularios/Campo";
 import "@/components/app/app.css";
 
 /**
  * Pasos del acceso:
  *   identificar → escribe su celular o correo (o entra con Google)
  *   clave       → ya tiene contraseña: la escribe
- *   activar     → lo registraron en la barbería y es su primera vez: crea su contraseña
+ *   activar     → lo registraron en la barbería (o reservó con su número) y es
+ *                 su primera vez: crea su contraseña
  *   registro    → cliente nuevo: nombre, celular o correo y contraseña
  */
 type Paso = "identificar" | "clave" | "activar" | "registro";
@@ -42,15 +53,9 @@ const SIN_SUPABASE =
 function mensajeDeError(mensaje: string) {
   if (/invalid login credentials/i.test(mensaje)) return "La contraseña no es correcta.";
   if (/email not confirmed/i.test(mensaje)) return "Tu correo aún no está confirmado.";
-  if (/rate limit|too many/i.test(mensaje)) return "Demasiados intentos. Espera un momento y vuelve a probar.";
+  if (/rate limit|too many/i.test(mensaje)) return "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
+  if (/failed to fetch|network/i.test(mensaje)) return "No hay conexión. Revisa tu internet e inténtalo de nuevo.";
   return mensaje;
-}
-
-function borrarCookiesDeSesion() {
-  for (const par of document.cookie.split(";")) {
-    const nombre = par.split("=")[0].trim();
-    if (nombre.startsWith("sb-")) document.cookie = `${nombre}=; Max-Age=0; path=/`;
-  }
 }
 
 /** "5512345678" → "55 1234 5678" */
@@ -59,6 +64,15 @@ const telefonoBonito = (t: string) => {
   return d.length === 10 ? `${d.slice(0, 2)} ${d.slice(2, 6)} ${d.slice(6)}` : t;
 };
 
+class ErrorAcceso extends Error {
+  constructor(
+    message: string,
+    public bloqueado = false
+  ) {
+    super(message);
+  }
+}
+
 async function pedir<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
@@ -66,8 +80,8 @@ async function pedir<T>(url: string, body: unknown): Promise<T> {
     credentials: "same-origin",
     body: JSON.stringify(body),
   });
-  const cuerpo = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(cuerpo.error ?? "No pudimos completar el acceso.");
+  const cuerpo = (await res.json().catch(() => ({}))) as T & { error?: string; bloqueado?: boolean };
+  if (!res.ok) throw new ErrorAcceso(cuerpo.error ?? "No pudimos completar el acceso.", Boolean(cuerpo.bloqueado));
   return cuerpo;
 }
 
@@ -84,9 +98,7 @@ function Acceso() {
   const siguiente = params.get("next");
 
   const [paso, setPaso] = useState<Paso>(params.get("modo") === "crear" ? "registro" : "identificar");
-  const [identificador, setIdentificador] = useState("");
-  /** Correo con el que se inicia sesión (el real o el interno del celular) */
-  const [correo, setCorreo] = useState("");
+  const [identificador, setIdentificador] = useState(params.get("tel") ?? params.get("u") ?? "");
   const [nombre, setNombre] = useState("");
   const [clave, setClave] = useState("");
   const [clave2, setClave2] = useState("");
@@ -95,28 +107,33 @@ function Acceso() {
   const [verClave, setVerClave] = useState(false);
   const [cargando, setCargando] = useState<null | "form" | "google">(null);
   const [error, setError] = useState<string | null>(params.get("error"));
+  const [errores, setErrores] = useState<Errores>({});
   const [aviso, setAviso] = useState<string | null>(null);
+  const [bloqueado, setBloqueado] = useState(false);
 
   const esTelefono = pareceTelefono(identificador);
   const destino = (rol: Rol) =>
     siguiente && siguiente.startsWith("/") && !siguiente.startsWith("//") ? siguiente : DESTINO_POR_ROL[rol];
+  const enlaceRecuperar = `/recuperar${identificador.trim() ? `?u=${encodeURIComponent(identificador.trim())}` : ""}`;
 
   function ir(nuevo: Paso) {
     setPaso(nuevo);
     setError(null);
+    setErrores({});
+    setBloqueado(false);
     setClave("");
     setClave2("");
     setCodigo("");
   }
 
-  /** Inicia sesión en el navegador y sale de esta pantalla. */
-  async function entrar(email: string, password: string) {
-    const supabase = getSupabaseBrowser();
-    if (!supabase) throw new Error(SIN_SUPABASE);
-    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-    borrarCookiesDeSesion();
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) throw err;
+  /**
+   * Inicia sesión en el servidor (que limita los intentos y escribe las
+   * cookies) y sale de esta pantalla.
+   */
+  async function entrar(password: string) {
+    if (!authDisponible) throw new Error(SIN_SUPABASE);
+    await getSupabaseBrowser()?.auth.signOut({ scope: "local" }).catch(() => {});
+    await pedir<{ rol: Rol }>("/api/auth/entrar", { identificador: identificador.trim(), password });
     const res = await fetch("/api/auth/sesion", { cache: "no-store", credentials: "same-origin" });
     const { rol } = (await res.json().catch(() => ({ rol: null }))) as { rol: Rol | null };
     if (!rol) {
@@ -138,26 +155,46 @@ function Acceso() {
     }
   }
 
+  function validar(): boolean {
+    const e: Errores = {};
+    if (paso === "registro") e.nombre = errorDeNombre(nombre);
+    if (paso === "identificar" || paso === "registro") e.id = errorDeIdentificador(identificador);
+    if (paso === "clave" && !clave) e.pass = "Escribe tu contraseña.";
+    if (paso === "activar" || paso === "registro") {
+      e.pass = errorDeClaveNueva(clave);
+      e.pass2 = errorDeRepetir(clave, clave2);
+    }
+    if ((paso === "activar" || paso === "registro") && conSms && !/^\d{6}$/.test(codigo)) {
+      e.codigo = "Escribe el código de 6 números.";
+    }
+    setErrores(e);
+    if (hayErrores(e)) {
+      enfocarPrimerError(e, ["nombre", "id", "codigo", "pass", "pass2"]);
+      return false;
+    }
+    return true;
+  }
+
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setAviso(null);
     if (!authDisponible) return setError(SIN_SUPABASE);
+    if (!validar()) return;
     setCargando("form");
     try {
       if (paso === "identificar") {
         const valor = identificador.trim();
         if (valor.includes("@")) {
-          setCorreo(valor.toLowerCase());
           ir("clave");
-        } else if (esTelefono) {
-          const r = await pedir<{ estado: string; correo?: string; pista?: string; google?: boolean; sms?: boolean }>(
-            "/api/auth/telefono",
-            { accion: "consultar", telefono: valor }
-          );
+        } else {
+          const r = await pedir<{ estado: string; pista?: string; google?: boolean; sms?: boolean }>("/api/auth/telefono", {
+            accion: "consultar",
+            telefono: valor,
+          });
           setConSms(Boolean(r.sms));
-          if (r.estado === "entrar" && r.correo) {
-            setCorreo(r.correo);
+          if (r.estado === "entrar") {
+            setAviso("Ya eres cliente. Escribe tu contraseña.");
             ir("clave");
           } else if (r.estado === "activar") {
             ir("activar");
@@ -165,45 +202,33 @@ function Acceso() {
             setAviso("Aún no tienes cuenta con ese número. Créala en un momento.");
             ir("registro");
           } else if (r.estado === "correo") {
-            setError(
-              r.google
-                ? `Ese número está ligado a tu cuenta de Google (${r.pista}). Entra con «Continuar con Google».`
-                : `Ese número está ligado a la cuenta ${r.pista}. Escribe tu correo para entrar.`
-            );
+            setError(`Ese número está ligado a tu cuenta de Google (${r.pista}). Entra con «Continuar con Google».`);
           }
-        } else {
-          setError("Escribe tu correo o tu número de celular a 10 dígitos.");
         }
         setCargando(null);
         return;
       }
 
       if (paso === "clave") {
-        await entrar(correo, clave);
+        await entrar(clave);
         return;
       }
 
-      if (clave.length < 8) throw new Error("Tu contraseña debe tener al menos 8 caracteres.");
-      if (clave !== clave2) throw new Error("Las contraseñas no coinciden.");
-
       if (paso === "activar") {
         await pedir("/api/auth/telefono", { accion: "activar", telefono: identificador, password: clave, codigo });
-        await entrar(correoDeTelefono(identificador), clave);
+        await entrar(clave);
         return;
       }
 
       // registro
-      if (nombre.trim().length < 2) throw new Error("Escribe tu nombre.");
       if (esTelefono) {
         await pedir("/api/auth/telefono", { accion: "registrar", telefono: identificador, nombre, password: clave, codigo });
-        await entrar(correoDeTelefono(identificador), clave);
-      } else if (identificador.includes("@")) {
-        await pedir("/api/auth/registro", { nombre, email: identificador.trim(), password: clave });
-        await entrar(identificador.trim().toLowerCase(), clave);
       } else {
-        throw new Error("Escribe tu celular a 10 dígitos o tu correo.");
+        await pedir("/api/auth/registro", { nombre, email: identificador.trim(), password: clave });
       }
+      await entrar(clave);
     } catch (err) {
+      if (err instanceof ErrorAcceso && err.bloqueado) setBloqueado(true);
       setError(mensajeDeError(err instanceof Error ? err.message : "No pudimos completar el acceso."));
       setCargando(null);
     }
@@ -231,59 +256,61 @@ function Acceso() {
     registro: {
       kicker: "Cuenta nueva",
       titulo: "Crea tu cuenta",
-      lead: "Reserva en segundos, guarda tus citas y junta sellos en tu tarjeta de lealtad.",
+      lead: "Guarda tus citas y junta sellos en tu tarjeta de lealtad.",
       accion: "Crear cuenta",
     },
   };
   const t = titulos[paso];
   const pideNueva = paso === "activar" || paso === "registro";
+  const bienvenida =
+    paso === "registro" ? "Bienvenido a CortMart." : paso === "activar" ? "Bienvenido a tu cuenta." : "Bienvenido de vuelta.";
 
   return (
     <main className="login-page">
       <div className="login-shell anim-in">
-        <section className="login-story">
+        <section className="login-story" aria-label="CortMart">
           <Link href="/" className="login-brand">
             <span className="login-brand-mark">
-              <Scissors className="h-4 w-4" />
+              <LogoCM />
             </span>
             <Marca />
           </Link>
           <div className="login-story-copy">
             <p className="login-kicker">Barbería</p>
-            <h1>{paso === "activar" ? "Bienvenido a tu cuenta." : "Bienvenido de vuelta."}</h1>
+            <p className="login-story-title">{bienvenida}</p>
             <p>Tus citas, tu QR de llegada y tu tarjeta de lealtad, en un solo lugar.</p>
           </div>
           <div className="login-flow" aria-label="Lo que puedes hacer">
             <span>
-              <CalendarCheck className="h-4 w-4" /> Reserva
+              <CalendarCheck className="h-4 w-4" aria-hidden /> Reserva
             </span>
             <span>
-              <Sparkles className="h-4 w-4" /> Sellos
+              <Sparkles className="h-4 w-4" aria-hidden /> Sellos
             </span>
             <span>
-              <ShieldCheck className="h-4 w-4" /> Avisos
+              <ShieldCheck className="h-4 w-4" aria-hidden /> Avisos
             </span>
           </div>
           <p className="login-local-note">
-            <span /> Sesión cifrada · tu contraseña nunca se guarda en texto
+            <span aria-hidden /> Sesión cifrada · tu contraseña nunca se guarda en texto
           </p>
         </section>
 
         <section className="login-access">
           {paso === "identificar" ? (
             <Link href="/" className="login-back">
-              ← Volver al inicio
+              <ArrowLeft className="inline h-4 w-4" aria-hidden /> Volver al inicio
             </Link>
           ) : (
             <button type="button" className="login-back" onClick={() => ir("identificar")}>
-              <ArrowLeft className="inline h-3.5 w-3.5" /> Volver
+              <ArrowLeft className="inline h-4 w-4" aria-hidden /> Volver
             </button>
           )}
           <header>
             <p className="login-kicker" style={{ color: "var(--gold)" }}>
               {t.kicker}
             </p>
-            <h2>{t.titulo}</h2>
+            <h1 className="login-title-lg">{t.titulo}</h1>
             <p>{t.lead}</p>
           </header>
 
@@ -299,48 +326,41 @@ function Acceso() {
             </>
           )}
 
-          <form onSubmit={enviar}>
+          <form onSubmit={enviar} noValidate>
             {paso === "registro" && (
-              <div className="login-field">
-                <label htmlFor="nombre">Nombre completo</label>
-                <div className="login-input-wrap">
-                  <input
-                    id="nombre"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Tu nombre"
-                    autoComplete="name"
-                    minLength={2}
-                    required
-                  />
-                </div>
-              </div>
+              <Campo id="nombre" label="Nombre completo" error={errores.nombre}>
+                {(aria) => (
+                  <input {...aria} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" autoComplete="name" />
+                )}
+              </Campo>
             )}
 
             {(paso === "identificar" || paso === "registro") && (
-              <div className="login-field">
-                <label htmlFor="id">Celular o correo</label>
-                <div className="login-input-wrap">
+              <Campo id="id" label="Celular o correo" ayuda="Tu celular a 10 dígitos o tu correo electrónico." error={errores.id}>
+                {(aria) => (
                   <input
-                    id="id"
+                    {...aria}
+                    type="text"
                     value={identificador}
                     onChange={(e) => setIdentificador(e.target.value)}
                     placeholder="55 1234 5678 o tu@correo.com"
                     autoComplete="username"
-                    inputMode={/^[\d\s+()-]*$/.test(identificador) ? "tel" : "email"}
-                    autoFocus
-                    required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
-                </div>
-              </div>
+                )}
+              </Campo>
             )}
 
             {(paso === "clave" || paso === "activar") && (
               <div className="login-chip">
-                <Smartphone className="h-4 w-4" />
+                <Smartphone className="h-4 w-4" aria-hidden />
                 <span className="min-w-0 flex-1 truncate">
-                  {pareceTelefono(identificador) ? telefonoBonito(identificador) : correo}
+                  {esTelefono ? telefonoBonito(identificador) : identificador.trim().toLowerCase()}
                 </span>
+                {/* Para el gestor de contraseñas: a qué cuenta pertenece la clave */}
+                <input type="text" name="username" autoComplete="username" value={identificador} readOnly hidden />
                 <button type="button" onClick={() => ir("identificar")}>
                   Cambiar
                 </button>
@@ -348,90 +368,87 @@ function Acceso() {
             )}
 
             {pideNueva && conSms && (
-              <div className="login-field">
-                <label htmlFor="codigo">Código que te enviamos por SMS</label>
-                <div className="login-input-wrap">
+              <Campo id="codigo" label="Código que te enviamos por SMS" error={errores.codigo}>
+                {(aria) => (
                   <input
-                    id="codigo"
+                    {...aria}
                     value={codigo}
                     onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="123456"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    required
                   />
-                </div>
-              </div>
+                )}
+              </Campo>
             )}
 
             {paso !== "identificar" && (
-              <div className="login-field">
-                <label htmlFor="pass">{pideNueva ? "Crea tu contraseña" : "Contraseña"}</label>
-                <div className="login-input-wrap">
-                  <input
-                    id="pass"
-                    type={verClave ? "text" : "password"}
-                    value={clave}
-                    onChange={(e) => setClave(e.target.value)}
-                    placeholder={pideNueva ? "Mínimo 8 caracteres" : "••••••••••"}
-                    autoComplete={pideNueva ? "new-password" : "current-password"}
-                    minLength={pideNueva ? 8 : undefined}
-                    autoFocus={paso !== "registro"}
-                    required
-                  />
-                  <button type="button" onClick={() => setVerClave((v) => !v)} aria-label="Mostrar u ocultar contraseña">
-                    {verClave ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+              <Campo
+                id="pass"
+                label={pideNueva ? "Crea tu contraseña" : "Contraseña"}
+                ayuda={pideNueva ? "Mínimo 8 caracteres." : undefined}
+                error={errores.pass}
+              >
+                {(aria) => (
+                  <>
+                    <input
+                      {...aria}
+                      type={verClave ? "text" : "password"}
+                      value={clave}
+                      onChange={(e) => setClave(e.target.value)}
+                      autoComplete={pideNueva ? "new-password" : "current-password"}
+                      autoFocus={paso === "clave"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setVerClave((v) => !v)}
+                      aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-pressed={verClave}
+                    >
+                      {verClave ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </>
+                )}
+              </Campo>
+            )}
+
+            {paso === "clave" && (
+              <p className="login-options">
+                <Link href={enlaceRecuperar} className={`login-forgot ${bloqueado ? "is-resaltado" : ""}`}>
+                  <KeyRound className="h-4 w-4" aria-hidden /> ¿Olvidaste tu contraseña?
+                </Link>
+              </p>
             )}
 
             {pideNueva && (
-              <div className="login-field">
-                <label htmlFor="pass2">Repite tu contraseña</label>
-                <div className="login-input-wrap">
+              <Campo id="pass2" label="Repite tu contraseña" error={errores.pass2}>
+                {(aria) => (
                   <input
-                    id="pass2"
+                    {...aria}
                     type={verClave ? "text" : "password"}
                     value={clave2}
                     onChange={(e) => setClave2(e.target.value)}
-                    placeholder="Otra vez, para confirmar"
                     autoComplete="new-password"
-                    required
                   />
-                </div>
-              </div>
-            )}
-
-            {paso === "clave" && !pareceTelefono(identificador) && (
-              <div className="login-options">
-                <span />
-                <Link href={`/restablecer?email=${encodeURIComponent(correo)}`} className="login-forgot">
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
-            )}
-            {paso === "clave" && pareceTelefono(identificador) && (
-              <p className="login-ayuda">
-                <KeyRound className="h-3.5 w-3.5" /> ¿Olvidaste tu contraseña? Pídele a la barbería que te la restablezca.
-              </p>
+                )}
+              </Campo>
             )}
 
             {error && (
               <p className="login-alert is-error" role="alert">
-                <AlertCircle /> {error}
+                <AlertCircle aria-hidden /> {error}
               </p>
             )}
             {aviso && (
               <p className="login-alert is-ok" role="status">
-                <CheckCircle2 /> {aviso}
+                <CheckCircle2 aria-hidden /> {aviso}
               </p>
             )}
 
             <button type="submit" className="btn-gold login-submit" disabled={cargando !== null || !authDisponible}>
               {cargando === "form" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {t.accion}
-              {paso === "identificar" && cargando !== "form" && <ArrowRight className="h-4 w-4" />}
+              {paso === "identificar" && cargando !== "form" && <ArrowRight className="h-4 w-4" aria-hidden />}
             </button>
           </form>
 
@@ -445,16 +462,17 @@ function Acceso() {
                 ¿Eres cliente nuevo? Crear una cuenta
               </button>
             )}
+            {paso === "identificar" && <Link href={enlaceRecuperar}>¿Olvidaste tu contraseña?</Link>}
           </div>
 
           {!authDisponible && (
             <p className="login-alert is-error" role="alert">
-              <AlertCircle /> {SIN_SUPABASE}
+              <AlertCircle aria-hidden /> {SIN_SUPABASE}
             </p>
           )}
 
           <p className="login-footnote">
-            ¿Te registraron en la barbería? Escribe tu número: la primera vez te pediremos crear tu contraseña.
+            ¿Te registraron en la barbería o reservaste sólo con tu número? Escríbelo: la primera vez te pediremos crear tu contraseña.
           </p>
         </section>
       </div>

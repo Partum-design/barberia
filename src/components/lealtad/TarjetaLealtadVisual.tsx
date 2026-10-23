@@ -78,7 +78,7 @@ export function TarjetaLealtadVisual({
           </p>
         </div>
         <figure className="loyalty-card-qr-wrap">
-          <div className="loyalty-card-qr" aria-label={`Código QR de la tarjeta ${numero}`} dangerouslySetInnerHTML={{ __html: qr }} />
+          <div className="loyalty-card-qr" role="img" aria-label={`Código QR de la tarjeta ${numero}`} dangerouslySetInnerHTML={{ __html: qr }} />
           <figcaption>{numero}</figcaption>
         </figure>
       </footer>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anton, Bebas_Neue, IBM_Plex_Mono, Outfit, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import "./tema-cortmart.css";
+import "./correcciones-qa.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 import { RegistrarApp } from "@/components/app/RegistrarApp";
@@ -55,7 +56,14 @@ export const metadata: Metadata = {
     `${NOMBRE}: servicios, equipo, horario y reservas en línea. Suma sellos en tu tarjeta de lealtad con cada visita.`,
   applicationName: NOMBRE,
   appleWebApp: { capable: true, title: "CortMart", statusBarStyle: "black-translucent" },
-  icons: { icon: "/pwa/icono?t=192", apple: "/pwa/icono?t=180&m=1" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/iconos/icono-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/iconos/icono-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: "/iconos/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

@@ -11,7 +11,6 @@ import {
   Clock3,
   Facebook,
   Gift,
-  Instagram,
   LockKeyhole,
   Mail,
   MapPin,
@@ -22,7 +21,6 @@ import {
   Quote,
   Scissors,
   Smartphone,
-  Sparkles,
   Star,
   TrainFront,
   UserRound,
@@ -38,21 +36,18 @@ import { PERFIL } from "@/lib/negocio/perfil";
 import { DIAS_SEMANA, precioDe, useBarberia, type BarberiaConfig, type Servicio } from "@/lib/store";
 import "./cortmart.css";
 import { WALLET_VISIBLE } from "@/lib/modo";
+import { LogoCM } from "@/components/shell/LogoCM";
+import { slug } from "@/components/booking/FlujoReserva";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
-/** Sólo dígitos y "+", como piden `tel:` y wa.me. */
-const soloDigitos = (v: string) => v.replace(/[^\d+]/g, "");
 
-/** Acepta "@usuario", "usuario" o una URL completa. */
-function enlaceRed(red: "instagram" | "facebook" | "tiktok", valor: string) {
+/** Acepta "usuario" o una URL completa de Facebook. */
+function enlaceFacebook(valor: string) {
   const v = valor.trim();
   if (!v) return null;
   if (/^https?:\/\//.test(v)) return v;
-  const usuario = v.replace(/^@/, "");
-  if (red === "instagram") return `https://instagram.com/${usuario}`;
-  if (red === "facebook") return `https://facebook.com/${usuario}`;
-  return `https://www.tiktok.com/@${usuario}`;
+  return `https://facebook.com/${v.replace(/^@/, "")}`;
 }
 
 /** "20:00" → "8 p.m." */
@@ -106,10 +101,11 @@ const MARQUESINA = ["Cortes", "Grecas", "Afeitado", "Facial", "Cejas", "Paquetes
 /** Número que sube desde 0 cuando entra en pantalla. */
 function Contador({ valor, decimales = 0 }: { valor: number; decimales?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [n, setN] = useState(0);
+  // El valor final va en el HTML: si la animación no corre, el número es correcto.
+  const [n, setN] = useState(valor);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || sinMovimiento()) return;
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       io.disconnect();
@@ -127,11 +123,19 @@ function Contador({ valor, decimales = 0 }: { valor: number; decimales?: number 
   return <span ref={ref}>{n.toFixed(decimales)}</span>;
 }
 
+/** Quien pidió menos movimiento (sistema o panel de accesibilidad). */
+function sinMovimiento() {
+  return (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    document.documentElement.dataset.movimiento === "reducido"
+  );
+}
+
 function Estrellas({ className = "" }: { className?: string }) {
   return (
-    <span className={`cm-stars ${className}`} aria-label="5 de 5 estrellas">
+    <span className={`cm-stars ${className}`} role="img" aria-label="5 de 5 estrellas">
       {Array.from({ length: 5 }, (_, i) => (
-        <Star key={i} style={{ animationDelay: `${i * 90}ms` }} />
+        <Star key={i} aria-hidden style={{ animationDelay: `${i * 90}ms` }} />
       ))}
     </span>
   );
@@ -152,7 +156,11 @@ export function SitioNegocio() {
   const [ahora, setAhora] = useState<Date | null>(null);
   const [resena, setResena] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [pausado, setPausado] = useState(false);
   const raiz = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+  const toque = useRef<number | null>(null);
 
   useEffect(() => {
     setAhora(new Date());
@@ -160,11 +168,49 @@ export function SitioNegocio() {
     return () => clearInterval(t);
   }, []);
 
-  // Reseñas en carrusel automático
+  // Reseñas en carrusel automático: se detiene con el puntero o el foco
+  // encima, y no avanza solo si se pidió menos movimiento.
   useEffect(() => {
-    const t = setInterval(() => setResena((i) => (i + 1) % PERFIL.resenas.length), 6000);
+    if (pausado || sinMovimiento()) return;
+    const t = setInterval(() => setResena((i) => (i + 1) % PERFIL.resenas.length), 7000);
     return () => clearInterval(t);
-  }, [resena]);
+  }, [resena, pausado]);
+
+  // Menú móvil: Escape o tocar fuera lo cierran; el foco se queda dentro
+  // mientras está abierto y vuelve al botón al cerrarse.
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const menu = menuRef.current;
+    const enfocables = () => Array.from(menu?.querySelectorAll<HTMLElement>("a, button") ?? []);
+    enfocables()[0]?.focus();
+    const cerrar = () => {
+      setMenuAbierto(false);
+      burgerRef.current?.focus();
+    };
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return cerrar();
+      if (e.key !== "Tab") return;
+      const lista = [burgerRef.current!, ...enfocables()].filter(Boolean);
+      const i = lista.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey && i <= 0) {
+        e.preventDefault();
+        lista[lista.length - 1].focus();
+      } else if (!e.shiftKey && i === lista.length - 1) {
+        e.preventDefault();
+        lista[0].focus();
+      }
+    };
+    const fuera = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!menu?.contains(t) && !burgerRef.current?.contains(t)) setMenuAbierto(false);
+    };
+    document.addEventListener("keydown", tecla);
+    document.addEventListener("pointerdown", fuera);
+    return () => {
+      document.removeEventListener("keydown", tecla);
+      document.removeEventListener("pointerdown", fuera);
+    };
+  }, [menuAbierto]);
 
   // Parallax: cada [data-parallax] recibe su avance en pantalla (-1…1) en --p
   useEffect(() => {
@@ -233,19 +279,16 @@ export function SitioNegocio() {
   const horario = DIAS_SEMANA.some((d) => horarioPanel[d.id].activo) ? horarioPanel : PERFIL.horario;
   const hoy = ahora ? estadoHoy(horario, ahora) : null;
 
-  const instagram = cfg.instagram.trim() || PERFIL.instagram;
-  const tiktok = cfg.tiktok.trim() || PERFIL.tiktok;
-  const redes = [
-    { id: "instagram" as const, icono: <Instagram />, url: enlaceRed("instagram", instagram), label: `Instagram @${instagram.replace(/^@/, "")}` },
-    { id: "facebook" as const, icono: <Facebook />, url: enlaceRed("facebook", cfg.facebook), label: "Facebook" },
-    { id: "tiktok" as const, icono: <Sparkles />, url: enlaceRed("tiktok", tiktok), label: `TikTok @${tiktok.replace(/^@/, "")}` },
-  ].filter((r) => r.url);
+  // La portada sólo publica Facebook (decisión del dueño, oct 2026).
+  const facebook = enlaceFacebook(cfg.facebook.trim() || PERFIL.facebook);
+  const digitosTel = telefono.replace(/\D/g, "");
+  const tel = digitosTel.length > 10 ? `tel:+${digitosTel}` : `tel:+52${digitosTel}`;
 
   const whatsapp = enlaceWhatsApp(cfg.whatsapp.trim() || PERFIL.whatsapp, `Hola ${nombre}, quiero información para agendar.`);
 
   // El catálogo del panel manda; sin él se muestra el menú impreso.
   const secciones = useMemo(() => {
-    type Item = Pick<Servicio, "nombre" | "categoria" | "precio" | "duracion_min" | "descripcion" | "desde">;
+    type Item = Pick<Servicio, "nombre" | "categoria" | "precio" | "duracion_min" | "descripcion" | "desde"> & { id?: string };
     const menu: readonly Item[] = activos.length > 0 ? activos : PERFIL.menu;
     const m = new Map<Servicio["categoria"], Item[]>();
     for (const s of menu) m.set(s.categoria, [...(m.get(s.categoria) ?? []), s]);
@@ -256,6 +299,7 @@ export function SitioNegocio() {
     const s = lista[0];
     return {
       icono: ICONO_CATEGORIA[s.categoria] ?? Tijeras,
+      href: `/reservar?servicio=${encodeURIComponent(s.id ?? slug(s.nombre))}`,
       nombre: s.nombre,
       texto: s.descripcion || `${TITULO_CATEGORIA[s.categoria] ?? s.categoria} · ${s.duracion_min} min`,
       precio: s.precio,
@@ -265,8 +309,8 @@ export function SitioNegocio() {
 
   const equipo =
     equipoPanel.length > 0
-      ? equipoPanel.map((b) => ({ nombre: b.nombre, rol: b.especialidad || "Barbero", nota: b.biografia }))
-      : PERFIL.equipo.map((b) => ({ ...b }));
+      ? equipoPanel.map((b) => ({ id: b.id, nombre: b.nombre, rol: b.especialidad || "Barbero", nota: b.biografia }))
+      : PERFIL.equipo.map((b) => ({ ...b, id: slug(b.nombre) }));
 
   const enlaces = [
     { href: "#servicios", label: "Servicios" },
@@ -286,9 +330,9 @@ export function SitioNegocio() {
     <main ref={raiz} className="cm overflow-x-hidden">
       {/* ── Navegación ──────────────────────────────────────────── */}
       <header className={`cm-nav ${scrolled ? "is-scrolled" : ""}`}>
-        <Link href="/" className="cm-logo" aria-label={nombre}>
+        <Link href="/" className="cm-logo">
           <span className="cm-logo-mark">
-            <Scissors />
+            <LogoCM />
           </span>
           <span className="cm-logo-text">
             <b>{PERFIL.marca}</b>
@@ -311,17 +355,19 @@ export function SitioNegocio() {
             <CalendarCheck /> Agendar
           </Link>
           <button
+            ref={burgerRef}
             type="button"
             className="cm-burger"
             onClick={() => setMenuAbierto((v) => !v)}
             aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={menuAbierto}
+            aria-controls="menu-movil"
           >
             {menuAbierto ? <X /> : <Menu />}
           </button>
         </div>
         {menuAbierto && (
-          <div className="cm-mobile-menu">
+          <div className="cm-mobile-menu" id="menu-movil" ref={menuRef}>
             {enlaces.map((e) => (
               <a key={e.href} href={e.href} onClick={() => setMenuAbierto(false)}>
                 {e.label}
@@ -331,6 +377,14 @@ export function SitioNegocio() {
               Agendar cita
             </Link>
             <Link href={cuenta.href}>{cuenta.label}</Link>
+            <a href={tel} className="cm-mobile-contacto">
+              <Phone aria-hidden /> Llamar: {telefono}
+            </a>
+            {whatsapp && (
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="cm-mobile-contacto">
+                <MessageCircle aria-hidden /> WhatsApp
+              </a>
+            )}
           </div>
         )}
       </header>
@@ -354,21 +408,21 @@ export function SitioNegocio() {
         </div>
 
         <div className="cm-hero-inner">
-          <p className="cm-eyebrow cm-in" style={{ animationDelay: "100ms" }}>
+          <p className="cm-eyebrow cm-in" style={{ animationDelay: "0ms" }}>
             <span /> Barbería · {PERFIL.zona}
           </p>
           <h1 className="cm-hero-title" aria-label={nombre}>
             {letras.map((l, i) => (
-              <span key={i} className={i >= 4 ? "is-accent" : ""} style={{ animationDelay: `${250 + i * 70}ms` }}>
+              <span key={i} aria-hidden className={i >= 4 ? "is-accent" : ""} style={{ animationDelay: `${i * 30}ms` }}>
                 {l}
               </span>
             ))}
           </h1>
-          <p className="cm-hero-tag cm-in" style={{ animationDelay: "900ms" }}>
+          <p className="cm-hero-tag cm-in" style={{ animationDelay: "150ms" }}>
             {eslogan}
           </p>
 
-          <div className="cm-cta cm-in" style={{ animationDelay: "1050ms" }}>
+          <div className="cm-cta">
             <Link href="/reservar" className="cm-cta-agendar">
               <span className="cm-cta-icono" aria-hidden>
                 <CalendarCheck />
@@ -389,20 +443,21 @@ export function SitioNegocio() {
               </span>
             </Link>
           </div>
-          <div className="cm-cta-extra cm-in" style={{ animationDelay: "1150ms" }}>
-            {whatsapp ? (
-              <a href={whatsapp} target="_blank" rel="noopener noreferrer">
-                <MessageCircle /> WhatsApp
-              </a>
-            ) : (
-              <a href={`tel:+52${soloDigitos(telefono)}`}>
-                <Phone /> {telefono}
+          <div className="cm-cta-contacto">
+            <a href={tel} className="cm-cta-tel">
+              <Phone aria-hidden /> Llamar: {telefono}
+            </a>
+            {whatsapp && (
+              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="cm-cta-tel is-whatsapp">
+                <MessageCircle aria-hidden /> WhatsApp
               </a>
             )}
+          </div>
+          <div className="cm-cta-extra">
             <BotonInstalarApp />
           </div>
 
-          <div className="cm-hero-facts cm-in" style={{ animationDelay: "1200ms" }}>
+          <div className="cm-hero-facts">
             <a href="#resenas" className="cm-rating">
               <strong>{PERFIL.calificacion.toFixed(1)}</strong>
               <span>
@@ -418,7 +473,7 @@ export function SitioNegocio() {
           </div>
         </div>
 
-        <a href="#servicios" className="cm-scroll" aria-label="Ver más">
+        <a href="#servicios" className="cm-scroll" aria-label="Ver más: servicios">
           <span />
         </a>
       </section>
@@ -459,13 +514,21 @@ export function SitioNegocio() {
                     {s.desde && <small>A partir de</small>}
                     <b>{mxn.format(s.precio)}</b>
                   </div>
+                  <Link href={s.href} className="cm-service-link">
+                    Agendar {s.nombre.toLowerCase()} <ArrowRight aria-hidden />
+                  </Link>
                 </article>
               </Reveal>
             );
           })}
         </div>
 
-        <Reveal className="cm-menu">
+        <details className="cm-menu-acordeon">
+          <summary>
+            <span>Ver todos los precios</span>
+            <ChevronRight aria-hidden />
+          </summary>
+        <div className="cm-menu">
           {secciones.map(([categoria, lista]) => (
             <div key={categoria} className="cm-menu-seccion">
               <h3>{TITULO_CATEGORIA[categoria] ?? categoria}</h3>
@@ -474,7 +537,10 @@ export function SitioNegocio() {
                   <li key={s.nombre}>
                     <span className="cm-menu-nombre">
                       {s.nombre}
-                      {s.descripcion && <small>{s.descripcion}</small>}
+                      <small>
+                        {s.descripcion ? `${s.descripcion} · ` : ""}
+                        {s.duracion_min} min
+                      </small>
                     </span>
                     <i aria-hidden />
                     <span className="cm-menu-precio">
@@ -489,7 +555,8 @@ export function SitioNegocio() {
           <Link href="/reservar" className="cm-btn cm-menu-cta">
             <CalendarCheck /> Reservar cita
           </Link>
-        </Reveal>
+        </div>
+        </details>
         <Brocha className="cm-deco cm-deco-a" />
         <Tijeras className="cm-deco cm-deco-b" />
       </section>
@@ -584,8 +651,8 @@ export function SitioNegocio() {
                 <h3>{b.nombre}</h3>
                 <p className="cm-barber-role">{b.rol}</p>
                 {b.nota && <p className="cm-barber-note">{b.nota}</p>}
-                <Link href="/reservar" className="cm-service-link">
-                  Agendar con {b.nombre.split(" ")[0]} <ArrowRight />
+                <Link href={`/reservar?barbero=${encodeURIComponent(b.id)}`} className="cm-service-link">
+                  Agendar con {b.nombre.split(" ")[0]} <ArrowRight aria-hidden />
                 </Link>
               </article>
             </Reveal>
@@ -609,18 +676,46 @@ export function SitioNegocio() {
             <Estrellas className="is-lg" />
             <small>{PERFIL.total_resenas} reseñas en Google Maps</small>
           </Reveal>
-          <div className="cm-carousel" aria-roledescription="carrusel" aria-label="Reseñas de clientes">
-            <button type="button" className="cm-arrow" onClick={() => setResena(anterior)} aria-label="Reseña anterior">
+          <div
+            className="cm-carousel"
+            role="region"
+            aria-roledescription="carrusel"
+            aria-label="Reseñas de clientes"
+            onPointerEnter={() => setPausado(true)}
+            onPointerLeave={() => setPausado(false)}
+            onFocusCapture={() => setPausado(true)}
+            onBlurCapture={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setPausado(false);
+            }}
+            onTouchStart={(e) => {
+              toque.current = e.touches[0].clientX;
+              setPausado(true);
+            }}
+            onTouchEnd={(e) => {
+              const inicio = toque.current;
+              toque.current = null;
+              if (inicio === null) return;
+              const dx = e.changedTouches[0].clientX - inicio;
+              if (Math.abs(dx) > 40) setResena(dx < 0 ? siguiente : anterior);
+            }}
+          >
+            <button type="button" className="cm-arrow" onClick={() => setResena(anterior)} aria-label="Ver la reseña anterior">
               <ChevronLeft />
             </button>
-            <div className="cm-cards">
+            <div className="cm-cards" aria-live={pausado ? "polite" : "off"}>
               {r.map((x, i) => {
                 const pos = i === resena ? "is-center" : i === anterior ? "is-left" : i === siguiente ? "is-right" : "is-hidden";
                 return (
-                  <blockquote key={x.autor} className={`cm-review ${pos}`} aria-hidden={i !== resena}>
-                    <Quote className="cm-review-quote" />
+                  <blockquote
+                    key={x.autor}
+                    className={`cm-review ${pos}`}
+                    aria-hidden={i !== resena}
+                    aria-roledescription="reseña"
+                    aria-label={`Reseña ${i + 1} de ${r.length}, de ${x.autor}`}
+                  >
+                    <Quote className="cm-review-quote" aria-hidden />
                     <Estrellas />
-                    <p>{x.texto}</p>
+                    <p tabIndex={i === resena ? 0 : -1}>{x.texto}</p>
                     <footer>
                       <span className="cm-review-avatar">{x.autor.charAt(0)}</span>
                       <span>
@@ -632,7 +727,7 @@ export function SitioNegocio() {
                 );
               })}
             </div>
-            <button type="button" className="cm-arrow" onClick={() => setResena(siguiente)} aria-label="Siguiente reseña">
+            <button type="button" className="cm-arrow" onClick={() => setResena(siguiente)} aria-label="Ver la siguiente reseña">
               <ChevronRight />
             </button>
           </div>
@@ -643,8 +738,11 @@ export function SitioNegocio() {
                 type="button"
                 className={i === resena ? "is-active" : ""}
                 onClick={() => setResena(i)}
-                aria-label={`Ver reseña de ${x.autor}`}
-              />
+                aria-label={`Ver reseña ${i + 1} de ${r.length}, de ${x.autor}`}
+                aria-current={i === resena ? "true" : undefined}
+              >
+                <span aria-hidden />
+              </button>
             ))}
           </div>
         </div>
@@ -674,6 +772,9 @@ export function SitioNegocio() {
             </Link>
           </Reveal>
           <Reveal delay={150} className="cm-loyalty-card">
+            {/* Ilustración: el texto de la tarjeta de muestra no se lee aparte */}
+            <div role="img" aria-label="Ejemplo de la tarjeta de lealtad CortMart con sus sellos">
+            <div aria-hidden>
             <TarjetaLealtadVisual
               negocio={nombre}
               titular="Tu nombre"
@@ -683,6 +784,8 @@ export function SitioNegocio() {
               disponibles={0}
               descuento={recompensasConfig.valor_descuento}
             />
+            </div>
+            </div>
           </Reveal>
         </div>
       </section>
@@ -728,16 +831,16 @@ export function SitioNegocio() {
             <Reveal delay={240} className="cm-card">
               <h3><Phone /> Contacto</h3>
               <ul className="cm-contact">
-                <li><a href={`tel:+52${soloDigitos(telefono)}`}><Phone /> {telefono}</a></li>
+                <li><a href={tel}><Phone aria-hidden /> Llamar: {telefono}</a></li>
                 {whatsapp && (
                   <li><a href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp</a></li>
                 )}
                 {cfg.email && (
                   <li><a href={`mailto:${cfg.email}`}><Mail /> {cfg.email}</a></li>
                 )}
-                {redes.map((x) => (
-                  <li key={x.id}><a href={x.url!} target="_blank" rel="noopener noreferrer">{x.icono} {x.label}</a></li>
-                ))}
+                {facebook && (
+                  <li><a href={facebook} target="_blank" rel="noopener noreferrer"><Facebook aria-hidden /> Facebook</a></li>
+                )}
                 <li><Link href="/reservar"><CalendarCheck /> Reservar en línea</Link></li>
               </ul>
             </Reveal>
@@ -767,7 +870,7 @@ export function SitioNegocio() {
       <footer className="cm-footer">
         <div className="cm-footer-brand">
           <span className="cm-logo-mark">
-            <Scissors />
+            <LogoCM />
           </span>
           <span>
             <b>{nombre}</b>

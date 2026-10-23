@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
-import { normalizarTelefono } from "@/lib/datos/modelo";
+import { celularValido, normalizarTelefono } from "@/lib/datos/modelo";
 
 // Campos de formulario con ayuda visible y errores en español debajo de cada
 // uno. Los formularios usan `noValidate`: los mensajes del navegador salen en
@@ -67,6 +67,8 @@ export function errorDeIdentificador(valor: string): string | undefined {
   const v = valor.trim();
   if (!v) return "Escribe tu celular o correo.";
   if (v.includes("@")) return EMAIL.test(v) ? undefined : "Escribe un celular de 10 dígitos o un correo válido.";
+  // Para entrar basta con 10 dígitos: no se le cierra la puerta a una cuenta
+  // que ya existe. Lo estricto (celularValido) aplica al crear algo nuevo.
   return /^[\d\s+()-]+$/.test(v) && normalizarTelefono(v).length === 10
     ? undefined
     : "Escribe un celular de 10 dígitos o un correo válido.";
@@ -75,7 +77,7 @@ export function errorDeIdentificador(valor: string): string | undefined {
 export function errorDeTelefono(valor: string): string | undefined {
   const v = valor.trim();
   if (!v) return "Escribe tu celular.";
-  return normalizarTelefono(v).length === 10 && /^[\d\s+()-]+$/.test(v) ? undefined : "Escribe un celular de 10 dígitos.";
+  return celularValido(v) && /^[\d\s+()-]+$/.test(v) ? undefined : "Escribe un celular válido de 10 dígitos (sin lada del país).";
 }
 
 export const errorDeNombre = (valor: string) => (valor.trim().length < 2 ? "Escribe tu nombre." : undefined);

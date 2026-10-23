@@ -1,11 +1,13 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { idsDeAdmins, notificar } from "@/lib/notificaciones/servidor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientePorTelefono, cuentaDeCliente, SISTEMA, usuarioPorId } from "@/lib/auth/cuentas";
 import { correoDeTelefono, esCorreoInterno } from "@/lib/auth/telefono";
 import { codigoValido, enviarCodigo, smsDisponible } from "@/lib/auth/sms";
 import { ejecutarOperacion, leerEstado } from "@/lib/datos/servidor";
-import { normalizarTelefono, nuevoId, numeroDeTarjeta } from "@/lib/datos/modelo";
+import { celularValido, normalizarTelefono, nuevoId, numeroDeTarjeta } from "@/lib/datos/modelo";
 import { dentroDelLimite, ESPERA, ipDe } from "@/lib/limites";
+import { revisarAntibot, type Antibot } from "@/lib/antibot";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,7 @@ type Peticion = {
   password?: string;
   codigo?: string;
   nombre?: string;
+  antibot?: Antibot;
 };
 
 const error = (mensaje: string, status = 400) => NextResponse.json({ error: mensaje }, { status });
@@ -71,6 +74,10 @@ export async function POST(req: NextRequest) {
 
   if (body.accion !== "activar" && body.accion !== "registrar") return error("Petición inválida.");
 
+  // Crear contraseña o cuenta: además del límite por IP, filtro antibot.
+  const bot = await revisarAntibot(body.antibot, ipDe(req));
+  if (bot) return error(bot, 403);
+
   const password = body.password ?? "";
   if (password.length < 8) return error("La contraseña debe tener al menos 8 caracteres.");
   if (sms && !(body.codigo && (await codigoValido(telefono, body.codigo.trim())))) {
@@ -82,6 +89,8 @@ export async function POST(req: NextRequest) {
   if (body.accion === "activar") {
     if (!cliente) return error("No encontramos ese número. Crea tu cuenta.", 404);
     if (usuario) return error("Ese número ya tiene contraseña. Inicia sesión.", 409);
+    // Pocos intentos por número: frena a quien quiera adueñarse de una cuenta ajena.
+    if (!(await dentroDelLimite(`activar:tel:${telefono}`, 3, 3600))) return error(`Demasiados intentos. ${ESPERA}`, 429);
 
     const { data, error: err } = await admin.auth.admin.createUser({
       email: correoDeTelefono(telefono),
@@ -101,11 +110,21 @@ export async function POST(req: NextRequest) {
       console.error(e);
       return error("No se pudo activar tu acceso. Intenta de nuevo.", 500);
     }
+    // La barbería se entera: si el cliente dice que no fue él, se reinicia
+    // su acceso desde Panel → Restablecer contraseñas.
+    after(async () => {
+      await notificar(await idsDeAdmins(), {
+        titulo: "Un cliente creó su contraseña",
+        cuerpo: `${cliente.nombre} (${telefono.slice(0, 2)} ${telefono.slice(2, 6)} ${telefono.slice(6)}) activó su cuenta en la app.`,
+        url: "/dashboard/admin/restablecer",
+      }).catch(() => {});
+    });
     return NextResponse.json({ ok: true, nombre: cliente.nombre.split(" ")[0] }, { status: 201 });
   }
 
   // registrar: cliente nuevo sólo con su número
   if (cliente) return error("Ese número ya está registrado. Inicia sesión.", 409);
+  if (!celularValido(telefono)) return error("Escribe un celular válido de 10 dígitos (sin lada del país).");
   const nombre = body.nombre?.trim().replace(/\s+/g, " ") ?? "";
   if (nombre.length < 2) return error("Escribe tu nombre.");
 

@@ -35,6 +35,7 @@ import {
   hayErrores,
   type Errores,
 } from "@/components/formularios/Campo";
+import { useAntibot } from "@/components/formularios/Antibot";
 import "@/components/app/app.css";
 
 /**
@@ -110,6 +111,7 @@ function Acceso() {
   const [errores, setErrores] = useState<Errores>({});
   const [aviso, setAviso] = useState<string | null>(null);
   const [bloqueado, setBloqueado] = useState(false);
+  const antibot = useAntibot();
 
   const esTelefono = pareceTelefono(identificador);
   const destino = (rol: Rol) =>
@@ -197,6 +199,7 @@ function Acceso() {
             setAviso("Ya eres cliente. Escribe tu contraseña.");
             ir("clave");
           } else if (r.estado === "activar") {
+            setAviso("Tu cuenta ya existe, pero aún no tiene contraseña. Créala ahora.");
             ir("activar");
           } else if (r.estado === "nuevo") {
             setAviso("Aún no tienes cuenta con ese número. Créala en un momento.");
@@ -215,20 +218,21 @@ function Acceso() {
       }
 
       if (paso === "activar") {
-        await pedir("/api/auth/telefono", { accion: "activar", telefono: identificador, password: clave, codigo });
+        await pedir("/api/auth/telefono", { accion: "activar", telefono: identificador, password: clave, codigo, antibot: antibot.datos() });
         await entrar(clave);
         return;
       }
 
       // registro
       if (esTelefono) {
-        await pedir("/api/auth/telefono", { accion: "registrar", telefono: identificador, nombre, password: clave, codigo });
+        await pedir("/api/auth/telefono", { accion: "registrar", telefono: identificador, nombre, password: clave, codigo, antibot: antibot.datos() });
       } else {
-        await pedir("/api/auth/registro", { nombre, email: identificador.trim(), password: clave });
+        await pedir("/api/auth/registro", { nombre, email: identificador.trim(), password: clave, antibot: antibot.datos() });
       }
       await entrar(clave);
     } catch (err) {
       if (err instanceof ErrorAcceso && err.bloqueado) setBloqueado(true);
+      if ((paso === "activar" || paso === "registro") && /Recarga|caducó|verificación/.test(String((err as Error)?.message))) antibot.renovar();
       setError(mensajeDeError(err instanceof Error ? err.message : "No pudimos completar el acceso."));
       setCargando(null);
     }
@@ -250,7 +254,7 @@ function Acceso() {
     activar: {
       kicker: "Primera vez",
       titulo: "Crea tu contraseña",
-      lead: "Ya eres cliente de la barbería. Como es tu primera vez, elige una contraseña: con ella y tu número entrarás siempre.",
+      lead: "Tu cuenta se creó cuando agendaste tu cita o te registraron en la barbería, pero todavía no tiene contraseña. Elige una: con tu número y esa contraseña entrarás siempre.",
       accion: "Crear contraseña y entrar",
     },
     registro: {
@@ -433,6 +437,8 @@ function Acceso() {
                 )}
               </Campo>
             )}
+
+            {pideNueva && antibot.campos}
 
             {error && (
               <p className="login-alert is-error" role="alert">

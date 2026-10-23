@@ -438,3 +438,7 @@ html[data-movimiento="reducido"] .cm .cm-in { animation: none; }
   .cm .cm-logo-text small { letter-spacing: 0.06em; }
   .cm .cm-nav-agendar { padding-inline: 0.8rem; }
 }
+
+/* Antibot: campo trampa invisible y recuadro de Turnstile */
+.antibot-trampa { position: absolute !important; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.antibot-turnstile { margin-top: 1rem; min-height: 4.1rem; }

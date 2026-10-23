@@ -203,6 +203,23 @@ export function normalizarTelefono(valor: string) {
   return d.length > 10 ? d.slice(-10) : d;
 }
 
+/**
+ * ¿Parece un celular mexicano real? 10 dígitos, sin empezar en 0 ni 1 (las
+ * claves de área van de 2 a 9) y sin patrones de relleno como 5555555555 o
+ * 1234567890, que es lo primero que escribe un bot o alguien que prueba.
+ */
+export function celularValido(valor: string) {
+  const d = normalizarTelefono(valor);
+  if (!/^[2-9]\d{9}$/.test(d)) return false;
+  if (/^(\d)\1{9}$/.test(d)) return false;
+  // Sus 8 últimos dígitos todos iguales (55 0000 0000) o en escalera.
+  if (/^(\d)\1{7}$/.test(d.slice(2))) return false;
+  const escalera = "01234567890123456789";
+  const bajada = "98765432109876543210";
+  if (escalera.includes(d.slice(2)) || bajada.includes(d.slice(2))) return false;
+  return true;
+}
+
 export type DiaSemana = "lun" | "mar" | "mie" | "jue" | "vie" | "sab" | "dom";
 
 export const DIAS_SEMANA: { id: DiaSemana; label: string }[] = [
@@ -701,7 +718,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       // Sólo el servidor (sesión del sistema) la ejecuta, tras sus límites.
       exigir(s.rol === "admin" && s.id === "sistema", "Operación reservada al servidor.");
       const telefono = normalizarTelefono(op.telefono);
-      if (telefono.length !== 10) throw new ErrorOperacion("Escribe un celular de 10 dígitos.", 400);
+      if (!celularValido(telefono)) throw new ErrorOperacion("Escribe un celular válido de 10 dígitos.", 400);
       const nombre = String(op.nombre ?? "").trim().replace(/\s+/g, " ").slice(0, 120);
       if (nombre.length < 2) throw new ErrorOperacion("Escribe tu nombre.", 400);
 

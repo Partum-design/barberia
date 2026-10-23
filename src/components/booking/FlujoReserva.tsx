@@ -20,10 +20,11 @@ import {
 } from "lucide-react";
 import { enlaceDeCita, nombreDelNegocio, normalizarTelefono, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
-import { PERFIL } from "@/lib/negocio/perfil";
+import { AVISO_PAGO, FORMAS_DE_PAGO, PERFIL } from "@/lib/negocio/perfil";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { BotonesContacto } from "@/components/contacto/BotonesContacto";
+import { useAntibot } from "@/components/formularios/Antibot";
 import { Campo, enfocarPrimerError, errorDeNombre, errorDeTelefono, hayErrores, type Errores } from "@/components/formularios/Campo";
 
 type Paso = "barbero" | "servicio" | "horario" | "datos" | "confirmada";
@@ -78,7 +79,7 @@ function descargarIcs(c: Confirmacion) {
     `DTSTART:${f(c.inicio)}`,
     `DTEND:${f(c.fin)}`,
     `SUMMARY:${esc(`${c.servicio || "Cita"} con ${c.barbero} · CortMart`)}`,
-    `DESCRIPTION:${esc(`Pagas en la barbería. ¿Necesitas cambiarla? Llama al ${PERFIL.telefono}.`)}`,
+    `DESCRIPTION:${esc(`${AVISO_PAGO} ¿Necesitas cambiarla? Llama al ${PERFIL.telefono}.`)}`,
     `LOCATION:${esc(PERFIL.direccion)}`,
     "BEGIN:VALARM",
     "TRIGGER:-PT2H",
@@ -102,7 +103,7 @@ function descargarIcs(c: Confirmacion) {
  * Reserva en cuatro pasos: barbero, servicio (fija precio y duración),
  * fecha y hora, y tus datos. No hace falta cuenta: sin sesión basta con
  * nombre y celular, y al confirmar se crea la ficha con su tarjeta de
- * lealtad (ver /api/reservas). El pago es en efectivo en la barbería.
+ * lealtad (ver /api/reservas). Se paga al llegar: transferencia, tarjeta o efectivo.
  *
  * Acepta ?barbero=, ?servicio= e ?inicio= para llegar con algo ya elegido
  * (los botones "Agendar con…" de la portada y el regreso del login).
@@ -126,6 +127,7 @@ export function FlujoReserva() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [hecha, setHecha] = useState<Confirmacion | null>(null);
+  const antibot = useAntibot();
   const preseleccion = useRef(false);
   const tituloRef = useRef<HTMLHeadingElement>(null);
 
@@ -266,7 +268,7 @@ export function FlujoReserva() {
       const res = await fetch("/api/reservas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...datos, nombre: nombre.trim(), telefono: normalizarTelefono(telefono) }),
+        body: JSON.stringify({ ...datos, nombre: nombre.trim(), telefono: normalizarTelefono(telefono), antibot: antibot.datos() }),
       });
       const r = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -279,6 +281,8 @@ export function FlujoReserva() {
       };
       setCargando(false);
       if (!res.ok || !r.cita) {
+        // Ficha caducada o rechazada: se pide otra. "Muy rápido" no reinicia el reloj.
+        if (res.status === 403 && !/rápido/.test(r.error ?? "")) antibot.renovar();
         if (r.campo) {
           setErrores({ [r.campo]: r.error });
           document.getElementById(r.campo)?.focus();
@@ -461,7 +465,7 @@ export function FlujoReserva() {
             <Fila k="Barbero" v={barbero.nombre} />
             <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
             <Fila k="Total" v={servicio ? mxn.format(precio) : "Se cotiza en la barbería"} destacado />
-            <Fila k="Pago" v="En efectivo, en la barbería" />
+            <Fila k="Pago" v={`Al llegar: ${FORMAS_DE_PAGO}`} />
           </dl>
 
           {barbero.acepta_domicilio && (
@@ -512,11 +516,12 @@ export function FlujoReserva() {
                   />
                 )}
               </Campo>
+              {antibot.campos}
             </>
           )}
 
           <p className="reserva-nota">
-            <Banknote aria-hidden /> Tu horario queda apartado al confirmar. Pagas en efectivo al llegar a la barbería.
+            <Banknote aria-hidden /> Tu horario queda apartado al confirmar. {AVISO_PAGO}
           </p>
 
           {!esPersonal && (
@@ -563,7 +568,7 @@ function Confirmada({
         <Fila k="Fecha" v={format(inicio, "EEEE d 'de' MMMM", { locale: es })} />
         <Fila k="Hora" v={format(inicio, "HH:mm 'h'")} />
         <Fila k="Precio" v={c.servicio ? mxn.format(c.precio) : "Se cotiza en la barbería"} destacado />
-        <Fila k="Pago" v="Pagas en la barbería" />
+        <Fila k="Pago" v={`Al llegar: ${FORMAS_DE_PAGO}`} />
       </dl>
 
       <button type="button" className="contacto-boton" onClick={() => descargarIcs(c)}>

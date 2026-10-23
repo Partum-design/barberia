@@ -95,7 +95,7 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
       };
       avisar([c.barbero_id], { ...aviso, url: "/dashboard/barbero" });
       avisar(admins, { ...aviso, url: "/dashboard/admin/citas" });
-      envios.push(notificar([c.cliente_id], { titulo: "¡Cita confirmada!", cuerpo: `${servicio(c)} con ${c.barbero_nombre}, ${cuando(c.inicio)}. Muestra tu QR al llegar.`, url: "/cuenta" }));
+      envios.push(notificar([c.cliente_id], { titulo: "¡Cita confirmada!", cuerpo: `${servicio(c)} con ${c.barbero_nombre}, ${cuando(c.inicio)}. Muestra tu QR al llegar; pagas con transferencia, tarjeta o efectivo.`, url: "/cuenta" }));
       break;
     }
     case "crearCitaPersonal": {

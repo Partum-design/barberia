@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { nuevoId, numeroDeTarjeta } from "@/lib/datos/modelo";
 import { ejecutarOperacion } from "@/lib/datos/servidor";
 import { dentroDelLimite, ESPERA, ipDe } from "@/lib/limites";
+import { revisarAntibot, type Antibot } from "@/lib/antibot";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
     nombre?: string;
     email?: string;
     password?: string;
+    antibot?: Antibot;
   };
   const nombre = body.nombre?.trim() ?? "";
   const email = body.email?.trim().toLowerCase() ?? "";
@@ -28,6 +30,8 @@ export async function POST(req: NextRequest) {
   if (!(await dentroDelLimite(`registro:ip:${ipDe(req)}`, 10, 60))) {
     return NextResponse.json({ error: `Demasiados intentos. ${ESPERA}` }, { status: 429 });
   }
+  const bot = await revisarAntibot(body.antibot, ipDe(req));
+  if (bot) return NextResponse.json({ error: bot }, { status: 403 });
   if (nombre.length < 2) return NextResponse.json({ error: "Escribe tu nombre." }, { status: 400 });
   if (!EMAIL.test(email)) return NextResponse.json({ error: "Escribe un correo válido." }, { status: 400 });
   if (password.length < 8) {

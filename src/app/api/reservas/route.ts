@@ -1,10 +1,11 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { SISTEMA } from "@/lib/auth/cuentas";
 import { ejecutarYComparar, leerEstado, sesionDePeticion } from "@/lib/datos/servidor";
-import { ErrorOperacion, normalizarTelefono, nuevoId, numeroDeTarjeta, type Operacion } from "@/lib/datos/modelo";
+import { celularValido, ErrorOperacion, normalizarTelefono, nuevoId, numeroDeTarjeta, type Operacion } from "@/lib/datos/modelo";
 import { avisosDeOperacion } from "@/lib/notificaciones/servidor";
 import { sincronizarCitas } from "@/lib/integrations/google-calendar";
 import { dentroDelLimite, ESPERA, ipDe } from "@/lib/limites";
+import { revisarAntibot, type Antibot } from "@/lib/antibot";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ type Peticion = {
   inicio?: string;
   modalidad?: "presencial" | "domicilio";
   direccion_domicilio?: string;
+  antibot?: Antibot;
 };
 
 const responder = (cuerpo: Record<string, unknown>, status = 200) => NextResponse.json(cuerpo, { status });
@@ -31,6 +33,7 @@ const responder = (cuerpo: Record<string, unknown>, status = 200) => NextRespons
  * Si el número ya es cliente, la cita se agenda en su ficha pero la respuesta
  * no incluye nada privado (ni sus citas ni su tarjeta).
  *
+ * Antibot (lib/antibot): campo trampa, ficha firmada y Turnstile si hay llave.
  * Límites: 6 reservas por hora por IP, 4 por hora por número y máximo 2
  * citas por venir por cliente (ver MAX_CITAS_FUTURAS).
  */
@@ -42,8 +45,13 @@ export async function POST(req: NextRequest) {
   const nombre = String(body.nombre ?? "").trim().replace(/\s+/g, " ");
   const telefono = normalizarTelefono(String(body.telefono ?? ""));
   if (nombre.length < 2) return responder({ error: "Escribe tu nombre.", campo: "nombre" }, 400);
-  if (telefono.length !== 10) return responder({ error: "Escribe un celular de 10 dígitos.", campo: "telefono" }, 400);
+  if (!celularValido(telefono)) {
+    return responder({ error: "Escribe un celular válido de 10 dígitos (sin lada del país).", campo: "telefono" }, 400);
+  }
   if (!body.barbero_id || !body.inicio) return responder({ error: "Elige barbero y horario." }, 400);
+
+  const bot = await revisarAntibot(body.antibot, ipDe(req));
+  if (bot) return responder({ error: bot, antibot: true }, 403);
 
   if (!(await dentroDelLimite(`reservar:ip:${ipDe(req)}`, 6, 3600))) {
     return responder({ error: `Hiciste muchas reservas seguidas. ${ESPERA}` }, 429);

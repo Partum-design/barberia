@@ -54,6 +54,10 @@ export function catalogoDelMenu(actuales: Servicio[]): Servicio[] {
   });
 }
 
+/** Cómo se paga una cita: siempre en la barbería, al llegar. */
+export const FORMAS_DE_PAGO = "transferencia, tarjeta o efectivo";
+export const AVISO_PAGO = `Pagas al llegar a la barbería con ${FORMAS_DE_PAGO}.`;
+
 export const PERFIL = {
   nombre: "Barbería CortMart",
   marca: "CortMart",

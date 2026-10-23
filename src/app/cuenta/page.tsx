@@ -145,7 +145,7 @@ export default function CuentaPage() {
                   {c.estado_pago === "pagado" ? (
                     <><CreditCard className="h-3 w-3" /> Pagado</>
                   ) : (
-                    <><Banknote className="h-3 w-3" /> Paga al llegar · efectivo o tarjeta</>
+                    <><Banknote className="h-3 w-3" /> Paga al llegar · transferencia, tarjeta o efectivo</>
                   )}
                 </span>
               </div>

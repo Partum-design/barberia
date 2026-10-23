@@ -37,7 +37,7 @@ export default function ReservarPage() {
             <Clock3 className="h-5 w-5" aria-hidden /> Disponibilidad en tiempo real
           </li>
           <li>
-            <Banknote className="h-5 w-5" aria-hidden /> Pagas en la barbería
+            <Banknote className="h-5 w-5" aria-hidden /> Pagas al llegar: transferencia, tarjeta o efectivo
           </li>
           <li>
             <CalendarCheck className="h-5 w-5" aria-hidden /> Confirmación inmediata
@@ -69,7 +69,7 @@ export default function ReservarPage() {
               <span aria-hidden>3</span>
               <div>
                 <strong>Escribe tu nombre y celular</strong>
-                <small>Pagas en efectivo al llegar a la barbería.</small>
+                <small>Pagas al llegar a la barbería con transferencia, tarjeta o efectivo.</small>
               </div>
             </li>
           </ol>

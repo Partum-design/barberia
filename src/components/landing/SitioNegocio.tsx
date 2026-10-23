@@ -855,7 +855,7 @@ export function SitioNegocio() {
         </div>
         <Reveal className="cm-final-inner">
           <h2 className="cm-h2">Tu próximo corte, a un clic</h2>
-          <p>Elige barbero y horario, paga en la barbería y suma un sello en tu tarjeta.</p>
+          <p>Elige barbero y horario, paga al llegar con transferencia, tarjeta o efectivo y suma un sello en tu tarjeta.</p>
           <div className="cm-hero-actions">
             <Link href="/reservar" className="cm-btn">
               <CalendarCheck /> Reservar cita

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, Boxes, Check, Minus, PackageSearch, Plus, Warehouse } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { AlertTriangle, Boxes, Check, Minus, PackageSearch, Pencil, Plus, Trash2, Warehouse, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import {
   EmptyState,
@@ -16,6 +16,16 @@ import { useBarberia, type Producto } from "@/lib/store";
 
 const CATEGORIAS: Producto["categoria"][] = ["Cuidado", "Peinado", "Afeitado", "Consumible"];
 
+const FORM_VACIO: Omit<Producto, "id"> = {
+  nombre: "",
+  categoria: "Cuidado",
+  existencias: 10,
+  minimo: 5,
+  costo: 100,
+  precio_venta: 250,
+  unidad: "pieza",
+};
+
 /**
  * Inventario de producto y consumible. La alerta de reposición no es un
  * adorno: es lo que evita que un sábado se acabe el aceite de barba a media
@@ -25,15 +35,11 @@ export default function InventarioPage() {
   const store = useBarberia();
   const { listo, sesion, productos } = store;
   const [abierto, setAbierto] = useState(false);
-  const [form, setForm] = useState({
-    nombre: "",
-    categoria: "Cuidado" as Producto["categoria"],
-    existencias: 10,
-    minimo: 5,
-    costo: 100,
-    precio_venta: 250,
-    unidad: "pieza",
-  });
+  /** id del producto que se está editando; null = alta de uno nuevo */
+  const [editando, setEditando] = useState<string | null>(null);
+  const [form, setForm] = useState<Omit<Producto, "id">>(FORM_VACIO);
+  const [aviso, setAviso] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const resumen = useMemo(() => {
     const valorAlmacen = productos.reduce((a, p) => a + p.existencias * p.costo, 0);
@@ -51,12 +57,47 @@ export default function InventarioPage() {
   if (!listo) return null;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
-  function crear(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.nombre.trim()) return;
-    store.agregarProducto({ ...form, nombre: form.nombre.trim() });
-    setForm({ nombre: "", categoria: "Cuidado", existencias: 10, minimo: 5, costo: 100, precio_venta: 250, unidad: "pieza" });
+  function cerrar() {
+    setForm(FORM_VACIO);
+    setEditando(null);
     setAbierto(false);
+  }
+
+  function nuevo() {
+    if (abierto && !editando) return cerrar();
+    setForm(FORM_VACIO);
+    setEditando(null);
+    setAbierto(true);
+  }
+
+  function editar(p: Producto) {
+    const { id, ...datos } = p;
+    setForm(datos);
+    setEditando(id);
+    setAbierto(true);
+    setAviso("");
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    const nombre = form.nombre.trim();
+    if (!nombre) return;
+    const datos = { ...form, nombre, unidad: form.unidad.trim() || "pieza" };
+    if (editando) {
+      if (store.actualizarProducto(editando, datos)) setAviso(`«${nombre}» actualizado.`);
+    } else if (store.agregarProducto(datos)) {
+      setAviso(`«${nombre}» agregado al inventario.`);
+    }
+    cerrar();
+  }
+
+  function eliminar(p: Producto) {
+    if (!window.confirm(`¿Eliminar «${p.nombre}» del inventario?\n\nEsta acción no se puede deshacer.`)) return;
+    if (store.eliminarProducto(p.id)) {
+      if (editando === p.id) cerrar();
+      setAviso(`«${p.nombre}» eliminado del inventario.`);
+    }
   }
 
   return (
@@ -89,15 +130,23 @@ export default function InventarioPage() {
 
       <ModulePanel
         titulo="Existencias"
-        descripcion="Usa + y − para registrar entradas y salidas de almacén."
+        descripcion="Usa + y − para registrar entradas y salidas; el lápiz edita y el bote elimina."
         extra={
-          <button type="button" className="btn-gold px-3 py-2 text-xs" onClick={() => setAbierto((v) => !v)}>
+          <button type="button" className="btn-gold px-3 py-2 text-xs" onClick={nuevo}>
             <Plus className="h-3.5 w-3.5" /> Nueva referencia
           </button>
         }
       >
+        {aviso && (
+          <p role="status" className="mb-3 text-xs" style={{ color: "var(--ink-muted)" }}>
+            {aviso}
+          </p>
+        )}
         {abierto && (
-          <form onSubmit={crear} className="mb-4 grid gap-2 rounded-2xl border p-3 sm:grid-cols-6" style={{ borderColor: "var(--line)" }}>
+          <form ref={formRef} onSubmit={guardar} className="mb-4 grid gap-2 rounded-2xl border p-3 sm:grid-cols-6" style={{ borderColor: "var(--line)" }}>
+            <p className="sm:col-span-6 text-xs font-semibold">
+              {editando ? `Editar «${productos.find((p) => p.id === editando)?.nombre ?? form.nombre}»` : "Nueva referencia"}
+            </p>
             <label className="sm:col-span-2 text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
               Producto
               <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required placeholder="Cera moldeadora" className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm" />
@@ -122,14 +171,25 @@ export default function InventarioPage() {
               Costo
               <input type="number" min={0} value={form.costo} onChange={(e) => setForm({ ...form, costo: Number(e.target.value) })} className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm" />
             </label>
-            <div className="sm:col-span-6 flex items-end justify-between gap-3">
-              <label className="text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
-                Precio de venta (0 si no se revende)
-                <input type="number" min={0} value={form.precio_venta} onChange={(e) => setForm({ ...form, precio_venta: Number(e.target.value) })} className="mt-1 w-40 rounded-lg border px-2.5 py-2 text-sm" />
-              </label>
-              <button type="submit" className="btn-gold px-4 py-2 text-xs">
-                <Check className="h-3.5 w-3.5" /> Guardar
-              </button>
+            <div className="sm:col-span-6 flex flex-wrap items-end justify-between gap-3">
+              <div className="flex flex-wrap gap-3">
+                <label className="text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
+                  Precio de venta (0 si no se revende)
+                  <input type="number" min={0} value={form.precio_venta} onChange={(e) => setForm({ ...form, precio_venta: Number(e.target.value) })} className="mt-1 w-40 rounded-lg border px-2.5 py-2 text-sm" />
+                </label>
+                <label className="text-[0.68rem]" style={{ color: "var(--ink-muted)" }}>
+                  Unidad
+                  <input value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })} placeholder="pieza" className="mt-1 w-28 rounded-lg border px-2.5 py-2 text-sm" />
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={cerrar} className="inline-flex items-center gap-1 rounded-lg border px-4 py-2 text-xs" style={{ borderColor: "var(--line)" }}>
+                  <X className="h-3.5 w-3.5" /> Cancelar
+                </button>
+                <button type="submit" className="btn-gold px-4 py-2 text-xs">
+                  <Check className="h-3.5 w-3.5" /> {editando ? "Guardar cambios" : "Guardar"}
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -148,6 +208,7 @@ export default function InventarioPage() {
                   <th className="num">Costo</th>
                   <th className="num">Venta</th>
                   <th className="num">Movimiento</th>
+                  <th className="num">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,6 +252,30 @@ export default function InventarioPage() {
                             style={{ borderColor: "var(--line)" }}
                           >
                             <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      </td>
+                      <td className="num">
+                        <span className="inline-flex gap-1">
+                          <button
+                            type="button"
+                            aria-label={`Editar ${p.nombre}`}
+                            title="Editar"
+                            onClick={() => editar(p)}
+                            className="grid h-7 w-7 place-items-center rounded-lg border"
+                            style={{ borderColor: "var(--line)" }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Eliminar ${p.nombre}`}
+                            title="Eliminar"
+                            onClick={() => eliminar(p)}
+                            className="grid h-7 w-7 place-items-center rounded-lg border"
+                            style={{ borderColor: "rgb(220 80 60 / 0.45)", color: "rgb(235 110 90)" }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </span>
                       </td>

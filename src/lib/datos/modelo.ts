@@ -529,6 +529,8 @@ export type Operacion =
   | { tipo: "actualizarServicio"; id: string; cambios: Partial<Omit<Servicio, "id">> }
   | { tipo: "agregarProducto"; producto: Producto }
   | { tipo: "ajustarExistencias"; id: string; delta: number }
+  | { tipo: "actualizarProducto"; id: string; cambios: Partial<Omit<Producto, "id">> }
+  | { tipo: "eliminarProducto"; id: string }
   | { tipo: "agregarGasto"; gasto: Gasto }
   | { tipo: "eliminarGasto"; id: string }
   | { tipo: "registrarCliente"; cliente: Cliente; tarjetaId: string; numeroTarjeta: string }
@@ -1069,6 +1071,25 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
           p.id === op.id ? { ...p, existencias: Math.max(0, p.existencias + Number(op.delta || 0)) } : p
         ),
       };
+
+    case "actualizarProducto": {
+      exigir(s.rol === "admin");
+      buscar(estado.productos, op.id, "Producto");
+      const c = { ...(op.cambios ?? {}) };
+      if (c.nombre !== undefined) {
+        c.nombre = String(c.nombre).trim();
+        exigir(c.nombre.length > 0, "El producto necesita nombre.");
+      }
+      for (const k of ["existencias", "minimo", "costo", "precio_venta"] as const) {
+        if (c[k] !== undefined) c[k] = Math.max(0, Number(c[k]) || 0);
+      }
+      return { productos: estado.productos.map((p) => (p.id === op.id ? { ...p, ...c, id: p.id } : p)) };
+    }
+
+    case "eliminarProducto":
+      exigir(s.rol === "admin");
+      buscar(estado.productos, op.id, "Producto");
+      return { productos: estado.productos.filter((p) => p.id !== op.id) };
 
     case "agregarGasto":
       exigir(s.rol === "admin");

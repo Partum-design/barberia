@@ -312,6 +312,9 @@ export function useBarberia() {
     actualizarServicio: (id: string, cambios: Partial<Servicio>) => ejecutar({ tipo: "actualizarServicio", id, cambios }),
     agregarProducto,
     ajustarExistencias: (id: string, delta: number) => ejecutar({ tipo: "ajustarExistencias", id, delta }),
+    actualizarProducto: (id: string, cambios: Partial<Omit<Producto, "id">>) =>
+      ejecutar({ tipo: "actualizarProducto", id, cambios }),
+    eliminarProducto: (id: string) => ejecutar({ tipo: "eliminarProducto", id }),
     agregarGasto,
     eliminarGasto: (id: string) => ejecutar({ tipo: "eliminarGasto", id }),
     registrarCliente,

@@ -894,3 +894,193 @@ body:has(.cm) .site-footer { display: none; }
   .cm-cta-agendar::after { animation: none; }
   .cm-cta-agendar:hover, .cm-cta-login:hover { transform: none; }
 }
+
+/* ── Tienda ──────────────────────────────────────────────────────── */
+.cm-tienda {
+  background:
+    radial-gradient(70% 50% at 50% 0%, rgb(247 147 30 / 0.12), transparent 70%),
+    linear-gradient(180deg, #0c0806, #120a06 60%, #0c0806);
+}
+.cm-tienda-sub { max-width: 36rem; margin: 1rem auto 0; color: var(--cm-mute); font-size: 1rem; line-height: 1.6; }
+.cm-prods {
+  display: grid;
+  gap: clamp(0.9rem, 2vw, 1.5rem);
+  max-width: 76rem;
+  margin: 0 auto;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15.5rem), 1fr));
+}
+.cm-prod-wrap { height: 100%; }
+.cm-prod {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1a0f08, #110905);
+  border: 1px solid rgb(247 147 30 / 0.18);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  transition: transform 320ms cubic-bezier(.2,.8,.2,1), border-color 320ms;
+}
+.cm-prod::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgb(255 190 110 / 0.16) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 900ms ease;
+}
+@media (hover: hover) {
+  .cm-prod:hover { transform: translateY(-6px); border-color: rgb(247 147 30 / 0.65); }
+  .cm-prod-wrap:hover { filter: drop-shadow(0 24px 34px rgb(255 122 18 / 0.28)); }
+  .cm-prod:hover::before { transform: translateX(120%); }
+  .cm-prod:hover .cm-prod-foto img { transform: scale(1.07); }
+}
+.cm-prod-foto {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 60% at 50% 40%, rgb(255 150 50 / 0.22), transparent 70%),
+    #0a0604;
+}
+.cm-prod-foto::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(180deg, transparent, rgb(17 9 5 / 0.95));
+  pointer-events: none;
+}
+.cm-prod-foto img { width: 100%; height: 100%; object-fit: cover; transition: transform 900ms cubic-bezier(.2,.8,.2,1); }
+.cm-prod-sinfoto { display: grid; place-items: center; height: 100%; color: var(--cm-orange); }
+.cm-prod-sinfoto svg { width: 42%; opacity: 0.5; filter: drop-shadow(0 10px 30px rgb(255 122 18 / 0.45)); }
+.cm-prod-cat {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
+  z-index: 1;
+  padding: 0.3rem 0.65rem 0.2rem;
+  font-family: var(--cm-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #120802;
+  background: var(--cm-orange);
+}
+.cm-prod-agotado {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font-family: var(--cm-display);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cm-ink);
+  background: rgb(12 8 6 / 0.62);
+}
+.cm-prod.is-agotado .cm-prod-foto img { filter: grayscale(1); }
+.cm-prod.is-agotado .cm-prod-precio { opacity: 0.5; text-decoration: line-through; }
+.cm-prod-cuerpo { position: relative; display: flex; flex: 1; flex-direction: column; gap: 0.35rem; padding: 0.4rem 1.15rem 1.15rem; margin-top: -1.6rem; z-index: 1; }
+.cm-prod-marca { font-family: var(--cm-display); font-size: 0.85rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--cm-orange); }
+.cm-prod h3 { font-family: var(--cm-display); font-weight: 400; font-size: clamp(1.45rem, 2.4vw, 1.75rem); line-height: 1.02; text-transform: uppercase; color: var(--cm-ink); }
+.cm-prod-desc { font-size: 0.86rem; line-height: 1.5; color: var(--cm-mute); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cm-prod-pie { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: auto; padding-top: 0.85rem; border-top: 1px dashed rgb(247 147 30 / 0.25); }
+.cm-prod-precio {
+  font-family: var(--cm-display);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffc067, var(--cm-orange) 55%, var(--cm-orange-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.cm-prod-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem 0.45rem;
+  font-family: var(--cm-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cm-ink);
+  box-shadow: inset 0 0 0 1.5px rgb(247 147 30 / 0.75);
+  transition: background 200ms, color 200ms, transform 160ms;
+}
+.cm-prod-cta svg { width: 1rem; height: 1rem; }
+.cm-prod-cta:hover { background: var(--cm-orange); color: #120802; }
+.cm-prod-cta:active { transform: scale(0.96); }
+.cm-prod-nota { font-size: 0.75rem; color: var(--cm-mute); text-align: right; }
+.cm-prod-mas { display: flex; justify-content: center; margin-top: clamp(2rem, 4vw, 3rem); }
+.cm-prod-filtros { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin: 0 auto clamp(1.5rem, 3vw, 2.5rem); }
+.cm-prod-filtros button {
+  padding: 0.55rem 1.1rem 0.45rem;
+  font-family: var(--cm-display);
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cm-mute);
+  box-shadow: inset 0 0 0 1px rgb(247 147 30 / 0.3);
+  transition: background 200ms, color 200ms, box-shadow 200ms;
+}
+.cm-prod-filtros button:hover { color: var(--cm-ink); box-shadow: inset 0 0 0 1px var(--cm-orange); }
+.cm-prod-filtros button.is-on { background: var(--cm-orange); color: #120802; box-shadow: none; }
+
+/* Página /productos */
+.cm-tienda-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem clamp(1rem, 4vw, 3rem);
+  padding-top: max(0.85rem, env(safe-area-inset-top));
+  background: rgb(12 8 6 / 0.92);
+  border-bottom: 1px solid rgb(247 147 30 / 0.15);
+}
+.cm-tienda-volver { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; font-family: var(--cm-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cm-mute); }
+.cm-tienda-volver svg { width: 1rem; height: 1rem; }
+.cm-tienda-volver:hover { color: var(--cm-orange); }
+.cm-tienda-hero { padding: clamp(3.5rem, 9vw, 6.5rem) clamp(1rem, 5vw, 4rem) clamp(2.5rem, 6vw, 4rem); text-align: center; }
+.cm-tienda-hero .cm-h2 { font-size: clamp(3.2rem, 10vw, 7rem); }
+.cm-tienda-pasos { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-top: 1.8rem; }
+.cm-tienda-pasos li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem 0.4rem;
+  font-family: var(--cm-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgb(0 0 0 / 0.45);
+  box-shadow: inset 0 0 0 1px rgb(247 147 30 / 0.35);
+}
+.cm-tienda-pasos svg { width: 1rem; height: 1rem; color: var(--cm-orange); }
+.cm-tienda-pasos span { color: var(--cm-orange); }
+.cm-tienda-pagina .cm-tienda { padding-top: clamp(2.5rem, 5vw, 4rem); }
+.cm-tienda-vacia { display: grid; justify-items: center; gap: 1rem; max-width: 30rem; margin: 0 auto; text-align: center; color: var(--cm-mute); }
+.cm-tienda-vacia > svg { width: 2.5rem; height: 2.5rem; color: var(--cm-orange); }
+@media (prefers-reduced-motion: reduce) {
+  .cm-prod, .cm-prod::before, .cm-prod-foto img { transition: none !important; }
+}
+@media (max-width: 560px) {
+  .cm-prods { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+  .cm-prod-cuerpo { padding: 0.3rem 0.7rem 0.75rem; margin-top: -1.2rem; gap: 0.25rem; }
+  .cm-prod h3 { font-size: 1.15rem; }
+  .cm-prod-marca { font-size: 0.7rem; letter-spacing: 0.2em; }
+  .cm-prod-desc { font-size: 0.74rem; -webkit-line-clamp: 2; }
+  .cm-prod-pie { flex-direction: column; align-items: stretch; gap: 0.5rem; padding-top: 0.6rem; }
+  .cm-prod-precio { font-size: 1.6rem; }
+  .cm-prod-cta { justify-content: center; font-size: 0.85rem; }
+  .cm-prod-nota { text-align: left; }
+  .cm-prod-cat { top: 0.5rem; left: 0.5rem; font-size: 0.68rem; padding: 0.22rem 0.5rem 0.15rem; }
+  .cm-prod-agotado { font-size: 1.2rem; }
+}

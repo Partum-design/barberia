@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { Banknote, CalendarDays, CalendarPlus, CheckCircle2, CreditCard, Home, MapPin, ScanLine, UserX, Users } from "lucide-react";
 import { Modal } from "@/components/panel/Modal";
 import { EditorCita } from "@/components/citas/EditorCita";
-import { BotonesCobro } from "@/components/citas/BotonesCobro";
+import { BotonesCobro, ETIQUETA_METODO } from "@/components/citas/BotonesCobro";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
 import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
@@ -168,7 +168,8 @@ export default function DashboardBarberoPage() {
                 {cita.estado_pago === "pagado" ? (
                   <>
                     {cita.metodo_pago === "tarjeta" ? <CreditCard className="h-3 w-3" /> : <Banknote className="h-3 w-3" />} Pagado ·{" "}
-                    {cita.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"}
+                    {ETIQUETA_METODO[cita.metodo_pago] ?? "Efectivo"}
+                    {cita.propina ? ` · +${mxn.format(cita.propina)} propina` : ""}
                   </>
                 ) : (
                   <><Banknote className="h-3 w-3" /> Pago pendiente</>
@@ -177,7 +178,7 @@ export default function DashboardBarberoPage() {
             </div>
             <div className="flex items-center gap-2">
               {cita.estado_pago === "pendiente" && cita.estado !== "cancelada" && cita.estado !== "no_asistio" && permisos.cobrar && (
-                <BotonesCobro compacto precio={cita.precio} onCobrar={(metodo) => store.cobrar(cita.id, metodo)} />
+                <BotonesCobro compacto precio={cita.precio} onCobrar={(metodo, propina) => store.cobrar(cita.id, metodo, propina)} />
               )}
               {cita.modalidad === "domicilio" &&
                 cita.direccion_domicilio &&

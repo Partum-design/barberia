@@ -97,7 +97,7 @@ export default function PagosPage() {
                 <p className="truncate font-medium">{c.barbero_nombre}</p>
                 <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
                   {format(new Date(c.inicio), "d 'de' MMMM, yyyy", { locale: es })} ·{" "}
-                  {c.metodo_pago === "tarjeta" ? "Tarjeta en línea" : "Efectivo en barbería"}
+                  {c.metodo_pago === "tarjeta" ? "Tarjeta" : c.metodo_pago === "transferencia" ? "Transferencia" : "Efectivo en barbería"}
                 </p>
               </div>
               <div className="text-right">

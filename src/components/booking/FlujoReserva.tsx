@@ -8,8 +8,10 @@ import { es } from "date-fns/locale";
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Banknote,
   CalendarPlus,
+  Check,
   CheckCircle2,
   Home,
   IdCard,
@@ -117,7 +119,20 @@ export function FlujoReserva() {
 
   const [paso, setPaso] = useState<Paso>("barbero");
   const [barbero, setBarbero] = useState<Barbero | null>(null);
-  const [servicio, setServicio] = useState<Servicio | null>(null);
+  // Puede llevar varios servicios (corte + barba…): precio y duración se suman.
+  const [elegidos, setElegidos] = useState<Servicio[]>([]);
+  const servicio = useMemo(
+    () =>
+      elegidos.length === 0
+        ? null
+        : {
+            id: elegidos[0].id,
+            nombre: elegidos.map((x) => x.nombre).join(" + "),
+            duracion_min: elegidos.reduce((a, x) => a + x.duracion_min, 0),
+            desde: elegidos.some((x) => x.desde),
+          },
+    [elegidos]
+  );
   const [slot, setSlot] = useState<Date | null>(null);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">("presencial");
   const [direccion, setDireccion] = useState("");
@@ -161,7 +176,7 @@ export function FlujoReserva() {
     const sv = catalogo.find((x) => coincide(params.get("servicio"), x)) ?? null;
     const inicio = params.get("inicio");
     if (b) setBarbero(b);
-    if (sv) setServicio(sv);
+    if (sv) setElegidos([sv]);
     if (b && (sv || catalogo.length === 0) && inicio && !Number.isNaN(Date.parse(inicio))) {
       setSlot(new Date(inicio));
       setPaso("datos");
@@ -179,7 +194,7 @@ export function FlujoReserva() {
     tituloRef.current?.focus();
   }, [paso]);
 
-  const precio = servicio ? precioDe(servicio, barbero) : 0;
+  const precio = elegidos.reduce((a, x) => a + precioDe(x, barbero), 0);
   const precioLista = (x: Servicio) => {
     if (barbero) return `${x.desde ? "desde " : ""}${mxn.format(precioDe(x, barbero))}`;
     const precios = activos.map((b) => precioDe(x, b));
@@ -198,11 +213,10 @@ export function FlujoReserva() {
     setPaso(catalogo.length > 0 && !servicio ? "servicio" : "horario");
   }
 
-  function elegirServicio(x: Servicio) {
-    setServicio(x);
+  function alternarServicio(x: Servicio) {
+    setElegidos((prev) => (prev.some((p) => p.id === x.id) ? prev.filter((p) => p.id !== x.id) : [...prev, x]));
     setSlot(null);
     setError("");
-    setPaso("horario");
   }
 
   const volverA = (p: Paso) => {
@@ -214,7 +228,7 @@ export function FlujoReserva() {
   const enlaceLogin = () => {
     const q = new URLSearchParams();
     if (barbero) q.set("barbero", barbero.id);
-    if (servicio) q.set("servicio", servicio.id);
+    if (elegidos[0]) q.set("servicio", elegidos[0].id);
     if (slot) q.set("inicio", slot.toISOString());
     return `/login?next=${encodeURIComponent(`/reservar?${q.toString()}`)}`;
   };
@@ -237,7 +251,8 @@ export function FlujoReserva() {
     setCargando(true);
     const datos = {
       barbero_id: barbero.id,
-      servicio_id: servicio?.id ?? null,
+      servicio_id: elegidos[0]?.id ?? null,
+      servicio_ids: elegidos.map((x) => x.id),
       inicio: slot.toISOString(),
       modalidad,
       direccion_domicilio: direccion.trim(),
@@ -325,7 +340,8 @@ export function FlujoReserva() {
       )}
       {servicio && (
         <span>
-          <b>Servicio:</b> {servicio.nombre} · {servicio.duracion_min} min · {precioLista(servicio)}
+          <b>{elegidos.length > 1 ? "Servicios" : "Servicio"}:</b> {servicio.nombre} · {servicio.duracion_min} min ·{" "}
+          {elegidos.length === 1 ? precioLista(elegidos[0]) : `${servicio.desde ? "desde " : ""}${mxn.format(precio)}`}
         </span>
       )}
       {slot && (
@@ -392,14 +408,28 @@ export function FlujoReserva() {
       {/* Paso 2: servicio */}
       {paso === "servicio" && (
         <div className="space-y-3">
-          {titulo("¿Qué servicio quieres?")}
+          {titulo("¿Qué servicios quieres?")}
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            Elige uno o varios: corte, barba, facial… los sumamos en la misma cita.
+          </p>
           {resumen}
           <button type="button" onClick={() => volverA("barbero")} className="reserva-volver">
             <ArrowLeft className="h-4 w-4" aria-hidden /> Cambiar barbero
           </button>
           <div className="grid gap-3 sm:grid-cols-2">
-            {catalogo.map((x) => (
-              <button key={x.id} type="button" onClick={() => elegirServicio(x)} className="reserva-servicio">
+            {catalogo.map((x) => {
+              const on = elegidos.some((p) => p.id === x.id);
+              return (
+              <button
+                key={x.id}
+                type="button"
+                onClick={() => alternarServicio(x)}
+                className={`reserva-servicio ${on ? "is-elegido" : ""}`}
+                aria-pressed={on}
+              >
+                <span className="reserva-servicio-check" aria-hidden>
+                  {on ? <Check className="h-3.5 w-3.5" /> : null}
+                </span>
                 <span className="min-w-0">
                   <span className="reserva-servicio-cat">{x.categoria}</span>
                   <span className="reserva-opcion-titulo">{x.nombre}</span>
@@ -407,7 +437,22 @@ export function FlujoReserva() {
                 </span>
                 <span className="reserva-servicio-precio">{precioLista(x)}</span>
               </button>
-            ))}
+              );
+            })}
+          </div>
+          <div className={`reserva-continuar ${elegidos.length > 0 ? "is-visible" : ""}`}>
+            <span>
+              <small>
+                {elegidos.length} {elegidos.length === 1 ? "servicio" : "servicios"} · {servicio?.duracion_min ?? 0} min
+              </small>
+              <b>
+                {servicio?.desde ? "desde " : ""}
+                {mxn.format(precio)}
+              </b>
+            </span>
+            <button type="button" className="btn-gold px-5 py-2.5 text-sm" disabled={elegidos.length === 0} onClick={() => volverA("horario")}>
+              Continuar <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         </div>
       )}
@@ -461,7 +506,7 @@ export function FlujoReserva() {
           </button>
 
           <dl className="reserva-dl">
-            {servicio && <Fila k="Servicio" v={`${servicio.nombre} · ${servicio.duracion_min} min`} />}
+            {servicio && <Fila k={elegidos.length > 1 ? "Servicios" : "Servicio"} v={`${servicio.nombre} · ${servicio.duracion_min} min`} />}
             <Fila k="Barbero" v={barbero.nombre} />
             <Fila k="Fecha" v={format(slot, "EEEE d 'de' MMMM, HH:mm 'h'", { locale: es })} />
             <Fila k="Total" v={servicio ? mxn.format(precio) : "Se cotiza en la barbería"} destacado />

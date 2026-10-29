@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Banknote, Check, CreditCard, Home, Loader2, MapPin, Search, UserPlus } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, CreditCard, Home, Loader2, MapPin, Search, UserPlus } from "lucide-react";
 import { Campo, Interruptor } from "@/components/panel/Modal";
 import { FormularioCliente } from "@/components/citas/FormularioCliente";
+import { SelectorServicios, totalServicios } from "@/components/citas/SelectorServicios";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
-import { ETIQUETA_ESTADO_CITA, precioDe, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, serviciosDeCita, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
 
 const ESTADOS: EstadoCita[] = ["confirmada", "asistida", "no_asistio", "cancelada"];
 
@@ -28,9 +29,9 @@ export function EditorCita({
 }) {
   const store = useBarberia();
   const { clientes, barberos, citas, barberiaConfig, horarioDeBarbero, sesion, servicios, permisos } = store;
-  const catalogo = servicios.filter((x) => x.activo || x.id === cita?.servicio_id);
-  const [servicioId, setServicioId] = useState<string>(cita ? (cita.servicio_id ?? "") : (catalogo[0]?.id ?? ""));
-  const servicio = servicios.find((x) => x.id === servicioId);
+  const previos = cita ? serviciosDeCita(cita) : [];
+  const catalogo = servicios.filter((x) => x.activo || previos.includes(x.id));
+  const [servicioIds, setServicioIds] = useState<string[]>(cita ? previos : catalogo[0] ? [catalogo[0].id] : []);
   const esAdmin = sesion?.rol === "admin";
 
   const [clienteId, setClienteId] = useState(cita?.cliente_id ?? clienteInicial ?? "");
@@ -43,12 +44,14 @@ export function EditorCita({
   const [fecha, setFecha] = useState(format(inicioBase ?? new Date(), "yyyy-MM-dd"));
   const [hora, setHora] = useState(inicioBase ? format(inicioBase, "HH:mm") : "");
   const barbero = barberos.find((b) => b.id === barberoId);
+  const elegidos = totalServicios(servicioIds, servicios, barbero);
   const [modalidad, setModalidad] = useState<"presencial" | "domicilio">(cita?.modalidad ?? "presencial");
   const [direccion, setDireccion] = useState(cita?.direccion_domicilio ?? "");
   const [precio, setPrecio] = useState<string>(cita ? String(cita.precio) : "");
   const [estado, setEstado] = useState<EstadoCita>(cita?.estado ?? "confirmada");
   const [pagado, setPagado] = useState(cita?.estado_pago === "pagado");
   const [metodo, setMetodo] = useState<MetodoPago>(cita?.metodo_pago ?? "efectivo");
+  const [propina, setPropina] = useState<string>(cita?.propina ? String(cita.propina) : "");
   const [notas, setNotas] = useState(cita?.notas ?? "");
   const [forzar, setForzar] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -76,13 +79,13 @@ export function EditorCita({
     const inicioDia = new Date(`${fecha}T00:00`).getTime();
     if (!Number.isFinite(inicioDia)) return [];
     const otras = citas.filter((c) => c.id !== cita?.id);
-    const duracion = servicio?.duracion_min ?? barbero.duracion_cita_min;
+    const duracion = elegidos.lista.length > 0 ? elegidos.duracion : barbero.duracion_cita_min;
     return slotsDisponibles(
       { barbero: { ...barbero, activo: true, duracion_cita_min: duracion }, horario: horarioDeBarbero(barbero.id), barberia: barberiaConfig, citas: otras },
       inicioDia,
       1
     ).filter((d) => d.getTime() > Date.now() - 5 * 60_000 && format(d, "yyyy-MM-dd") === fecha);
-  }, [barbero, fecha, citas, cita?.id, horarioDeBarbero, barberiaConfig, servicio]);
+  }, [barbero, fecha, citas, cita?.id, horarioDeBarbero, barberiaConfig, elegidos.duracion, elegidos.lista.length]);
 
   if (nuevoCliente) {
     return (
@@ -106,7 +109,7 @@ export function EditorCita({
     setError("");
     if (!clienteId) return setError("Elige al cliente.");
     if (!barbero) return setError("Elige quién lo atiende.");
-    if (catalogo.length > 0 && !servicioId) return setError("Elige el servicio.");
+    if (catalogo.length > 0 && servicioIds.length === 0) return setError("Elige el servicio.");
     if (!fecha || !hora) return setError("Elige el día y la hora.");
     const inicio = new Date(`${fecha}T${hora}`);
     if (!Number.isFinite(inicio.getTime())) return setError("La fecha u hora no es válida.");
@@ -119,7 +122,8 @@ export function EditorCita({
       const r = await store.crearCitaPersonal({
         cliente_id: clienteId,
         barbero_id: barbero.id,
-        servicio_id: servicioId || null,
+        servicio_id: servicioIds[0] ?? null,
+        servicio_ids: servicioIds,
         inicio: inicio.toISOString(),
         modalidad,
         direccion_domicilio: direccion.trim(),
@@ -136,11 +140,13 @@ export function EditorCita({
     const cambios: Parameters<typeof store.actualizarCita>[1] = {};
     if (inicio.toISOString() !== new Date(cita.inicio).toISOString()) cambios.inicio = inicio.toISOString();
     if (barbero.id !== cita.barbero_id) cambios.barbero_id = barbero.id;
-    if ((servicioId || null) !== (cita.servicio_id ?? null)) cambios.servicio_id = servicioId || null;
+    if (servicioIds.join("|") !== previos.join("|")) cambios.servicio_ids = servicioIds;
     if (estado !== cita.estado) cambios.estado = estado;
     if (esAdmin && precioNum !== undefined && precioNum !== cita.precio) cambios.precio = precioNum;
     if (pagado !== (cita.estado_pago === "pagado")) cambios.estado_pago = pagado ? "pagado" : "pendiente";
     if (pagado && metodo !== cita.metodo_pago) cambios.metodo_pago = metodo;
+    const propinaNum = Math.max(0, Math.round(Number(propina) || 0));
+    if (pagado && propinaNum !== (cita.propina ?? 0)) cambios.propina = propinaNum;
     if (notas.trim() !== (cita.notas ?? "")) cambios.notas = notas.trim();
     if (modalidad !== cita.modalidad) cambios.modalidad = modalidad;
     if (modalidad === "domicilio" && direccion.trim() !== (cita.direccion_domicilio ?? "")) {
@@ -231,7 +237,9 @@ export function EditorCita({
           onChange={(e) => {
             // Si el precio era el del barbero anterior, pasa al del nuevo.
             const nuevo = barberos.find((b) => b.id === e.target.value);
-            if (cita && servicio && precio === String(precioDe(servicio, barbero))) setPrecio(String(precioDe(servicio, nuevo)));
+            if (cita && elegidos.lista.length > 0 && precio === String(elegidos.precio)) {
+              setPrecio(String(totalServicios(servicioIds, servicios, nuevo).precio));
+            }
             setBarberoId(e.target.value);
           }}
           disabled={Boolean(cita) && !esAdmin}
@@ -251,30 +259,21 @@ export function EditorCita({
         </select>
       </Campo>
 
-      <Campo label="Servicio" ayuda={servicio ? `${servicio.duracion_min} min · ${precioDe(servicio, barbero) !== servicio.precio ? `precio de ${barbero?.nombre.split(" ")[0]} $${precioDe(servicio, barbero)} (lista $${servicio.precio})` : `precio de lista $${servicio.precio}`}` : catalogo.length === 0 ? "Da de alta servicios en «Servicios» para fijar precios." : undefined}>
-        <select
-          className="campo-input"
-          value={servicioId}
-          onChange={(e) => {
-            setServicioId(e.target.value);
-            const nuevo = servicios.find((x) => x.id === e.target.value);
-            setPrecio(cita && nuevo ? String(precioDe(nuevo, barbero)) : "");
-          }}
-          disabled={catalogo.length === 0}
-        >
-          {catalogo.length === 0 && <option value="">Sin servicios en el catálogo</option>}
-          {catalogo.length > 0 && !servicioId && (
-            <option value="" disabled>
-              Elige un servicio
-            </option>
-          )}
-          {catalogo.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.nombre} — ${precioDe(x, barbero)}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <div className="is-full">
+        <span className="campo-label">{servicioIds.length > 1 ? "Servicios" : "Servicio"}</span>
+        <div className="mt-1.5">
+          <SelectorServicios
+            ids={servicioIds}
+            catalogo={catalogo}
+            servicios={servicios}
+            barbero={barbero}
+            onChange={(ids) => {
+              setServicioIds(ids);
+              setPrecio(cita && ids.length > 0 ? String(totalServicios(ids, servicios, barbero).precio) : "");
+            }}
+          />
+        </div>
+      </div>
 
       <Campo ancho="completo" label="Precio a cobrar" ayuda={esAdmin ? "Cámbialo sólo para descuentos o cargos extra." : "Lo fija el servicio y el barbero."}>
         <input
@@ -284,7 +283,7 @@ export function EditorCita({
           min={0}
           value={precio}
           onChange={(e) => setPrecio(e.target.value)}
-          placeholder={String(servicio ? precioDe(servicio, barbero) : 0)}
+          placeholder={String(elegidos.precio)}
           disabled={!esAdmin}
         />
       </Campo>
@@ -363,14 +362,28 @@ export function EditorCita({
         <div className="is-full">
           <Interruptor activo={pagado} onChange={setPagado} label="Pagada" ayuda="Marca si ya se cobró en caja." />
           {pagado && (
-            <div className="segmentado mt-2">
-              {(["efectivo", "tarjeta"] as const).map((m) => (
+            <div className="segmentado is-3 mt-2">
+              {(["efectivo", "tarjeta", "transferencia"] as const).map((m) => (
                 <button key={m} type="button" className={metodo === m ? "is-active" : ""} onClick={() => setMetodo(m)}>
-                  {m === "efectivo" ? <Banknote className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
-                  {m === "efectivo" ? "Efectivo" : "Tarjeta"}
+                  {m === "efectivo" ? <Banknote className="h-4 w-4" /> : m === "tarjeta" ? <CreditCard className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}
+                  {m === "efectivo" ? "Efectivo" : m === "tarjeta" ? "Tarjeta" : "Transferencia"}
                 </button>
               ))}
             </div>
+          )}
+          {pagado && (
+            <label className="mt-2 block">
+              <span className="campo-label">Propina (MXN)</span>
+              <input
+                className="campo-input mt-1"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={propina}
+                onChange={(e) => setPropina(e.target.value)}
+                placeholder="0"
+              />
+            </label>
           )}
         </div>
       )}

@@ -10,7 +10,24 @@ import { horarioReservable } from "@/lib/datos/disponibilidad";
 
 export type Rol = "cliente" | "barbero" | "admin";
 
-export type MetodoPago = "tarjeta" | "efectivo";
+export type MetodoPago = "tarjeta" | "efectivo" | "transferencia";
+
+export const METODOS_PAGO: { id: MetodoPago; label: string }[] = [
+  { id: "efectivo", label: "Efectivo" },
+  { id: "tarjeta", label: "Tarjeta" },
+  { id: "transferencia", label: "Transferencia" },
+];
+
+/** Cualquier valor raro cae a efectivo: es lo que pasa en el mostrador. */
+export function metodoValido(m: unknown): MetodoPago {
+  return m === "tarjeta" || m === "transferencia" ? m : "efectivo";
+}
+
+/** Propina en pesos: entera, no negativa y con tope razonable. */
+export function propinaValida(valor: unknown) {
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? Math.min(100_000, Math.round(n)) : 0;
+}
 export type EstadoPago = "pagado" | "pendiente";
 
 export type Sesion = {
@@ -43,9 +60,16 @@ export type Cita = {
   notas?: string;
   /** Quién la registró: el propio cliente o el personal */
   creada_por?: "cliente" | "personal";
-  /** Servicio contratado: de él salen el precio y la duración */
+  /** Servicio contratado (el primero si son varios): de él salen el precio y la duración */
   servicio_id?: string | null;
+  /** Nombre(s) del servicio; con varios, unidos con « + » */
   servicio_nombre?: string;
+  /** Todos los servicios de la cita, en orden. Si falta, es sólo `servicio_id`. */
+  servicio_ids?: string[];
+  /** Propina que dejó el cliente al pagar (MXN). Es del barbero, no entra en comisión. */
+  propina?: number;
+  /** Momento del cobro */
+  pagada_en?: string | null;
   /**
    * Comisión del barbero (%) congelada al agendar, para que cambiar el
    * catálogo después no reescriba lo ya pagado. Sólo la ve el administrador.
@@ -268,6 +292,8 @@ export type BarberiaConfig = {
   anio_fundacion: string;
   /** Horario de atención al público, mostrado en la portada */
   horario: HorarioSemanal;
+  /** Día en que empieza la semana de corte de caja */
+  corte_inicio?: DiaSemana;
 };
 
 // --- Clientes y tarjetas de lealtad ----------------------------------------
@@ -320,6 +346,8 @@ export type Servicio = {
   categoria: (typeof CATEGORIAS_SERVICIO)[number];
   /** Qué incluye, p. ej. "Corte y facial" en los paquetes */
   descripcion?: string;
+  /** Paquete: servicios del catálogo que incluye (para armar el texto y comparar precio) */
+  incluye?: string[];
   /** El precio es mínimo ("A partir de $250"): sube según largo o diseño */
   desde?: boolean;
   precio: number;
@@ -338,6 +366,58 @@ export type Producto = {
   costo: number;
   precio_venta: number;
   unidad: string;
+  /** Se muestra en la tienda de la página web */
+  publico?: boolean;
+  /** Texto para la tienda: para qué sirve, aroma, fijación… */
+  descripcion?: string;
+  /** Foto del producto (URL pública) */
+  imagen_url?: string;
+  /** Marca, para la tienda */
+  marca?: string;
+};
+
+/** Venta de mostrador de un producto del inventario. */
+export type VentaProducto = {
+  id: string;
+  fecha: string; // ISO
+  producto_id: string;
+  producto_nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  total: number;
+  metodo_pago: MetodoPago;
+  /** Quién lo vendió (barbero o administrador) */
+  vendedor_id: string;
+  vendedor_nombre: string;
+  /** Cliente, si se sabe */
+  cliente_nombre?: string;
+};
+
+/** Cierre de caja de un periodo: los números quedan congelados al hacerlo. */
+export type CorteCaja = {
+  id: string;
+  /** Inicio y fin del periodo (ISO, fin exclusivo) */
+  desde: string;
+  hasta: string;
+  creado_en: string;
+  creado_por: string;
+  servicios: number;
+  productos: number;
+  propinas: number;
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
+  comisiones: number;
+  gastos: number;
+  /** Lo que queda: servicios + productos − comisiones − gastos (las propinas son del equipo) */
+  utilidad: number;
+  citas: number;
+  ventas: number;
+  /** Efectivo que se contó físicamente en caja, si se capturó */
+  efectivo_contado?: number | null;
+  notas?: string;
+  /** Por barbero: servicios, comisión, propinas y productos vendidos */
+  equipo: { id: string; nombre: string; servicios: number; comision: number; propinas: number; productos: number }[];
 };
 
 export type Gasto = {
@@ -363,6 +443,8 @@ export type Estado = {
   gastos: Gasto[];
   clientes: Cliente[];
   tarjetas: TarjetaLealtad[];
+  ventas: VentaProducto[];
+  cortes: CorteCaja[];
 };
 
 export type Clave = keyof Estado;
@@ -413,6 +495,8 @@ export function estadoVacio(): Estado {
     gastos: [],
     clientes: [],
     tarjetas: [],
+    ventas: [],
+    cortes: [],
   };
 }
 
@@ -476,6 +560,7 @@ export type Operacion =
       id: string;
       barbero_id: string;
       servicio_id?: string | null;
+      servicio_ids?: string[];
       inicio: string;
       fin: string;
       modalidad: "presencial" | "domicilio";
@@ -488,6 +573,7 @@ export type Operacion =
       cliente_id: string;
       barbero_id: string;
       servicio_id?: string | null;
+      servicio_ids?: string[];
       inicio: string;
       modalidad: "presencial" | "domicilio";
       direccion_domicilio?: string;
@@ -502,13 +588,24 @@ export type Operacion =
       cambios: Partial<
         Pick<
           Cita,
-          "inicio" | "barbero_id" | "servicio_id" | "estado" | "precio" | "estado_pago" | "metodo_pago" | "notas" | "modalidad" | "direccion_domicilio"
+          | "inicio"
+          | "barbero_id"
+          | "servicio_id"
+          | "servicio_ids"
+          | "estado"
+          | "precio"
+          | "estado_pago"
+          | "metodo_pago"
+          | "propina"
+          | "notas"
+          | "modalidad"
+          | "direccion_domicilio"
         >
       >;
       forzar?: boolean;
     }
   | { tipo: "cobrarEfectivo"; id: string }
-  | { tipo: "cobrarCita"; id: string; metodo: MetodoPago }
+  | { tipo: "cobrarCita"; id: string; metodo: MetodoPago; propina?: number }
   | { tipo: "marcarAsistida"; id: string }
   | { tipo: "cancelarCita"; id: string }
   | { tipo: "eliminarCita"; id: string }
@@ -533,6 +630,10 @@ export type Operacion =
   | { tipo: "eliminarProducto"; id: string }
   | { tipo: "agregarGasto"; gasto: Gasto }
   | { tipo: "eliminarGasto"; id: string }
+  | { tipo: "venderProducto"; venta: VentaProducto }
+  | { tipo: "eliminarVenta"; id: string }
+  | { tipo: "hacerCorte"; corte: CorteCaja }
+  | { tipo: "eliminarCorte"; id: string }
   | { tipo: "registrarCliente"; cliente: Cliente; tarjetaId: string; numeroTarjeta: string }
   | { tipo: "actualizarCliente"; id: string; cambios: Partial<Omit<Cliente, "id">> }
   | { tipo: "ajustarSellos"; tarjetaId: string; delta: number }
@@ -552,6 +653,7 @@ export type Operacion =
       telefono: string;
       barbero_id: string;
       servicio_id?: string | null;
+      servicio_ids?: string[];
       inicio: string;
       modalidad: "presencial" | "domicilio";
       direccion_domicilio?: string;
@@ -572,24 +674,56 @@ export class ErrorOperacion extends Error {
 
 const esStaff = (s: Sesion) => s.rol === "admin" || s.rol === "barbero";
 
+/** Ids de servicio de una petición: la lista nueva o el servicio único de antes. */
+export function idsDeServicio(datos: { servicio_ids?: unknown; servicio_id?: string | null }): string[] {
+  const lista = Array.isArray(datos.servicio_ids)
+    ? datos.servicio_ids.filter((x): x is string => typeof x === "string" && x.length > 0)
+    : datos.servicio_id
+      ? [datos.servicio_id]
+      : [];
+  return lista.slice(0, 8);
+}
+
+/** Servicios de una cita ya guardada, en orden. */
+export function serviciosDeCita(c: Pick<Cita, "servicio_ids" | "servicio_id">): string[] {
+  return idsDeServicio(c);
+}
+
 /**
- * Servicio elegido para una cita y lo que define: precio, duración y comisión.
- * Sin catálogo (barbería recién abierta) la cita va sin servicio, precio 0 y
- * la duración base del barbero.
+ * Servicios elegidos para una cita y lo que definen: el precio y la duración
+ * se suman y la comisión queda como el promedio ponderado por precio, para
+ * que el reparto salga igual que si fueran citas separadas. Sin catálogo
+ * (barbería recién abierta) la cita va sin servicio, precio 0 y la duración
+ * base del barbero.
  */
-function servicioParaCita(estado: Estado, servicioId: string | null | undefined, barbero: Barbero) {
+function servicioParaCita(estado: Estado, servicioIds: string[], barbero: Barbero) {
   const activos = estado.servicios.filter((x) => x.activo);
-  if (!servicioId) {
+  if (servicioIds.length === 0) {
     if (activos.length > 0) throw new ErrorOperacion("Elige el servicio.", 400);
-    return { servicio: null, precio: 0, duracion: Math.max(5, barbero.duracion_cita_min), comision: 0 };
+    return { servicios: [] as Servicio[], ids: [] as string[], nombre: "", precio: 0, duracion: Math.max(5, barbero.duracion_cita_min), comision: 0 };
   }
-  const servicio = estado.servicios.find((x) => x.id === servicioId);
-  if (!servicio) throw new ErrorOperacion("Ese servicio ya no existe.", 400);
+  const servicios = servicioIds.map((id) => {
+    const sv = estado.servicios.find((x) => x.id === id);
+    if (!sv) throw new ErrorOperacion("Ese servicio ya no existe.", 400);
+    return sv;
+  });
+  const precio = servicios.reduce((a, sv) => a + precioDe(sv, barbero), 0);
+  const duracion = Math.max(5, servicios.reduce((a, sv) => a + Math.max(0, sv.duracion_min), 0));
+  const comisionPesos = servicios.reduce(
+    (a, sv) => a + (precioDe(sv, barbero) * Math.min(100, Math.max(0, sv.comision_pct))) / 100,
+    0
+  );
+  const comision =
+    precio > 0
+      ? Math.round((comisionPesos / precio) * 100 * 100) / 100
+      : Math.min(100, Math.max(0, servicios[0].comision_pct));
   return {
-    servicio,
-    precio: precioDe(servicio, barbero),
-    duracion: Math.max(5, servicio.duracion_min),
-    comision: Math.min(100, Math.max(0, servicio.comision_pct)),
+    servicios,
+    ids: servicios.map((x) => x.id),
+    nombre: servicios.map((x) => x.nombre).join(" + "),
+    precio,
+    duracion,
+    comision,
   };
 }
 
@@ -641,7 +775,7 @@ function exigirCupoDeCitas(estado: Estado, clienteId: string) {
  */
 function citaDeCliente(
   estado: Estado,
-  datos: { id: string; barbero_id: string; servicio_id?: string | null; inicio: string; modalidad: "presencial" | "domicilio"; direccion_domicilio?: string },
+  datos: { id: string; barbero_id: string; servicio_id?: string | null; servicio_ids?: string[]; inicio: string; modalidad: "presencial" | "domicilio"; direccion_domicilio?: string },
   cliente: { id: string; nombre: string }
 ): Cita {
   idNuevo(estado.citas, datos.id);
@@ -649,8 +783,8 @@ function citaDeCliente(
   if (!barbero) throw new ErrorOperacion("El barbero no está disponible.", 400);
   const inicio = new Date(datos.inicio).getTime();
   if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-  const sv = servicioParaCita(estado, datos.servicio_id, barbero);
-  if (sv.servicio && !sv.servicio.activo) throw new ErrorOperacion("Ese servicio no está disponible.", 400);
+  const sv = servicioParaCita(estado, idsDeServicio(datos), barbero);
+  if (sv.servicios.some((x) => !x.activo)) throw new ErrorOperacion("Ese servicio no está disponible.", 400);
   const fin = inicio + sv.duracion * 60_000;
   const problema = horarioReservable(
     {
@@ -675,8 +809,9 @@ function citaDeCliente(
     modalidad: domicilio ? "domicilio" : "presencial",
     estado: "confirmada",
     precio: sv.precio,
-    servicio_id: sv.servicio?.id ?? null,
-    servicio_nombre: sv.servicio?.nombre ?? "",
+    servicio_id: sv.ids[0] ?? null,
+    servicio_nombre: sv.nombre,
+    servicio_ids: sv.ids,
     comision_pct: sv.comision,
     direccion_domicilio: domicilio ? String(datos.direccion_domicilio || "Domicilio del cliente").slice(0, 300) : null,
     // De momento sólo se cobra en efectivo en la barbería: el pago en
@@ -761,7 +896,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       const barbero = buscar(estado.barberos, op.barbero_id, "Barbero");
       const inicio = new Date(op.inicio).getTime();
       if (!Number.isFinite(inicio)) throw new ErrorOperacion("Horario inválido.", 400);
-      const sv = servicioParaCita(estado, op.servicio_id, barbero);
+      const sv = servicioParaCita(estado, idsDeServicio(op), barbero);
       const fin = inicio + sv.duracion * 60_000;
       validarHueco(estado, barbero, inicio, fin, null, Boolean(op.forzar) && s.rol === "admin");
       const domicilio = op.modalidad === "domicilio";
@@ -777,8 +912,9 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         modalidad: domicilio ? "domicilio" : "presencial",
         estado: "confirmada",
         precio: s.rol === "admin" ? precioValido(op.precio, sv.precio) : sv.precio,
-        servicio_id: sv.servicio?.id ?? null,
-        servicio_nombre: sv.servicio?.nombre ?? "",
+        servicio_id: sv.ids[0] ?? null,
+        servicio_nombre: sv.nombre,
+        servicio_ids: sv.ids,
         comision_pct: sv.comision,
         direccion_domicilio: domicilio ? String(op.direccion_domicilio || "Domicilio del cliente").slice(0, 300) : null,
         metodo_pago: "efectivo",
@@ -803,15 +939,20 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         siguiente.barbero_nombre = otro.nombre;
         siguiente.especialidad = otro.especialidad;
         // Si el precio era el del barbero anterior, pasa al del nuevo.
-        const sv = estado.servicios.find((x) => x.id === cita.servicio_id);
+        const svs = serviciosDeCita(cita)
+          .map((id) => estado.servicios.find((x) => x.id === id))
+          .filter((x): x is Servicio => Boolean(x));
         const anterior = estado.barberos.find((b) => b.id === cita.barbero_id);
-        if (sv && cita.precio === precioDe(sv, anterior)) siguiente.precio = precioDe(sv, otro);
+        const total = (b?: Barbero) => svs.reduce((a, sv) => a + precioDe(sv, b), 0);
+        if (svs.length > 0 && cita.precio === total(anterior)) siguiente.precio = total(otro);
       }
       let duracion = Math.max(5 * 60_000, new Date(cita.fin).getTime() - new Date(cita.inicio).getTime());
-      if (c.servicio_id !== undefined && c.servicio_id !== (cita.servicio_id ?? null)) {
-        const sv = servicioParaCita(estado, c.servicio_id, buscar(estado.barberos, siguiente.barbero_id, "Barbero"));
-        siguiente.servicio_id = sv.servicio?.id ?? null;
-        siguiente.servicio_nombre = sv.servicio?.nombre ?? "";
+      const idsNuevos = c.servicio_ids !== undefined || c.servicio_id !== undefined ? idsDeServicio(c) : null;
+      if (idsNuevos && idsNuevos.join("|") !== serviciosDeCita(cita).join("|")) {
+        const sv = servicioParaCita(estado, idsNuevos, buscar(estado.barberos, siguiente.barbero_id, "Barbero"));
+        siguiente.servicio_id = sv.ids[0] ?? null;
+        siguiente.servicio_nombre = sv.nombre;
+        siguiente.servicio_ids = sv.ids;
         siguiente.comision_pct = sv.comision;
         siguiente.precio = sv.precio;
         duracion = sv.duracion * 60_000;
@@ -856,7 +997,16 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       }
       if (c.metodo_pago !== undefined && c.metodo_pago !== cita.metodo_pago) {
         exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
-        siguiente.metodo_pago = c.metodo_pago === "tarjeta" ? "tarjeta" : "efectivo";
+        siguiente.metodo_pago = metodoValido(c.metodo_pago);
+      }
+      if (c.propina !== undefined && propinaValida(c.propina) !== (cita.propina ?? 0)) {
+        exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
+        siguiente.propina = propinaValida(c.propina);
+      }
+      if (siguiente.estado_pago === "pagado" && cita.estado_pago !== "pagado") siguiente.pagada_en = new Date().toISOString();
+      if (siguiente.estado_pago === "pendiente") {
+        siguiente.pagada_en = null;
+        siguiente.propina = 0;
       }
       if (c.notas !== undefined) siguiente.notas = String(c.notas).slice(0, 500);
       if (c.modalidad !== undefined) {
@@ -894,9 +1044,14 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       }
       const cambios: Partial<Cita> =
         op.tipo === "cobrarEfectivo"
-          ? { estado_pago: "pagado", metodo_pago: "efectivo" }
+          ? { estado_pago: "pagado", metodo_pago: "efectivo", pagada_en: new Date().toISOString() }
           : op.tipo === "cobrarCita"
-            ? { estado_pago: "pagado", metodo_pago: op.metodo === "tarjeta" ? "tarjeta" : "efectivo" }
+            ? {
+                estado_pago: "pagado",
+                metodo_pago: metodoValido(op.metodo),
+                propina: propinaValida(op.propina),
+                pagada_en: new Date().toISOString(),
+              }
             : op.tipo === "marcarAsistida"
               ? { estado: "asistida", llegada_en: cita.llegada_en ?? new Date().toISOString() }
               : { estado: "cancelada" };
@@ -1058,10 +1213,21 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       buscar(estado.servicios, op.id, "Servicio");
       return { servicios: estado.servicios.map((x) => (x.id === op.id ? { ...x, ...op.cambios, id: x.id } : x)) };
 
-    case "agregarProducto":
+    case "agregarProducto": {
       exigir(s.rol === "admin");
       idNuevo(estado.productos, op.producto.id);
-      return { productos: [...estado.productos, op.producto] };
+      const p = op.producto;
+      const producto: Producto = {
+        ...p,
+        nombre: String(p.nombre ?? "").trim().slice(0, 120),
+        publico: Boolean(p.publico),
+        descripcion: String(p.descripcion ?? "").slice(0, 400),
+        marca: String(p.marca ?? "").trim().slice(0, 60),
+        imagen_url: urlDeImagen(p.imagen_url),
+      };
+      exigir(producto.nombre.length > 0, "El producto necesita nombre.");
+      return { productos: [...estado.productos, producto] };
+    }
 
     case "ajustarExistencias":
       exigir(s.rol === "admin");
@@ -1083,6 +1249,10 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       for (const k of ["existencias", "minimo", "costo", "precio_venta"] as const) {
         if (c[k] !== undefined) c[k] = Math.max(0, Number(c[k]) || 0);
       }
+      if (c.publico !== undefined) c.publico = Boolean(c.publico);
+      if (c.descripcion !== undefined) c.descripcion = String(c.descripcion).slice(0, 400);
+      if (c.marca !== undefined) c.marca = String(c.marca).trim().slice(0, 60);
+      if (c.imagen_url !== undefined) c.imagen_url = urlDeImagen(c.imagen_url);
       return { productos: estado.productos.map((p) => (p.id === op.id ? { ...p, ...c, id: p.id } : p)) };
     }
 
@@ -1099,6 +1269,89 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
     case "eliminarGasto":
       exigir(s.rol === "admin");
       return { gastos: estado.gastos.filter((g) => g.id !== op.id) };
+
+    case "venderProducto": {
+      exigir(esStaff(s));
+      exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
+      const v = op.venta;
+      exigir(v && typeof v === "object", "Venta inválida.");
+      idNuevo(estado.ventas, v.id);
+      const producto = buscar(estado.productos, v.producto_id, "Producto");
+      const cantidad = Math.round(Number(v.cantidad));
+      if (!Number.isFinite(cantidad) || cantidad < 1 || cantidad > 999) throw new ErrorOperacion("Cantidad inválida.", 400);
+      if (producto.existencias < cantidad) {
+        throw new ErrorOperacion(`Sólo quedan ${producto.existencias} de «${producto.nombre}».`, 409);
+      }
+      // El barbero sólo registra ventas a su nombre; el administrador elige quién vendió.
+      let vendedorId = s.id;
+      let vendedorNombre = s.nombre;
+      if (s.rol === "admin" && v.vendedor_id && v.vendedor_id !== s.id) {
+        const b = buscar(estado.barberos, v.vendedor_id, "Barbero");
+        vendedorId = b.id;
+        vendedorNombre = b.nombre;
+      }
+      const unitario = s.rol === "admin" ? precioValido(v.precio_unitario, producto.precio_venta) : producto.precio_venta;
+      const venta: VentaProducto = {
+        id: v.id,
+        fecha: new Date().toISOString(),
+        producto_id: producto.id,
+        producto_nombre: producto.nombre,
+        cantidad,
+        precio_unitario: unitario,
+        total: unitario * cantidad,
+        metodo_pago: metodoValido(v.metodo_pago),
+        vendedor_id: vendedorId,
+        vendedor_nombre: vendedorNombre,
+        ...(v.cliente_nombre?.trim() ? { cliente_nombre: v.cliente_nombre.trim().slice(0, 120) } : {}),
+      };
+      return {
+        ventas: [venta, ...estado.ventas],
+        productos: estado.productos.map((p) => (p.id === producto.id ? { ...p, existencias: p.existencias - cantidad } : p)),
+      };
+    }
+
+    case "eliminarVenta": {
+      // Deshacer una venta devuelve las piezas al almacén.
+      exigir(s.rol === "admin", "Sólo el administrador elimina ventas.");
+      const venta = buscar(estado.ventas, op.id, "Venta");
+      return {
+        ventas: estado.ventas.filter((v) => v.id !== op.id),
+        productos: estado.productos.map((p) =>
+          p.id === venta.producto_id ? { ...p, existencias: p.existencias + venta.cantidad } : p
+        ),
+      };
+    }
+
+    case "hacerCorte": {
+      exigir(s.rol === "admin", "Sólo el administrador hace cortes de caja.");
+      const c = op.corte;
+      exigir(c && typeof c === "object", "Corte inválido.");
+      idNuevo(estado.cortes, c.id);
+      const desde = new Date(c.desde).getTime();
+      const hasta = new Date(c.hasta).getTime();
+      if (!Number.isFinite(desde) || !Number.isFinite(hasta) || hasta <= desde) {
+        throw new ErrorOperacion("Las fechas del corte no son válidas.", 400);
+      }
+      // Los números se recalculan aquí: no se confía en los que mande el navegador.
+      const calculado = calcularCorte(estado, desde, hasta);
+      const contado = c.efectivo_contado === null || c.efectivo_contado === undefined ? null : precioValido(c.efectivo_contado, 0);
+      const corte: CorteCaja = {
+        ...calculado,
+        id: c.id,
+        desde: new Date(desde).toISOString(),
+        hasta: new Date(hasta).toISOString(),
+        creado_en: new Date().toISOString(),
+        creado_por: s.nombre,
+        efectivo_contado: contado,
+        notas: String(c.notas ?? "").slice(0, 500),
+      };
+      return { cortes: [corte, ...estado.cortes] };
+    }
+
+    case "eliminarCorte":
+      exigir(s.rol === "admin");
+      buscar(estado.cortes, op.id, "Corte");
+      return { cortes: estado.cortes.filter((c) => c.id !== op.id) };
 
     case "registrarCliente": {
       // El personal da de alta a cualquiera; un cliente sólo a sí mismo.
@@ -1262,7 +1515,8 @@ export function vistaPara(estado: Estado, s: Sesion | null): Estado {
     const fichas = p.ver_nombres_clientes
       ? estado.fichas
       : estado.fichas.map((f) => ({ ...f, cliente_nombre: iniciales(f.cliente_nombre) }));
-    return { ...estado, servicios, citas, clientes, fichas };
+    const ventas = estado.ventas.filter((v) => v.vendedor_id === s.id);
+    return { ...estado, servicios, citas, clientes, fichas, ventas, cortes: [], gastos: [] };
   }
 
   const citas = estado.citas
@@ -1282,13 +1536,20 @@ export function vistaPara(estado: Estado, s: Sesion | null): Estado {
 
   const propio = <T,>(lista: T[], clave: (x: T) => string) => (s ? lista.filter((x) => clave(x) === s.id) : []);
 
+  // De la tienda sólo se ve lo publicado, sin costo ni existencias exactas.
+  const productos = estado.productos
+    .filter((p) => p.publico && p.precio_venta > 0)
+    .map((p) => ({ ...p, costo: 0, minimo: 0, existencias: p.existencias > 0 ? 1 : 0 }));
+
   return {
     ...estado,
     servicios,
     citas: citas.map(sinComision),
     fichas: [],
-    productos: [],
+    productos,
     gastos: [],
+    ventas: [],
+    cortes: [],
     clientes: propio(estado.clientes, (c) => c.id),
     tarjetas: propio(estado.tarjetas, (t) => t.cliente_id),
     canjes: s && estado.canjes[s.id] ? { [s.id]: estado.canjes[s.id] } : {},
@@ -1453,5 +1714,101 @@ export function calcularLealtad(
     recompensasGanadas: Math.floor(puntos / requerido),
     faltan: requerido - (puntos % requerido),
     requerido,
+  };
+}
+
+/** Sólo URLs https (o rutas del propio sitio) para las fotos de producto. */
+export function urlDeImagen(valor: unknown) {
+  const v = String(valor ?? "").trim().slice(0, 600);
+  if (!v) return "";
+  if (v.startsWith("/") && !v.startsWith("//")) return v;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" ? u.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Caja
+// ---------------------------------------------------------------------------
+
+const ORDEN_DIAS: DiaSemana[] = ["dom", "lun", "mar", "mie", "jue", "vie", "sab"];
+
+/** Semana de corte que contiene `fecha`, empezando en el día configurado (lunes por defecto). */
+export function semanaDeCorte(fecha: Date, inicio: DiaSemana = "lun") {
+  const objetivo = ORDEN_DIAS.indexOf(inicio);
+  const d = new Date(fecha);
+  d.setHours(0, 0, 0, 0);
+  const atras = (d.getDay() - objetivo + 7) % 7;
+  d.setDate(d.getDate() - atras);
+  const fin = new Date(d);
+  fin.setDate(fin.getDate() + 7);
+  return { desde: d, hasta: fin };
+}
+
+/** Momento en que cuenta un cobro: cuando se pagó o, en citas viejas, su hora. */
+const momentoDeCobro = (c: Cita) => new Date(c.pagada_en || c.inicio).getTime();
+
+/**
+ * Números de caja de un periodo [desde, hasta): servicios cobrados, productos
+ * vendidos, propinas, desglose por método, comisiones y gastos.
+ */
+export function calcularCorte(
+  estado: Pick<Estado, "citas" | "ventas" | "gastos">,
+  desde: number,
+  hasta: number
+): Omit<CorteCaja, "id" | "desde" | "hasta" | "creado_en" | "creado_por" | "efectivo_contado" | "notas"> {
+  const enRango = (t: number) => t >= desde && t < hasta;
+  const cobradas = estado.citas.filter((c) => citaActiva(c) && c.estado_pago === "pagado" && enRango(momentoDeCobro(c)));
+  const ventas = estado.ventas.filter((v) => enRango(new Date(v.fecha).getTime()));
+  const gastos = estado.gastos.filter((g) => enRango(new Date(g.fecha).getTime()));
+
+  const metodo = { efectivo: 0, tarjeta: 0, transferencia: 0 } as Record<MetodoPago, number>;
+  const equipo = new Map<string, CorteCaja["equipo"][number]>();
+  const de = (id: string, nombre: string) => {
+    const e = equipo.get(id) ?? { id, nombre, servicios: 0, comision: 0, propinas: 0, productos: 0 };
+    equipo.set(id, e);
+    return e;
+  };
+  let servicios = 0;
+  let propinas = 0;
+  let comisiones = 0;
+  for (const c of cobradas) {
+    const propina = c.propina ?? 0;
+    const comision = (c.precio * (c.comision_pct ?? 0)) / 100;
+    servicios += c.precio;
+    propinas += propina;
+    comisiones += comision;
+    metodo[metodoValido(c.metodo_pago)] += c.precio + propina;
+    const e = de(c.barbero_id, c.barbero_nombre);
+    e.servicios += c.precio;
+    e.comision += comision;
+    e.propinas += propina;
+  }
+  let productos = 0;
+  for (const v of ventas) {
+    productos += v.total;
+    metodo[metodoValido(v.metodo_pago)] += v.total;
+    de(v.vendedor_id, v.vendedor_nombre).productos += v.total;
+  }
+  const totalGastos = gastos.reduce((a, g) => a + g.monto, 0);
+  comisiones = Math.round(comisiones);
+  return {
+    servicios,
+    productos,
+    propinas,
+    efectivo: metodo.efectivo,
+    tarjeta: metodo.tarjeta,
+    transferencia: metodo.transferencia,
+    comisiones,
+    gastos: totalGastos,
+    utilidad: servicios + productos - comisiones - totalGastos,
+    citas: cobradas.length,
+    ventas: ventas.reduce((a, v) => a + v.cantidad, 0),
+    equipo: [...equipo.values()]
+      .map((e) => ({ ...e, comision: Math.round(e.comision) }))
+      .sort((a, b) => b.servicios + b.productos - (a.servicios + a.productos)),
   };
 }

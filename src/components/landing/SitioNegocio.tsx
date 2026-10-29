@@ -38,6 +38,7 @@ import "./cortmart.css";
 import { WALLET_VISIBLE } from "@/lib/modo";
 import { LogoCM } from "@/components/shell/LogoCM";
 import { slug } from "@/components/booking/FlujoReserva";
+import { Tienda } from "@/components/landing/Tienda";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -147,7 +148,9 @@ function Estrellas({ className = "" }: { className?: string }) {
  * Google Maps (`PERFIL`).
  */
 export function SitioNegocio() {
-  const { listo, sesion, barberiaConfig: cfg, servicios, barberos, recompensasConfig, horarioDeBarbero } = useBarberia();
+  const { listo, sesion, barberiaConfig: cfg, servicios, barberos, recompensasConfig, horarioDeBarbero, productos } = useBarberia();
+  // Tienda: sólo lo publicado (el servidor ya filtra para clientes; el personal ve todo).
+  const tienda = productos.filter((p) => p.publico && p.precio_venta > 0);
   // Con sesión abierta el botón lleva directo a su cuenta o a su panel.
   const cuenta = sesion
     ? { href: DESTINO_POR_ROL[sesion.rol], label: sesion.rol === "cliente" ? "Mi cuenta" : "Mi panel", nota: `Hola, ${sesion.nombre.split(" ")[0]}` }
@@ -321,6 +324,7 @@ export function SitioNegocio() {
 
   const enlaces = [
     { href: "#servicios", label: "Servicios" },
+    ...(tienda.length > 0 ? [{ href: "#tienda", label: "Tienda" }] : []),
     { href: "#lugar", label: "El lugar" },
     { href: "#equipo", label: "Equipo" },
     { href: "#resenas", label: "Reseñas" },
@@ -569,6 +573,19 @@ export function SitioNegocio() {
         <Brocha className="cm-deco cm-deco-a" />
         <Tijeras className="cm-deco cm-deco-b" />
       </section>
+
+      {/* ── Tienda ──────────────────────────────────────────────── */}
+      {tienda.length > 0 && (
+        <section id="tienda" className="cm-section cm-tienda">
+          <Reveal className="cm-head">
+            <p className="cm-kicker">Llévate el acabado a casa</p>
+            <h2 className="cm-h2">Tienda</h2>
+            <p className="cm-tienda-sub">Los productos que usamos en el sillón. Apártalos por WhatsApp y recógelos en tu próxima visita.</p>
+          </Reveal>
+          <Tienda productos={tienda} whatsapp={cfg.whatsapp.trim() || PERFIL.whatsapp} />
+          <Peine className="cm-deco cm-deco-a" />
+        </section>
+      )}
 
       {/* ── El lugar ────────────────────────────────────────────── */}
       <section id="lugar" className="cm-gallery">

@@ -16,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { EscanerQR } from "@/components/citas/EscanerQR";
-import { BotonesCobro } from "@/components/citas/BotonesCobro";
+import { BotonesCobro, ETIQUETA_METODO } from "@/components/citas/BotonesCobro";
 import {
   calcularLealtad,
   ETIQUETA_ESTADO_CITA,
@@ -256,7 +256,7 @@ export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) 
               puedeCobrar={permisos.cobrar}
               puedeSellar={permisos.ajustar_sellos}
               citaActual={(id) => citas.find((c) => c.id === id)}
-              onCobrar={(id, metodo) => store.cobrar(id, metodo)}
+              onCobrar={(id, metodo, propina) => store.cobrar(id, metodo, propina)}
               resumenDe={(cita) => ({
                 cliente: resumirCitas(citas.filter((c) => c.cliente_id === cita.cliente_id)),
                 barberoHoy: resumirCitas(
@@ -336,7 +336,7 @@ function ResultadoEscaneo({
   puedeCobrar: boolean;
   puedeSellar: boolean;
   citaActual: (id: string) => Cita | undefined;
-  onCobrar: (id: string, metodo: MetodoPago) => void;
+  onCobrar: (id: string, metodo: MetodoPago, propina: number) => void;
   resumenDe: (cita: Cita) => { cliente: ReturnType<typeof resumirCitas>; barberoHoy: ReturnType<typeof resumirCitas> };
   resultado: Resultado;
   lealtadDe: (clienteId: string) => ReturnType<typeof calcularLealtad> & { disponibles: number };
@@ -391,7 +391,8 @@ function ResultadoEscaneo({
             </span>
             {cita.estado_pago === "pagado" ? (
               <span className="badge badge-ok">
-                <Banknote className="h-3.5 w-3.5" /> Pagado · {cita.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"}
+                <Banknote className="h-3.5 w-3.5" /> Pagado · {ETIQUETA_METODO[cita.metodo_pago] ?? "Efectivo"}
+                {cita.propina ? ` · propina ${mxn.format(cita.propina)}` : ""}
               </span>
             ) : !puedeCobrar ? (
               <span className="badge badge-warm">Pendiente de cobro</span>
@@ -399,7 +400,7 @@ function ResultadoEscaneo({
           </div>
         )}
         {cita.barbero_id && cita.estado_pago !== "pagado" && puedeCobrar && (
-          <BotonesCobro precio={cita.precio} onCobrar={(metodo) => onCobrar(cita.id, metodo)} />
+          <BotonesCobro precio={cita.precio} onCobrar={(metodo, propina) => onCobrar(cita.id, metodo, propina)} />
         )}
         {r && (
           <dl className="resultado-datos">

@@ -22,9 +22,13 @@ export function Modal({
   ancho?: "md" | "lg";
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // Se guarda en una referencia: si el padre pasa una función nueva en cada
+  // render (los datos se refrescan solos), el foco no debe saltar al inicio.
+  const cerrar = useRef(onCerrar);
+  cerrar.current = onCerrar;
 
   useEffect(() => {
-    const tecla = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && cerrar.current();
     window.addEventListener("keydown", tecla);
     const previo = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -33,7 +37,7 @@ export function Modal({
       window.removeEventListener("keydown", tecla);
       document.body.style.overflow = previo;
     };
-  }, [onCerrar]);
+  }, []);
 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-label={titulo}>

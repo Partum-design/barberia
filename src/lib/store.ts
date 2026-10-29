@@ -27,6 +27,8 @@ import {
   type Operacion,
   type PermisosBarbero,
   type Producto,
+  type CorteCaja,
+  type VentaProducto,
   type RecompensasConfig,
   type Servicio,
   type Sesion,
@@ -37,6 +39,11 @@ import {
 export {
   BARBERIA_VACIA,
   CATEGORIAS_SERVICIO,
+  METODOS_PAGO,
+  calcularCorte,
+  semanaDeCorte,
+  serviciosDeCita,
+  urlDeImagen,
   DIAS_SEMANA,
   ETIQUETA_ESTADO_CITA,
   ETIQUETAS_PERMISOS,
@@ -73,6 +80,8 @@ export type {
   MetodoPago,
   PermisosBarbero,
   Producto,
+  CorteCaja,
+  VentaProducto,
   RecompensasConfig,
   Rol,
   Servicio,
@@ -281,6 +290,8 @@ export function useBarberia() {
     gastos: estado.gastos,
     clientes: estado.clientes,
     tarjetas: estado.tarjetas,
+    ventas: estado.ventas,
+    cortes: estado.cortes,
     logout,
     recargar: cargar,
     horarioDeBarbero,
@@ -294,7 +305,7 @@ export function useBarberia() {
     eliminarCita: (id: string) => ejecutarEnServidor({ tipo: "eliminarCita", id }),
     eliminarTodasLasCitas: () => ejecutarEnServidor({ tipo: "eliminarTodasLasCitas" }),
     cobrarEfectivo: (id: string) => ejecutar({ tipo: "cobrarCita", id, metodo: "efectivo" }),
-    cobrar: (id: string, metodo: MetodoPago) => ejecutar({ tipo: "cobrarCita", id, metodo }),
+    cobrar: (id: string, metodo: MetodoPago, propina = 0) => ejecutar({ tipo: "cobrarCita", id, metodo, propina }),
     actualizarBarbero: (id: string, cambios: Partial<Barbero>) => ejecutar({ tipo: "actualizarBarbero", id, cambios }),
     toggleActivoBarbero: (id: string) => ejecutar({ tipo: "toggleActivoBarbero", id }),
     eliminarBarbero: (id: string) => eliminarPersona("barbero", id),
@@ -315,6 +326,15 @@ export function useBarberia() {
     actualizarProducto: (id: string, cambios: Partial<Omit<Producto, "id">>) =>
       ejecutar({ tipo: "actualizarProducto", id, cambios }),
     eliminarProducto: (id: string) => ejecutar({ tipo: "eliminarProducto", id }),
+    venderProducto: (datos: Omit<VentaProducto, "id" | "fecha" | "total" | "producto_nombre" | "vendedor_nombre">) =>
+      ejecutarEnServidor({
+        tipo: "venderProducto",
+        venta: { ...datos, id: nuevoId("vta"), fecha: new Date().toISOString(), total: 0, producto_nombre: "", vendedor_nombre: "" },
+      }),
+    eliminarVenta: (id: string) => ejecutar({ tipo: "eliminarVenta", id }),
+    hacerCorte: (datos: Pick<CorteCaja, "desde" | "hasta" | "efectivo_contado" | "notas">) =>
+      ejecutarEnServidor({ tipo: "hacerCorte", corte: { ...datos, id: nuevoId("corte") } as CorteCaja }),
+    eliminarCorte: (id: string) => ejecutar({ tipo: "eliminarCorte", id }),
     agregarGasto,
     eliminarGasto: (id: string) => ejecutar({ tipo: "eliminarGasto", id }),
     registrarCliente,
@@ -407,6 +427,7 @@ async function crearCitaPersonal(datos: Omit<Extract<Operacion, { tipo: "crearCi
 async function crearCita(datos: {
   barbero_id: string;
   servicio_id?: string | null;
+  servicio_ids?: string[];
   inicio: string;
   modalidad: "presencial" | "domicilio";
   direccion_domicilio?: string;

@@ -778,3 +778,27 @@ textarea.campo-input { resize: vertical; min-height: 4rem; }
 .kpi-card p.font-num { color: var(--ink); }
 .metric-card strong, .kpi-card .font-num { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .valor-vivo { animation: none; } }
+
+/* Reserva: varios servicios */
+.reserva-servicio { position: relative; }
+.reserva-servicio-check {
+  display: grid; place-items: center; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 0.45rem;
+  border: 1.5px solid var(--line-strong); color: var(--cm-ink-dark, #120802);
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.reserva-servicio.is-elegido { border-color: var(--cm-orange); background: linear-gradient(150deg, rgba(247, 147, 30, 0.14), var(--card)); }
+.reserva-servicio.is-elegido .reserva-servicio-check { background: var(--cm-orange); border-color: var(--cm-orange); transform: scale(1.05); }
+.reserva-servicio > .min-w-0 { flex: 1; }
+.reserva-continuar {
+  position: sticky; bottom: calc(0.75rem + env(safe-area-inset-bottom)); z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.75rem 0.85rem 0.75rem 1.1rem; border-radius: 1.1rem;
+  border: 1px solid rgba(247, 147, 30, 0.45); background: rgba(18, 12, 8, 0.94);
+  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.8);
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.reserva-continuar.is-visible { opacity: 1; transform: none; pointer-events: auto; }
+.reserva-continuar span { display: grid; line-height: 1.2; }
+.reserva-continuar small { font-size: 0.72rem; color: var(--ink-muted); }
+.reserva-continuar b { font-size: 1.15rem; color: var(--cm-orange); font-variant-numeric: tabular-nums; }

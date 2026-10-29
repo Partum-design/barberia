@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BadgeDollarSign, Check, CheckCircle2, Clock3, ListPlus, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
+import { BadgeDollarSign, Check, CheckCircle2, Clock3, ListPlus, Package, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EmptyState, Metric, ModulePanel, SinAcceso, moneda, numero } from "@/components/panel/ModuleUI";
 import { Campo, Modal } from "@/components/panel/Modal";
 import { EditorPrecios } from "@/components/panel/EditorPrecios";
-import { CATEGORIAS_SERVICIO, precioDe, useBarberia, type Servicio } from "@/lib/store";
+import { CATEGORIAS_SERVICIO, precioDe, serviciosDeCita, useBarberia, type Servicio } from "@/lib/store";
 import { PERFIL } from "@/lib/negocio/perfil";
 
 const VACIO = {
@@ -17,6 +17,7 @@ const VACIO = {
   precio: "250",
   duracion_min: "30",
   comision_pct: "45",
+  incluye: [] as string[],
 };
 
 /**
@@ -27,9 +28,10 @@ const VACIO = {
 export default function ServiciosPage() {
   const store = useBarberia();
   const { listo, sesion, servicios, citas, barberos } = store;
-  const [editando, setEditando] = useState<{ servicio?: Servicio } | null>(null);
+  const [editando, setEditando] = useState<{ servicio?: Servicio; paquete?: boolean } | null>(null);
   const [precios, setPrecios] = useState(false);
   const [aviso, setAviso] = useState("");
+  const [filtro, setFiltro] = useState<string>("Todos");
 
   useEffect(() => {
     if (!aviso) return;
@@ -51,17 +53,26 @@ export default function ServiciosPage() {
   const ventas = useMemo(() => {
     const m = new Map<string, { veces: number; ingresos: number }>();
     for (const c of citas) {
-      if (c.estado !== "asistida" || !c.servicio_id) continue;
-      const v = m.get(c.servicio_id) ?? { veces: 0, ingresos: 0 };
-      v.veces += 1;
-      v.ingresos += c.precio;
-      m.set(c.servicio_id, v);
+      const ids = serviciosDeCita(c);
+      if (c.estado !== "asistida" || ids.length === 0) continue;
+      // Con varios servicios, el cobro se reparte según el precio de lista de cada uno.
+      const listas = ids.map((id) => servicios.find((x) => x.id === id)?.precio ?? 0);
+      const totalLista = listas.reduce((a, n) => a + n, 0);
+      ids.forEach((id, i) => {
+        const v = m.get(id) ?? { veces: 0, ingresos: 0 };
+        v.veces += 1;
+        v.ingresos += totalLista > 0 ? Math.round((c.precio * listas[i]) / totalLista) : Math.round(c.precio / ids.length);
+        m.set(id, v);
+      });
     }
     return m;
-  }, [citas]);
+  }, [citas, servicios]);
 
   if (!listo) return null;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
+
+  const categorias = ["Todos", ...CATEGORIAS_SERVICIO.filter((c) => servicios.some((s) => s.categoria === c))];
+  const visibles = filtro === "Todos" ? servicios : servicios.filter((s) => s.categoria === filtro);
 
   function eliminar(s: Servicio) {
     const v = ventas.get(s.id);
@@ -132,7 +143,25 @@ export default function ServiciosPage() {
         <Metric icono={<Percent />} label="Comisión media" valor={`${resumen.comisionMedia} %`} nota="Parte del barbero · sólo admin" />
       </div>
 
-      <ModulePanel titulo="Catálogo" descripcion={`${servicios.length} servicio${servicios.length === 1 ? "" : "s"}`}>
+      <ModulePanel
+        titulo="Catálogo"
+        descripcion={`${servicios.length} servicio${servicios.length === 1 ? "" : "s"} · toca el lápiz para editar precio, duración o lo que incluye`}
+        extra={
+          <button type="button" className="btn-linea is-sm" onClick={() => setEditando({ servicio: undefined, paquete: true })}>
+            <Package className="h-4 w-4" /> Nuevo paquete
+          </button>
+        }
+      >
+        {categorias.length > 2 && (
+          <div className="filtro-chips mb-3" role="tablist" aria-label="Filtrar por categoría">
+            {categorias.map((c) => (
+              <button key={c} type="button" role="tab" aria-selected={filtro === c} className={filtro === c ? "is-on" : ""} onClick={() => setFiltro(c)}>
+                {c}
+                <small>{c === "Todos" ? servicios.length : servicios.filter((s) => s.categoria === c).length}</small>
+              </button>
+            ))}
+          </div>
+        )}
         {servicios.length === 0 ? (
           <EmptyState icono={<Tags />}>
             Todavía no hay servicios. Sin servicios las citas no llevan precio.{" "}
@@ -142,7 +171,7 @@ export default function ServiciosPage() {
           </EmptyState>
         ) : (
           <div className="grid gap-2">
-            {servicios.map((s) => {
+            {visibles.map((s) => {
               const v = ventas.get(s.id);
               const caja = Math.round(s.precio * (1 - s.comision_pct / 100));
               return (
@@ -152,6 +181,9 @@ export default function ServiciosPage() {
                       <span className="truncate font-semibold" style={{ color: "var(--ink)" }}>{s.nombre}</span>
                       <span className="badge badge-neutral">{s.categoria}</span>
                       {!s.activo && <span className="badge badge-warm">En pausa</span>}
+                      {s.categoria === "Paquete" && (s.incluye?.length ?? 0) > 0 && (
+                        <span className="badge badge-gold">{s.incluye!.length} servicios</span>
+                      )}
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>
                       {s.descripcion ? `${s.descripcion} · ` : ""}
@@ -218,12 +250,13 @@ export default function ServiciosPage() {
 
       {editando && (
         <Modal
-          titulo={editando.servicio ? "Editar servicio" : "Nuevo servicio"}
+          titulo={editando.servicio ? `Editar ${editando.servicio.categoria === "Paquete" ? "paquete" : "servicio"}` : editando.paquete ? "Nuevo paquete" : "Nuevo servicio"}
           descripcion="Los cambios aplican a las citas nuevas; las ya agendadas conservan su precio."
           onCerrar={() => setEditando(null)}
         >
           <FormularioServicio
             servicio={editando.servicio}
+            paquete={editando.paquete}
             onCancelar={() => setEditando(null)}
             onListo={(m) => {
               setEditando(null);
@@ -238,14 +271,17 @@ export default function ServiciosPage() {
 
 function FormularioServicio({
   servicio,
+  paquete,
   onListo,
   onCancelar,
 }: {
   servicio?: Servicio;
+  paquete?: boolean;
   onListo: (mensaje: string) => void;
   onCancelar: () => void;
 }) {
   const store = useBarberia();
+  const catalogo = store.servicios.filter((x) => x.id !== servicio?.id && x.categoria !== "Paquete");
   const [f, setF] = useState(
     servicio
       ? {
@@ -256,13 +292,25 @@ function FormularioServicio({
           precio: String(servicio.precio),
           duracion_min: String(servicio.duracion_min),
           comision_pct: String(servicio.comision_pct),
+          incluye: servicio.incluye ?? [],
         }
-      : VACIO
+      : { ...VACIO, ...(paquete ? { categoria: "Paquete" as Servicio["categoria"], duracion_min: "60", precio: "" } : {}) }
   );
   const [error, setError] = useState("");
   const precio = Number(f.precio);
   const comision = Number(f.comision_pct);
   const valido = Number.isFinite(precio) && Number.isFinite(comision);
+  const incluidos = catalogo.filter((x) => f.incluye.includes(x.id));
+  const sumaIncluidos = incluidos.reduce((a, x) => a + x.precio, 0);
+  const duracionIncluidos = incluidos.reduce((a, x) => a + x.duracion_min, 0);
+
+  /** Marca o desmarca un servicio del paquete y rehace el texto «Incluye». */
+  function alternarIncluido(id: string) {
+    const incluye = f.incluye.includes(id) ? f.incluye.filter((x) => x !== id) : [...f.incluye, id];
+    const nombres = catalogo.filter((x) => incluye.includes(x.id)).map((x) => x.nombre);
+    const texto = nombres.length > 1 ? `${nombres.slice(0, -1).join(", ")} y ${nombres.at(-1)}` : (nombres[0] ?? "");
+    setF({ ...f, incluye, descripcion: texto || f.descripcion });
+  }
 
   function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -275,6 +323,7 @@ function FormularioServicio({
       precio: Math.round(Number(f.precio)),
       duracion_min: Math.round(Number(f.duracion_min)),
       comision_pct: Math.round(Number(f.comision_pct)),
+      incluye: f.categoria === "Paquete" ? f.incluye : [],
     };
     if (datos.nombre.length < 2) return setError("Escribe el nombre del servicio.");
     if (!Number.isFinite(datos.precio) || datos.precio < 0) return setError("El precio no es válido.");
@@ -303,6 +352,37 @@ function FormularioServicio({
           ))}
         </select>
       </Campo>
+      {f.categoria === "Paquete" && catalogo.length > 0 && (
+        <div className="is-full">
+          <span className="campo-label">Servicios del paquete</span>
+          <div className="paquete-incluye mt-1.5">
+            {catalogo.map((x) => {
+              const on = f.incluye.includes(x.id);
+              return (
+                <button key={x.id} type="button" className={on ? "is-on" : ""} aria-pressed={on} onClick={() => alternarIncluido(x.id)}>
+                  <Check className="h-3.5 w-3.5" aria-hidden /> {x.nombre}
+                  <small>{moneda.format(x.precio)}</small>
+                </button>
+              );
+            })}
+          </div>
+          {incluidos.length > 0 && (
+            <p className="campo-ayuda mt-1.5">
+              Por separado: {moneda.format(sumaIncluidos)} · {duracionIncluidos} min.
+              {Number.isFinite(precio) && precio < sumaIncluidos && (
+                <b style={{ color: "#5cc08d" }}> El cliente ahorra {moneda.format(sumaIncluidos - precio)}.</b>
+              )}{" "}
+              <button
+                type="button"
+                className="underline underline-offset-4"
+                onClick={() => setF({ ...f, precio: String(sumaIncluidos), duracion_min: String(Math.max(5, duracionIncluidos)) })}
+              >
+                Usar suma
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       <Campo label="Incluye" ancho="completo" ayuda="Opcional. Se ve en la portada, p. ej. «Corte y facial».">
         <input className="campo-input" value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} placeholder="Corte y facial" />
       </Campo>

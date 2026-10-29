@@ -14,6 +14,7 @@ type Peticion = {
   telefono?: string;
   barbero_id?: string;
   servicio_id?: string | null;
+  servicio_ids?: string[];
   inicio?: string;
   modalidad?: "presencial" | "domicilio";
   direccion_domicilio?: string;
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest) {
     telefono,
     barbero_id: body.barbero_id,
     servicio_id: body.servicio_id ?? null,
+    servicio_ids: Array.isArray(body.servicio_ids) ? body.servicio_ids.filter((x) => typeof x === "string").slice(0, 8) : undefined,
     inicio: body.inicio,
     modalidad: body.modalidad === "domicilio" ? "domicilio" : "presencial",
     direccion_domicilio: String(body.direccion_domicilio ?? "").slice(0, 300),

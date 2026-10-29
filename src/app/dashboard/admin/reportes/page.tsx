@@ -78,12 +78,14 @@ export default function ReportesPage() {
       .filter((m) => m.total > 0)
       .sort((a, b) => b.ingresos - a.ingresos);
 
-    const tarjeta = atendidas.filter((c) => c.metodo_pago === "tarjeta");
-    const efectivo = atendidas.filter((c) => c.metodo_pago === "efectivo");
-    const porMetodo = [
-      { metodo: "Tarjeta", ingresos: tarjeta.reduce((s, c) => s + c.precio, 0), citas: tarjeta.length },
-      { metodo: "Efectivo", ingresos: efectivo.reduce((s, c) => s + c.precio, 0), citas: efectivo.length },
-    ];
+    const porMetodo = (["tarjeta", "efectivo", "transferencia"] as const).map((m) => {
+      const lista = atendidas.filter((c) => (c.metodo_pago ?? "efectivo") === m);
+      return {
+        metodo: m === "tarjeta" ? "Tarjeta" : m === "efectivo" ? "Efectivo" : "Transferencia",
+        ingresos: lista.reduce((s, c) => s + c.precio, 0),
+        citas: lista.length,
+      };
+    });
 
     const dias = Array.from({ length: 14 }).map((_, i) => {
       const dia = addDays(new Date(), -13 + i);

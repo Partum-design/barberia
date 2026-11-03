@@ -599,6 +599,32 @@ button.login-back { background: none; border: 0; cursor: pointer; }
   width: 5.5rem; height: 1.9rem; padding: 0 0.6rem; border-radius: 999px; border: 1px solid var(--line);
   background: transparent; color: var(--ink); font-size: 0.8rem;
 }
+.cobro-productos { display: grid; gap: 0.45rem; border: 0; padding: 0; margin: 0; min-width: 0; }
+.cobro-productos legend {
+  display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.45rem;
+  font-size: 0.78rem; font-weight: 600; color: var(--ink);
+}
+.cobro-productos ul { display: grid; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
+.cobro-productos li {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line); border-radius: 0.75rem; font-size: 0.82rem;
+}
+.cobro-productos li small { font-size: 0.7rem; color: var(--ink-muted); }
+.cobro-productos li strong { font-variant-numeric: tabular-nums; }
+.cobro-cantidad { display: inline-flex; align-items: center; gap: 0.15rem; }
+.cobro-cantidad button {
+  display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--ink);
+}
+.cobro-cantidad button:disabled { opacity: 0.35; }
+.cobro-cantidad b { min-width: 1.4rem; text-align: center; font-variant-numeric: tabular-nums; }
+.cobro-agregar {
+  display: flex; align-items: center; gap: 0.4rem; height: 2.1rem; padding: 0 0.75rem;
+  border: 1px dashed var(--line-strong, var(--line)); border-radius: 999px; color: var(--ink-muted);
+}
+.cobro-agregar select { flex: 1; min-width: 0; background: transparent; color: var(--ink); font-size: 0.8rem; border: 0; outline: none; }
+.cobro-agregar select option { color: #111; }
+.cobro-agregar:focus-within { border-color: var(--cm-orange, #f7931e); }
 .cobro-panel .cobro-metodos { justify-content: flex-start; }
 .cobro-panel .cobro-metodos-label { text-align: left; }
 @media (max-width: 520px) {

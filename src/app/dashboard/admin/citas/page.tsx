@@ -27,7 +27,7 @@ import { EditorCita } from "@/components/citas/EditorCita";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { BotonesCobro, ETIQUETA_METODO } from "@/components/citas/BotonesCobro";
-import { ETIQUETA_ESTADO_CITA, enlaceDeCita, nombreDelNegocio, resumirCitas, useBarberia, type Cita, type EstadoCita, type MetodoPago } from "@/lib/store";
+import { ETIQUETA_ESTADO_CITA, enlaceDeCita, nombreDelNegocio, resumirCitas, useBarberia, type Cita, type EstadoCita, type MetodoPago, type ProductoEnCobro } from "@/lib/store";
 
 type Rango = "hoy" | "proximas" | "pasadas" | "todas";
 
@@ -260,10 +260,14 @@ export default function CitasAdminPage() {
                           void cambiarEstado(c, "cancelada", "Cita cancelada.");
                         }
                       }}
-                      onCobrar={(metodo, propina) => {
-                        store.cobrar(c.id, metodo, propina);
+                      onCobrar={(metodo, propina, productos, totalProductos) => {
+                        store.cobrar(c.id, metodo, propina, productos);
+                        const incluye = [
+                          totalProductos > 0 ? `${moneda.format(totalProductos)} de productos` : "",
+                          propina > 0 ? `${moneda.format(propina)} de propina` : "",
+                        ].filter(Boolean);
                         setAviso(
-                          `Cobro de ${moneda.format(c.precio + propina)} en ${ETIQUETA_METODO[metodo].toLowerCase()} registrado${propina > 0 ? ` (incluye ${moneda.format(propina)} de propina)` : ""}.`
+                          `Cobro de ${moneda.format(c.precio + totalProductos + propina)} en ${ETIQUETA_METODO[metodo].toLowerCase()} registrado${incluye.length ? ` (incluye ${incluye.join(" y ")})` : ""}.`
                         );
                       }}
                       onEditar={() => setEditor({ cita: c })}
@@ -354,7 +358,7 @@ function FilaCita({
   onLlego: () => void;
   onFalta: () => void;
   onCancelar: () => void;
-  onCobrar: (metodo: MetodoPago, propina: number) => void;
+  onCobrar: (metodo: MetodoPago, propina: number, productos: ProductoEnCobro[], totalProductos: number) => void;
   onEditar: () => void;
   onEliminar: () => void;
   onQr: () => void;

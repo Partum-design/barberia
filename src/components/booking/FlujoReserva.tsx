@@ -18,9 +18,11 @@ import {
   KeyRound,
   Loader2,
   MapPin,
+  Minus,
+  Plus,
   UserRound,
 } from "lucide-react";
-import { enlaceDeCita, nombreDelNegocio, normalizarTelefono, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
+import { enlaceDeCita, nombreDeServicios, nombreDelNegocio, normalizarTelefono, precioDe, useBarberia, type Barbero, type Servicio } from "@/lib/store";
 import { slotsDisponibles } from "@/lib/datos/disponibilidad";
 import { AVISO_PAGO, FORMAS_DE_PAGO, PERFIL } from "@/lib/negocio/perfil";
 import { QrCita } from "@/components/citas/QrCita";
@@ -28,6 +30,9 @@ import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { BotonesContacto } from "@/components/contacto/BotonesContacto";
 import { useAntibot } from "@/components/formularios/Antibot";
 import { Campo, enfocarPrimerError, errorDeNombre, errorDeTelefono, hayErrores, type Errores } from "@/components/formularios/Campo";
+
+/** Tope de servicios por cita (igual que en el servidor). */
+const MAX_SERVICIOS = 8;
 
 type Paso = "barbero" | "servicio" | "horario" | "datos" | "confirmada";
 
@@ -127,7 +132,7 @@ export function FlujoReserva() {
         ? null
         : {
             id: elegidos[0].id,
-            nombre: elegidos.map((x) => x.nombre).join(" + "),
+            nombre: nombreDeServicios(elegidos),
             duracion_min: elegidos.reduce((a, x) => a + x.duracion_min, 0),
             desde: elegidos.some((x) => x.desde),
           },
@@ -215,6 +220,18 @@ export function FlujoReserva() {
 
   function alternarServicio(x: Servicio) {
     setElegidos((prev) => (prev.some((p) => p.id === x.id) ? prev.filter((p) => p.id !== x.id) : [...prev, x]));
+    setSlot(null);
+    setError("");
+  }
+
+  // Un mismo servicio para varias personas (dos niños, papá e hijo…).
+  const cuantos = (x: Servicio) => elegidos.filter((p) => p.id === x.id).length;
+  function cambiarCantidad(x: Servicio, delta: number) {
+    setElegidos((prev) => {
+      if (delta > 0) return prev.length >= MAX_SERVICIOS ? prev : [...prev, x];
+      const i = prev.map((p) => p.id).lastIndexOf(x.id);
+      return i < 0 ? prev : prev.filter((_, j) => j !== i);
+    });
     setSlot(null);
     setError("");
   }
@@ -410,7 +427,7 @@ export function FlujoReserva() {
         <div className="space-y-3">
           {titulo("¿Qué servicios quieres?")}
           <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
-            Elige uno o varios: corte, barba, facial… los sumamos en la misma cita.
+            Elige uno o varios: corte, barba, facial… los sumamos en la misma cita. ¿Vienen dos niños? Usa + para indicar cuántos.
           </p>
           {resumen}
           <button type="button" onClick={() => volverA("barbero")} className="reserva-volver">
@@ -418,10 +435,11 @@ export function FlujoReserva() {
           </button>
           <div className="grid gap-3 sm:grid-cols-2">
             {catalogo.map((x) => {
-              const on = elegidos.some((p) => p.id === x.id);
+              const n = cuantos(x);
+              const on = n > 0;
               return (
+              <div key={x.id} className="reserva-servicio-caja">
               <button
-                key={x.id}
                 type="button"
                 onClick={() => alternarServicio(x)}
                 className={`reserva-servicio ${on ? "is-elegido" : ""}`}
@@ -437,6 +455,24 @@ export function FlujoReserva() {
                 </span>
                 <span className="reserva-servicio-precio">{precioLista(x)}</span>
               </button>
+              {on && (
+                <div className="reserva-cantidad" role="group" aria-label={`Cuántas personas para ${x.nombre}`}>
+                  <span>¿Para cuántas personas?</span>
+                  <button type="button" aria-label={`Una persona menos para ${x.nombre}`} onClick={() => cambiarCantidad(x, -1)}>
+                    <Minus className="h-4 w-4" aria-hidden />
+                  </button>
+                  <b aria-live="polite">{n}</b>
+                  <button
+                    type="button"
+                    aria-label={`Una persona más para ${x.nombre}`}
+                    disabled={elegidos.length >= MAX_SERVICIOS}
+                    onClick={() => cambiarCantidad(x, 1)}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              )}
+              </div>
               );
             })}
           </div>

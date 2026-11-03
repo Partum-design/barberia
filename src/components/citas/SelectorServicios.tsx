@@ -35,7 +35,8 @@ export function SelectorServicios({
   barbero?: Barbero | null;
 }) {
   const { lista, precio, duracion } = totalServicios(ids, servicios, barbero);
-  const disponibles = catalogo.filter((x) => !ids.includes(x.id));
+  // Se puede repetir un servicio: dos cortes de niño en la misma cita.
+  const disponibles = ids.length >= 8 ? [] : catalogo;
 
   if (catalogo.length === 0) {
     return <p className="campo-ayuda">Da de alta servicios en «Servicios» para fijar precios.</p>;
@@ -46,7 +47,7 @@ export function SelectorServicios({
       {lista.length > 0 && (
         <ul className="sel-servicios-lista">
           {lista.map((sv, i) => (
-            <li key={sv.id}>
+            <li key={`${sv.id}-${i}`}>
               <span className="sel-servicios-n">{i + 1}</span>
               <span className="min-w-0 flex-1">
                 <b className="block truncate">{sv.nombre}</b>
@@ -60,7 +61,7 @@ export function SelectorServicios({
                 type="button"
                 className="sel-servicios-quitar"
                 aria-label={`Quitar ${sv.nombre}`}
-                onClick={() => onChange(ids.filter((x) => x !== sv.id))}
+                onClick={() => onChange(ids.filter((_, j) => j !== i))}
               >
                 <X className="h-3.5 w-3.5" />
               </button>

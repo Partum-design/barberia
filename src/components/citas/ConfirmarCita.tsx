@@ -25,6 +25,7 @@ import {
   useBarberia,
   type Cita,
   type MetodoPago,
+  type ProductoEnCobro,
 } from "@/lib/store";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
@@ -256,7 +257,7 @@ export function ConfirmarCita({ citaInicial }: { citaInicial?: string | null }) 
               puedeCobrar={permisos.cobrar}
               puedeSellar={permisos.ajustar_sellos}
               citaActual={(id) => citas.find((c) => c.id === id)}
-              onCobrar={(id, metodo, propina) => store.cobrar(id, metodo, propina)}
+              onCobrar={(id, metodo, propina, productos) => store.cobrar(id, metodo, propina, productos)}
               resumenDe={(cita) => ({
                 cliente: resumirCitas(citas.filter((c) => c.cliente_id === cita.cliente_id)),
                 barberoHoy: resumirCitas(
@@ -336,7 +337,7 @@ function ResultadoEscaneo({
   puedeCobrar: boolean;
   puedeSellar: boolean;
   citaActual: (id: string) => Cita | undefined;
-  onCobrar: (id: string, metodo: MetodoPago, propina: number) => void;
+  onCobrar: (id: string, metodo: MetodoPago, propina: number, productos: ProductoEnCobro[]) => void;
   resumenDe: (cita: Cita) => { cliente: ReturnType<typeof resumirCitas>; barberoHoy: ReturnType<typeof resumirCitas> };
   resultado: Resultado;
   lealtadDe: (clienteId: string) => ReturnType<typeof calcularLealtad> & { disponibles: number };
@@ -400,7 +401,7 @@ function ResultadoEscaneo({
           </div>
         )}
         {cita.barbero_id && cita.estado_pago !== "pagado" && puedeCobrar && (
-          <BotonesCobro precio={cita.precio} onCobrar={(metodo, propina) => onCobrar(cita.id, metodo, propina)} />
+          <BotonesCobro precio={cita.precio} onCobrar={(metodo, propina, productos) => onCobrar(cita.id, metodo, propina, productos)} />
         )}
         {r && (
           <dl className="resultado-datos">

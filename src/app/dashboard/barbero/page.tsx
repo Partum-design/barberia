@@ -178,7 +178,7 @@ export default function DashboardBarberoPage() {
             </div>
             <div className="flex items-center gap-2">
               {cita.estado_pago === "pendiente" && cita.estado !== "cancelada" && cita.estado !== "no_asistio" && permisos.cobrar && (
-                <BotonesCobro compacto precio={cita.precio} onCobrar={(metodo, propina) => store.cobrar(cita.id, metodo, propina)} />
+                <BotonesCobro compacto precio={cita.precio} onCobrar={(metodo, propina, productos) => store.cobrar(cita.id, metodo, propina, productos)} />
               )}
               {cita.modalidad === "domicilio" &&
                 cita.direccion_domicilio &&

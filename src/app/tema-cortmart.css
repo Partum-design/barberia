@@ -802,3 +802,18 @@ textarea.campo-input { resize: vertical; min-height: 4rem; }
 .reserva-continuar span { display: grid; line-height: 1.2; }
 .reserva-continuar small { font-size: 0.72rem; color: var(--ink-muted); }
 .reserva-continuar b { font-size: 1.15rem; color: var(--cm-orange); font-variant-numeric: tabular-nums; }
+
+/* Cantidad por servicio: dos cortes de niño, papá e hijo… */
+.reserva-servicio-caja { display: grid; gap: 0.4rem; align-content: start; }
+.reserva-cantidad {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.6rem 0.45rem 1rem;
+  border: 1px solid var(--cm-orange); border-radius: 999px; background: rgba(255, 122, 18, 0.08);
+  font-size: 0.9rem; color: var(--ink);
+}
+.reserva-cantidad span { flex: 1; min-width: 0; }
+.reserva-cantidad button {
+  display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+}
+.reserva-cantidad button:disabled { opacity: 0.35; }
+.reserva-cantidad b { min-width: 1.5rem; text-align: center; font-size: 1.05rem; font-variant-numeric: tabular-nums; }

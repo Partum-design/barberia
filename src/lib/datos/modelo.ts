@@ -391,7 +391,12 @@ export type VentaProducto = {
   vendedor_nombre: string;
   /** Cliente, si se sabe */
   cliente_nombre?: string;
+  /** Cita en la que se cobró, si se vendió junto con el servicio */
+  cita_id?: string;
 };
+
+/** Producto que se lleva el cliente al cobrar su cita. */
+export type ProductoEnCobro = { id: string; producto_id: string; cantidad: number };
 
 /** Cierre de caja de un periodo: los números quedan congelados al hacerlo. */
 export type CorteCaja = {
@@ -605,7 +610,7 @@ export type Operacion =
       forzar?: boolean;
     }
   | { tipo: "cobrarEfectivo"; id: string }
-  | { tipo: "cobrarCita"; id: string; metodo: MetodoPago; propina?: number }
+  | { tipo: "cobrarCita"; id: string; metodo: MetodoPago; propina?: number; productos?: ProductoEnCobro[] }
   | { tipo: "marcarAsistida"; id: string }
   | { tipo: "cancelarCita"; id: string }
   | { tipo: "eliminarCita"; id: string }
@@ -684,6 +689,20 @@ export function idsDeServicio(datos: { servicio_ids?: unknown; servicio_id?: str
   return lista.slice(0, 8);
 }
 
+/**
+ * Nombre de varios servicios juntando los repetidos: dos cortes de niño
+ * quedan «2× Corte de niño», no «Corte de niño + Corte de niño».
+ */
+export function nombreDeServicios(servicios: Pick<Servicio, "id" | "nombre">[]) {
+  const cuenta = new Map<string, { nombre: string; n: number }>();
+  for (const sv of servicios) {
+    const x = cuenta.get(sv.id);
+    if (x) x.n += 1;
+    else cuenta.set(sv.id, { nombre: sv.nombre, n: 1 });
+  }
+  return [...cuenta.values()].map((x) => (x.n > 1 ? `${x.n}× ${x.nombre}` : x.nombre)).join(" + ");
+}
+
 /** Servicios de una cita ya guardada, en orden. */
 export function serviciosDeCita(c: Pick<Cita, "servicio_ids" | "servicio_id">): string[] {
   return idsDeServicio(c);
@@ -720,7 +739,7 @@ function servicioParaCita(estado: Estado, servicioIds: string[], barbero: Barber
   return {
     servicios,
     ids: servicios.map((x) => x.id),
-    nombre: servicios.map((x) => x.nombre).join(" + "),
+    nombre: nombreDeServicios(servicios),
     precio,
     duracion,
     comision,
@@ -836,6 +855,53 @@ function idNuevo(lista: { id: string }[], id: string) {
   if (typeof id !== "string" || id.length < 4 || id.length > 64 || lista.some((x) => x.id === id)) {
     throw new ErrorOperacion("Identificador inválido.", 400);
   }
+}
+
+/**
+ * Registra la venta de un producto y descuenta las piezas del almacén. Sin
+ * precio unitario se cobra el precio de venta del inventario.
+ */
+function nuevaVenta(
+  estado: Pick<Estado, "ventas" | "productos">,
+  v: {
+    id: string;
+    producto_id: string;
+    cantidad: unknown;
+    precio_unitario?: number;
+    metodo_pago: MetodoPago;
+    vendedor_id: string;
+    vendedor_nombre: string;
+    cliente_nombre?: string;
+    cita_id?: string;
+  }
+) {
+  idNuevo(estado.ventas, v.id);
+  const producto = buscar(estado.productos, v.producto_id, "Producto");
+  const cantidad = Math.round(Number(v.cantidad));
+  if (!Number.isFinite(cantidad) || cantidad < 1 || cantidad > 999) throw new ErrorOperacion("Cantidad inválida.", 400);
+  if (producto.existencias < cantidad) {
+    throw new ErrorOperacion(`Sólo quedan ${producto.existencias} de «${producto.nombre}».`, 409);
+  }
+  const unitario = v.precio_unitario ?? producto.precio_venta;
+  const cliente = typeof v.cliente_nombre === "string" ? v.cliente_nombre.trim().slice(0, 120) : "";
+  const venta: VentaProducto = {
+    id: v.id,
+    fecha: new Date().toISOString(),
+    producto_id: producto.id,
+    producto_nombre: producto.nombre,
+    cantidad,
+    precio_unitario: unitario,
+    total: unitario * cantidad,
+    metodo_pago: metodoValido(v.metodo_pago),
+    vendedor_id: v.vendedor_id,
+    vendedor_nombre: v.vendedor_nombre,
+    ...(cliente ? { cliente_nombre: cliente } : {}),
+    ...(v.cita_id ? { cita_id: v.cita_id } : {}),
+  };
+  return {
+    ventas: [venta, ...estado.ventas],
+    productos: estado.productos.map((p) => (p.id === producto.id ? { ...p, existencias: p.existencias - cantidad } : p)),
+  };
 }
 
 /**
@@ -1055,7 +1121,34 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
             : op.tipo === "marcarAsistida"
               ? { estado: "asistida", llegada_en: cita.llegada_en ?? new Date().toISOString() }
               : { estado: "cancelada" };
-      return { citas: estado.citas.map((c) => (c.id === op.id ? { ...c, ...cambios } : c)) };
+      const citas = estado.citas.map((c) => (c.id === op.id ? { ...c, ...cambios } : c));
+      if (op.tipo !== "cobrarCita" || !Array.isArray(op.productos) || op.productos.length === 0) return { citas };
+      // Productos que se lleva al pagar: quedan como ventas del barbero de la
+      // cita, con el mismo método de pago, y salen del almacén.
+      exigir(esStaff(s));
+      exigir(op.productos.length <= 20, "Demasiados productos en un cobro.");
+      let ventas = estado.ventas;
+      let productos = estado.productos;
+      const vendedor = estado.barberos.find((b) => b.id === cita.barbero_id);
+      for (const item of op.productos) {
+        exigir(item && typeof item === "object", "Venta inválida.");
+        const r = nuevaVenta(
+          { ventas, productos },
+          {
+            id: item.id,
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            metodo_pago: cambios.metodo_pago ?? "efectivo",
+            vendedor_id: vendedor?.id ?? s.id,
+            vendedor_nombre: vendedor?.nombre ?? cita.barbero_nombre ?? s.nombre,
+            cliente_nombre: cita.cliente_nombre,
+            cita_id: cita.id,
+          }
+        );
+        ventas = r.ventas;
+        productos = r.productos;
+      }
+      return { citas, ventas, productos };
     }
 
     case "eliminarCita":
@@ -1275,13 +1368,7 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
       exigir(puede(estado, s, "cobrar"), "No tienes permiso para registrar cobros.");
       const v = op.venta;
       exigir(v && typeof v === "object", "Venta inválida.");
-      idNuevo(estado.ventas, v.id);
       const producto = buscar(estado.productos, v.producto_id, "Producto");
-      const cantidad = Math.round(Number(v.cantidad));
-      if (!Number.isFinite(cantidad) || cantidad < 1 || cantidad > 999) throw new ErrorOperacion("Cantidad inválida.", 400);
-      if (producto.existencias < cantidad) {
-        throw new ErrorOperacion(`Sólo quedan ${producto.existencias} de «${producto.nombre}».`, 409);
-      }
       // El barbero sólo registra ventas a su nombre; el administrador elige quién vendió.
       let vendedorId = s.id;
       let vendedorNombre = s.nombre;
@@ -1290,24 +1377,16 @@ export function aplicarOperacion(estado: Estado, op: Operacion, s: Sesion): Part
         vendedorId = b.id;
         vendedorNombre = b.nombre;
       }
-      const unitario = s.rol === "admin" ? precioValido(v.precio_unitario, producto.precio_venta) : producto.precio_venta;
-      const venta: VentaProducto = {
+      return nuevaVenta(estado, {
         id: v.id,
-        fecha: new Date().toISOString(),
         producto_id: producto.id,
-        producto_nombre: producto.nombre,
-        cantidad,
-        precio_unitario: unitario,
-        total: unitario * cantidad,
+        cantidad: v.cantidad,
+        precio_unitario: s.rol === "admin" ? precioValido(v.precio_unitario, producto.precio_venta) : producto.precio_venta,
         metodo_pago: metodoValido(v.metodo_pago),
         vendedor_id: vendedorId,
         vendedor_nombre: vendedorNombre,
-        ...(v.cliente_nombre?.trim() ? { cliente_nombre: v.cliente_nombre.trim().slice(0, 120) } : {}),
-      };
-      return {
-        ventas: [venta, ...estado.ventas],
-        productos: estado.productos.map((p) => (p.id === producto.id ? { ...p, existencias: p.existencias - cantidad } : p)),
-      };
+        cliente_nombre: v.cliente_nombre,
+      });
     }
 
     case "eliminarVenta": {

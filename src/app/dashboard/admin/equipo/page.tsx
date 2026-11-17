@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BadgeDollarSign, CheckCircle2, Home, KeyRound, Loader2, LockKeyhole, Plus, Settings2, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
@@ -68,7 +69,7 @@ export default function EquipoBarberoPage() {
     return barberos.map((m, i) => ({ ...m, stats: resumen[i] }));
   }, [barberos, citas]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (!sesion || sesion.rol !== "admin") {
     return <SinSesion />;

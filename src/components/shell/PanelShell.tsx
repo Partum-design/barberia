@@ -28,6 +28,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import type { Rol, Sesion } from "@/lib/store";
 import { Marca } from "@/components/shell/Marca";
@@ -35,6 +36,7 @@ import { ValorVivo } from "@/components/panel/ModuleUI";
 import { CampanaAvisos } from "@/components/app/CampanaAvisos";
 import { TarjetaApp } from "@/components/app/TarjetaApp";
 import { BotonInstalarApp } from "@/components/app/BotonInstalarApp";
+import { repararApp } from "@/lib/reparar-app";
 
 type NavItem = { label: string; corto?: string; href: string; icon: React.ReactNode };
 
@@ -157,6 +159,7 @@ export function PanelShell({
             <Link
               key={item.label}
               href={item.href}
+              prefetch={false}
               aria-current={item.label === activo ? "page" : undefined}
               className={`app-nav-item ${item.label === activo ? "is-active" : ""}`}
             >
@@ -218,6 +221,7 @@ export function PanelShell({
             <Link
               key={item.label}
               href={item.href}
+              prefetch={false}
               aria-current={item.label === activo ? "page" : undefined}
               className={`app-mobile-item ${item.label === activo ? "is-active" : ""}`}
             >
@@ -258,6 +262,7 @@ export function PanelShell({
                   <Link
                     key={item.label}
                     href={item.href}
+              prefetch={false}
                     onClick={() => setMasAbierto(false)}
                     aria-current={item.label === activo ? "page" : undefined}
                     className={`app-sheet-item ${item.label === activo ? "is-active" : ""}`}
@@ -270,6 +275,15 @@ export function PanelShell({
               </div>
               <div className="app-sheet-extra">
                 <BotonInstalarApp variante="enlace" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasAbierto(false);
+                    void repararApp();
+                  }}
+                >
+                  <Wrench className="h-4 w-4" /> Reparar la app
+                </button>
                 <Link href="/" onClick={() => setMasAbierto(false)}>
                   <ExternalLink className="h-4 w-4" /> Ver página pública
                 </Link>

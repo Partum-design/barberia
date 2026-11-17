@@ -101,9 +101,15 @@ export async function ejecutarYComparar(op: Operacion, sesion: Sesion): Promise<
 
 /** Sesión de quien hace la petición, validada contra Supabase (no sólo la cookie). */
 export async function sesionDePeticion(): Promise<Sesion | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user ? sesionDesdeUsuario(user) : null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user ? sesionDesdeUsuario(user) : null;
+  } catch (err) {
+    // Supabase lento o caído: se trata como sin sesión y el navegador reintenta.
+    console.error("No se pudo validar la sesión:", err);
+    return null;
+  }
 }

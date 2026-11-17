@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { BadgeDollarSign, Check, CheckCircle2, Clock3, ListPlus, Pause, Pencil, Percent, Play, Plus, Tags, Trash2, Wallet } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EmptyState, Metric, ModulePanel, SinAcceso, moneda, numero } from "@/components/panel/ModuleUI";
@@ -60,7 +61,7 @@ export default function ServiciosPage() {
     return m;
   }, [citas]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   function eliminar(s: Servicio) {

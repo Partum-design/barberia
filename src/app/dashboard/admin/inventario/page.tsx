@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { AlertTriangle, Boxes, Check, Minus, PackageSearch, Pencil, Plus, Trash2, Warehouse, X } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import {
@@ -54,7 +55,7 @@ export default function InventarioPage() {
     };
   }, [productos]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   function cerrar() {

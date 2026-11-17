@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -116,7 +117,7 @@ export default function CajaPage() {
     return [...mapa.entries()].map(([categoria, monto]) => ({ categoria, monto })).sort((a, b) => b.monto - a.monto);
   }, [periodo.gastosPeriodo]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   function registrar(e: React.FormEvent) {

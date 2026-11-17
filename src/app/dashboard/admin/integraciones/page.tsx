@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Megaphone, Plug } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Metric, ModulePanel, SinAcceso } from "@/components/panel/ModuleUI";
@@ -111,7 +112,7 @@ export default function IntegracionesPage() {
     };
   }, []);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   const conectadas = estado ? Object.values(estado).filter((e) => e.conectada).length : 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useEffect, useMemo, useState } from "react";
 import { endOfDay, format, isToday, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -105,7 +106,7 @@ export default function CitasAdminPage() {
     return { total: filtradas.length, dias: [...porDia.entries()] };
   }, [citas, rango, estado, barbero, busqueda]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   async function eliminar(c: Cita) {

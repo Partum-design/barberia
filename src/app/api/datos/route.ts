@@ -6,12 +6,17 @@ import { sincronizarCitas } from "@/lib/integrations/google-calendar";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/datos — el estado de la barbería, recortado a lo que puede ver quien pregunta. */
+/**
+ * GET /api/datos — el estado de la barbería, recortado a lo que puede ver quien
+ * pregunta, junto con la sesión que el servidor reconoció. El navegador usa esa
+ * sesión como la verdadera: así nunca muestra un panel de administrador vacío
+ * porque el servidor lo trató como visitante.
+ */
 export async function GET() {
   try {
     const [sesion, { estado }] = await Promise.all([sesionDePeticion(), leerEstado()]);
     return NextResponse.json(
-      { estado: vistaPara(estado, sesion) },
+      { estado: vistaPara(estado, sesion), sesion },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {

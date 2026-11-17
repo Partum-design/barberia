@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useEffect, useState } from "react";
 import { Check, Home, Save, Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
@@ -37,7 +38,7 @@ export default function ConfiguracionBarberoPage() {
     }
   }, [barbero?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 

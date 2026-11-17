@@ -90,9 +90,15 @@ export type {
 // servidor lo rechaza, se recarga su versión y se muestra el motivo.
 // ============================================================================
 
-type Snapshot = { listo: boolean; sesion: Sesion | null; estado: Estado };
+type Snapshot = {
+  listo: boolean;
+  sesion: Sesion | null;
+  estado: Estado;
+  /** La última carga falló (sin conexión, servidor lento): las pantallas ofrecen reintentar. */
+  error: boolean;
+};
 
-let snapshot: Snapshot = { listo: false, sesion: null, estado: estadoVacio() };
+let snapshot: Snapshot = { listo: false, sesion: null, estado: estadoVacio(), error: false };
 const oyentes = new Set<() => void>();
 let iniciado = false;
 
@@ -132,16 +138,86 @@ function aplicarDelServidor(estado: Partial<Estado>) {
   recordarNegocio(normal.barberia);
 }
 
-let cargaEnCurso: Promise<void> | null = null;
+// ---------------------------------------------------------------------------
+// Carga de datos y sesión.
+//
+// Antes, el navegador y el servidor renovaban el token de sesión al mismo
+// tiempo (sobre todo al reabrir la app instalada después de horas). Supabase
+// sólo acepta cada token de renovación una vez: el segundo intento fallaba
+// («Refresh Token Already Used»), el servidor trataba a la persona como
+// visitante y el panel se quedaba vacío o en blanco.
+//
+// Ahora el orden es fijo: 1) el navegador renueva el token si venció (con
+// tiempo límite, para no colgarse nunca), 2) se piden los datos y la sesión
+// al servidor, que ya recibe el token fresco, y 3) si aun así el servidor no
+// reconoce la sesión pero el navegador sí la tiene, se reintenta una vez
+// antes de darla por terminada. Ninguna espera es infinita.
+// ---------------------------------------------------------------------------
 
-async function cargar() {
+type RespuestaDatos = { estado: Estado; sesion?: Sesion | null };
+
+const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+function conLimite<T>(promesa: Promise<T>, ms: number, respaldo: T): Promise<T> {
+  return Promise.race([promesa.catch(() => respaldo), esperar(ms).then(() => respaldo)]);
+}
+
+/** Renueva el token en el navegador si hace falta. Devuelve si hay sesión guardada. */
+async function prepararToken(): Promise<boolean> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return false;
+  return conLimite(
+    supabase.auth.getSession().then(({ data }) => Boolean(data.session)),
+    5000,
+    false
+  );
+}
+
+async function pedirDatos(): Promise<RespuestaDatos | null> {
+  const control = new AbortController();
+  const limite = setTimeout(() => control.abort(), 20_000);
+  try {
+    const res = await fetch("/api/datos", { cache: "no-store", credentials: "same-origin", signal: control.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as RespuestaDatos;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(limite);
+  }
+}
+
+let cargaEnCurso: Promise<boolean> | null = null;
+
+async function cargar(): Promise<boolean> {
   if (cargaEnCurso) return cargaEnCurso;
   cargaEnCurso = (async () => {
     try {
-      const res = await fetch("/api/datos", { cache: "no-store", credentials: "same-origin" });
-      if (res.ok) aplicarDelServidor(((await res.json()) as { estado: Estado }).estado);
+      const hayLocal = await prepararToken();
+      let r = await pedirDatos();
+      if (r && !r.sesion && hayLocal) {
+        // Otra pestaña o el servidor pudo estar renovando en ese instante.
+        await esperar(1500);
+        await prepararToken();
+        r = (await pedirDatos()) ?? r;
+      }
+      if (!r) {
+        publicar({ error: true });
+        return false;
+      }
+      const sesion = r.sesion ?? null;
+      // Con sesión de personal, nunca se reemplazan sus datos por la vista pública.
+      if (!sesion && snapshot.sesion && snapshot.sesion.rol !== "cliente" && hayLocal) {
+        publicar({ error: true });
+        return false;
+      }
+      publicar({ sesion, error: false });
+      aplicarDelServidor(r.estado);
+      return true;
     } catch (err) {
       console.error("No se pudieron cargar los datos", err);
+      publicar({ error: true });
+      return false;
     } finally {
       cargaEnCurso = null;
     }
@@ -149,13 +225,11 @@ async function cargar() {
   return cargaEnCurso;
 }
 
-async function sesionActual(): Promise<Sesion | null> {
-  const supabase = getSupabaseBrowser();
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return null;
-  const { sesionDesdeUsuario } = await import("@/lib/auth/roles");
-  return sesionDesdeUsuario(data.user);
+/** Vuelve a intentar la carga desde cero (botón «Reintentar»). */
+async function reintentar() {
+  publicar({ error: false });
+  const ok = await cargar();
+  if (ok) publicar({ listo: true });
 }
 
 function iniciar() {
@@ -163,13 +237,11 @@ function iniciar() {
   iniciado = true;
 
   const refrescarTodo = async () => {
-    const sesion = await sesionActual();
-    publicar({ sesion });
-    await cargar();
-    publicar({ listo: true });
+    const ok = await cargar();
+    if (ok) publicar({ listo: true });
   };
 
-  refrescarTodo();
+  void refrescarTodo();
 
   const supabase = getSupabaseBrowser();
   supabase?.auth.onAuthStateChange((evento) => {
@@ -181,14 +253,18 @@ function iniciar() {
 
   // Lo que hagan otros (una reserva nueva, una llegada confirmada en otro
   // teléfono, un cobro) llega al volver a la pestaña y, mientras está
-  // abierta, cada 10 segundos: los reportes y contadores se mueven solos.
-  window.addEventListener("focus", () => void cargar());
+  // abierta, cada 15 segundos: los reportes y contadores se mueven solos.
+  // Si la primera carga no se completó, cualquiera de estos la termina.
+  const alVolver = () => void refrescarTodo();
+  window.addEventListener("focus", alVolver);
+  window.addEventListener("online", alVolver);
+  window.addEventListener("pageshow", (e) => (e as PageTransitionEvent).persisted && alVolver());
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") void cargar();
+    if (document.visibilityState === "visible") alVolver();
   });
   window.setInterval(() => {
-    if (document.visibilityState === "visible") void cargar();
-  }, 10_000);
+    if (document.visibilityState === "visible") void refrescarTodo();
+  }, 15_000);
 }
 
 /**
@@ -248,8 +324,15 @@ function suscribir(f: () => void) {
 const leer = () => snapshot;
 
 // Hook principal: estado compartido + mutadores.
+/** Sólo el estado de la carga, para la pantalla de «Cargando…». */
+export function useCargaBarberia() {
+  const { listo, error } = useSyncExternalStore(suscribir, leer, leer);
+  useEffect(iniciar, []);
+  return { listo, error, reintentar };
+}
+
 export function useBarberia() {
-  const { listo, sesion, estado } = useSyncExternalStore(suscribir, leer, leer);
+  const { listo, sesion, estado, error } = useSyncExternalStore(suscribir, leer, leer);
 
   useEffect(iniciar, []);
 
@@ -268,6 +351,7 @@ export function useBarberia() {
 
   return {
     listo,
+    error,
     sesion,
     permisos,
     citas: estado.citas,
@@ -283,6 +367,7 @@ export function useBarberia() {
     tarjetas: estado.tarjetas,
     logout,
     recargar: cargar,
+    reintentar,
     horarioDeBarbero,
     crearCita,
     crearCitaPersonal,

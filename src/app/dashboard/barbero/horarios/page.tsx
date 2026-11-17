@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { Scissors } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { EditorHorario } from "@/components/panel/EditorHorario";
@@ -13,7 +14,7 @@ export default function HorariosPage() {
   const store = useBarberia();
   const { listo, sesion } = store;
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 

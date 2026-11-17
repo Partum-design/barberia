@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import {
   Area,
   AreaChart,
@@ -117,7 +118,7 @@ export default function MarketingPage() {
     return citas.filter((c) => citaActiva(c) && new Date(c.inicio).getTime() >= desde);
   }, [citas]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   return (

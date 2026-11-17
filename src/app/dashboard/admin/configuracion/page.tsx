@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useEffect, useState } from "react";
 import { Building2, Check, Clock3, Gift, Globe, Save, ShieldCheck } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
@@ -22,7 +23,7 @@ export default function ConfiguracionAdminPage() {
   useEffect(() => setBarberia(barberiaConfig), [barberiaConfig]);
   useEffect(() => setRecompensas(recompensasConfig), [recompensasConfig]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (!sesion || sesion.rol !== "admin") {
     return <SinSesion />;

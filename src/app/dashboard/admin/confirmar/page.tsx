@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { SinAcceso } from "@/components/panel/ModuleUI";
 import { ConfirmarCita } from "@/components/citas/ConfirmarCita";
@@ -15,7 +16,7 @@ export default function ConfirmarCitaAdminPage() {
     setCitaInicial(new URLSearchParams(window.location.search).get("cita"));
   }, []);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   return (

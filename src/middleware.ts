@@ -121,11 +121,24 @@ async function sesionYGuardas(req: NextRequest) {
   return respuesta;
 }
 
+function esPrecarga(req: NextRequest) {
+  return (
+    req.headers.get("next-router-prefetch") === "1" ||
+    req.headers.get("purpose") === "prefetch" ||
+    req.headers.get("sec-purpose")?.includes("prefetch") === true
+  );
+}
+
 export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return (await limitar(req)) ?? NextResponse.next();
   }
   if (!authConfigurada) return NextResponse.next();
+  // Las precargas de enlaces (el menú del panel tiene más de quince) no llevan
+  // datos: todo se pide después a /api/datos, que valida la sesión. Si cada
+  // precarga renovara el token, se dispararían muchas renovaciones a la vez con
+  // el mismo token y Supabase cerraría la sesión («Refresh Token Already Used»).
+  if (esPrecarga(req)) return NextResponse.next();
   return sesionYGuardas(req);
 }
 
@@ -135,8 +148,27 @@ export const config = {
     "/api/search/:path*",
     "/api/auth/registro",
     "/api/auth/telefono",
-    "/dashboard/:path*",
-    "/cuenta/:path*",
-    "/login",
+    // Páginas privadas, salvo las precargas de enlaces (ver `esPrecarga`).
+    {
+      source: "/dashboard/:path*",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+    {
+      source: "/cuenta/:path*",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+    {
+      source: "/login",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

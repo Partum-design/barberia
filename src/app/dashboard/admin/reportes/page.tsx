@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useEffect, useMemo, useState } from "react";
 import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -110,7 +111,7 @@ export default function ReportesPage() {
     };
   }, [citas, barberos]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (!sesion || sesion.rol !== "admin") {
     return <SinSesion />;

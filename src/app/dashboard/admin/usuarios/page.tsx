@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Crown, KeyRound, Loader2, Scissors, ShieldCheck, Trash2, User, UserPlus, Users, X } from "lucide-react";
@@ -97,7 +98,7 @@ export default function UsuariosPage() {
 
   const cuenta = (rol: Rol) => (cuentas ?? []).filter((c) => c.rol === rol).length;
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || !esAdmin) return <SinAcceso mensaje="Inicia sesión como administrador para ver este módulo" />;
 
   const tipos: Rol[] = principal ? ["cliente", "barbero", "admin"] : ["cliente", "barbero"];

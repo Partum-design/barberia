@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useMemo } from "react";
 import { Banknote, CalendarCheck, CalendarPlus, ScanLine, CheckCircle2, Circle, CreditCard, Gift, TrendingUp, UserPlus, Users } from "lucide-react";
 import { PanelShell, KpiPastel } from "@/components/shell/PanelShell";
@@ -35,7 +36,7 @@ export default function DashboardAdminPage() {
     };
   }, [citas, barberos, recompensasConfig]);
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (!sesion || sesion.rol !== "admin") {
     return (

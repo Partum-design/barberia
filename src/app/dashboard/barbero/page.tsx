@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useMemo, useState } from "react";
 import { format, isThisMonth, isToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -50,7 +51,7 @@ export default function DashboardBarberoPage() {
     mes,
   };
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (sesion && sesion.rol !== "barbero") return <OtroRol rol={sesion.rol} para="barberos" />;
 

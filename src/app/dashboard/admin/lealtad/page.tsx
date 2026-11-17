@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -83,7 +84,7 @@ export default function LealtadAdminPage() {
     [tarjetas, filas]
   );
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   const negocio = nombreDelNegocio(barberiaConfig);

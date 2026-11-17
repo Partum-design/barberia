@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -33,7 +34,7 @@ export default function DisponibilidadPage() {
     [barberos, citas, barberiaConfig, horarioDeBarbero]
   );
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || sesion.rol !== "admin") return <SinSesion />;
 
   const barbero = barberos.find((b) => b.id === elegido) ?? barberos[0] ?? null;

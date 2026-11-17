@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import QRCode from "qrcode";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -188,7 +189,7 @@ export default function RestablecerAdminPage() {
     }
   }
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
   if (!sesion || !esAdmin) return <SinAcceso mensaje="Inicia sesión como administrador para ver este módulo" />;
 
   const whatsapp = enlace

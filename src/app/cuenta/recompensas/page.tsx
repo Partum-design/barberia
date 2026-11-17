@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CargandoPanel } from "@/components/shell/CargandoPanel";
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -34,7 +35,7 @@ export default function RecompensasPage() {
     [citas, clienteId]
   );
 
-  if (!listo) return null;
+  if (!listo) return <CargandoPanel />;
 
   if (sesion && sesion.rol !== "cliente") return <OtroRol rol={sesion.rol} para="clientes" />;
 

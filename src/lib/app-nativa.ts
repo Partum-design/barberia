@@ -38,7 +38,16 @@ export function prepararAppNativa() {
   });
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker:", err));
+    // updateViaCache "none": el teléfono siempre pregunta si hay un sw.js nuevo.
+    navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((registro) => {
+        // La app instalada casi nunca se cierra: al volver a ella se busca versión nueva.
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") registro.update().catch(() => {});
+        });
+      })
+      .catch((err) => console.warn("Service worker:", err));
   }
 }
 

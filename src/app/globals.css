@@ -1523,6 +1523,7 @@ h1, h2, h3, .font-display {
 .data-table .num { font-family: var(--font-num); font-feature-settings: "tnum"; text-align: right; white-space: nowrap; }
 .data-table .strong { font-weight: 650; }
 .data-table td.muted { color: var(--ink-muted); }
+.data-table tfoot td { border-top: 2px solid var(--line-strong, var(--line)); background: rgb(247 147 30 / 0.05); }
 
 /* Barra de proporción dentro de tablas y listas */
 .share-bar { position: relative; height: 0.35rem; min-width: 3.5rem; overflow: hidden; border-radius: 999px; background: rgb(255 255 255 / 0.07); }

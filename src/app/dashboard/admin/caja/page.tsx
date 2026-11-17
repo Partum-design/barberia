@@ -278,6 +278,14 @@ export default function CajaPage() {
                 </div>
               </ModulePanel>
 
+              <ModulePanel titulo="Cobrado por persona" descripcion="Total general y lo que cobró cada quien en efectivo y tarjeta (servicios, propinas y productos)">
+                {datos.equipo.length === 0 ? (
+                  <EmptyState icono={<Banknote />}>Sin cobros ni ventas en el periodo.</EmptyState>
+                ) : (
+                  <TablaCobros equipo={datos.equipo} />
+                )}
+              </ModulePanel>
+
               <ModulePanel titulo="Equipo" descripcion="Lo que generó cada quien y lo que le toca (comisión + propinas)">
                 {datos.equipo.length === 0 ? (
                   <EmptyState icono={<Wallet />}>Sin cobros ni ventas en el periodo.</EmptyState>
@@ -423,6 +431,56 @@ export default function CajaPage() {
   );
 }
 
+/** Efectivo / tarjeta (y transferencia si hubo) por persona, con fila de total general. */
+function TablaCobros({ equipo }: { equipo: CorteCaja["equipo"] }) {
+  const filas = equipo.map((b) => {
+    const efectivo = b.efectivo ?? 0;
+    const tarjeta = b.tarjeta ?? 0;
+    const transferencia = b.transferencia ?? 0;
+    return { id: b.id, nombre: b.nombre, efectivo, tarjeta, transferencia, total: efectivo + tarjeta + transferencia };
+  });
+  const suma = filas.reduce(
+    (a, f) => ({ efectivo: a.efectivo + f.efectivo, tarjeta: a.tarjeta + f.tarjeta, transferencia: a.transferencia + f.transferencia, total: a.total + f.total }),
+    { efectivo: 0, tarjeta: 0, transferencia: 0, total: 0 }
+  );
+  const conTransferencia = suma.transferencia > 0;
+  return (
+    <div className="data-table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Quién</th>
+            <th className="num">Efectivo</th>
+            <th className="num">Tarjeta</th>
+            {conTransferencia && <th className="num">Transferencia</th>}
+            <th className="num">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr key={f.id}>
+              <td className="strong">{f.nombre}</td>
+              <td className="num">{moneda.format(f.efectivo)}</td>
+              <td className="num">{moneda.format(f.tarjeta)}</td>
+              {conTransferencia && <td className="num muted">{moneda.format(f.transferencia)}</td>}
+              <td className="num strong">{moneda.format(f.total)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td className="strong">Total general</td>
+            <td className="num strong">{moneda.format(suma.efectivo)}</td>
+            <td className="num strong">{moneda.format(suma.tarjeta)}</td>
+            {conTransferencia && <td className="num strong">{moneda.format(suma.transferencia)}</td>}
+            <td className="num strong">{moneda.format(suma.total)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 function TablaEquipo({ equipo }: { equipo: CorteCaja["equipo"] }) {
   return (
     <div className="data-table-wrap">
@@ -510,6 +568,11 @@ function FilaCorte({
             <div><dt>Cobros / piezas</dt><dd>{numero.format(c.citas)} / {numero.format(c.ventas)}</dd></div>
           </dl>
           {c.equipo.length > 0 && <TablaEquipo equipo={c.equipo} />}
+          {c.equipo.some((b) => b.efectivo !== undefined) && (
+            <div className="mt-2">
+              <TablaCobros equipo={c.equipo} />
+            </div>
+          )}
           {c.notas && <p className="mt-2 text-xs" style={{ color: "var(--ink-muted)" }}>Notas: {c.notas}</p>}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <button type="button" className="btn-linea is-sm" onClick={() => window.print()}>

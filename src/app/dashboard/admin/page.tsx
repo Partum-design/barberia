@@ -196,7 +196,7 @@ export default function DashboardAdminPage() {
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2" style={{ color: "var(--ink-muted)" }}>
-                  <CreditCard className="h-4 w-4 text-brand-500" /> Tarjeta (Stripe)
+                  <CreditCard className="h-4 w-4 text-brand-500" /> Tarjeta
                 </span>
                 <span className="font-medium tabular-nums">{stats.tarjetaCitas} citas</span>
               </div>

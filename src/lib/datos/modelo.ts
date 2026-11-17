@@ -421,8 +421,22 @@ export type CorteCaja = {
   /** Efectivo que se contó físicamente en caja, si se capturó */
   efectivo_contado?: number | null;
   notas?: string;
-  /** Por barbero: servicios, comisión, propinas y productos vendidos */
-  equipo: { id: string; nombre: string; servicios: number; comision: number; propinas: number; productos: number }[];
+  /**
+   * Por barbero: servicios, comisión, propinas, productos vendidos y cómo se
+   * le cobró (efectivo / tarjeta / transferencia: servicio + propina + productos).
+   * Los métodos faltan en cortes guardados antes de existir el desglose.
+   */
+  equipo: {
+    id: string;
+    nombre: string;
+    servicios: number;
+    comision: number;
+    propinas: number;
+    productos: number;
+    efectivo?: number;
+    tarjeta?: number;
+    transferencia?: number;
+  }[];
 };
 
 export type Gasto = {
@@ -1847,7 +1861,7 @@ export function calcularCorte(
   const metodo = { efectivo: 0, tarjeta: 0, transferencia: 0 } as Record<MetodoPago, number>;
   const equipo = new Map<string, CorteCaja["equipo"][number]>();
   const de = (id: string, nombre: string) => {
-    const e = equipo.get(id) ?? { id, nombre, servicios: 0, comision: 0, propinas: 0, productos: 0 };
+    const e = equipo.get(id) ?? { id, nombre, servicios: 0, comision: 0, propinas: 0, productos: 0, efectivo: 0, tarjeta: 0, transferencia: 0 };
     equipo.set(id, e);
     return e;
   };
@@ -1860,8 +1874,10 @@ export function calcularCorte(
     servicios += c.precio;
     propinas += propina;
     comisiones += comision;
-    metodo[metodoValido(c.metodo_pago)] += c.precio + propina;
+    const m = metodoValido(c.metodo_pago);
+    metodo[m] += c.precio + propina;
     const e = de(c.barbero_id, c.barbero_nombre);
+    e[m] = (e[m] ?? 0) + c.precio + propina;
     e.servicios += c.precio;
     e.comision += comision;
     e.propinas += propina;
@@ -1869,8 +1885,11 @@ export function calcularCorte(
   let productos = 0;
   for (const v of ventas) {
     productos += v.total;
-    metodo[metodoValido(v.metodo_pago)] += v.total;
-    de(v.vendedor_id, v.vendedor_nombre).productos += v.total;
+    const m = metodoValido(v.metodo_pago);
+    metodo[m] += v.total;
+    const e = de(v.vendedor_id, v.vendedor_nombre);
+    e.productos += v.total;
+    e[m] = (e[m] ?? 0) + v.total;
   }
   const totalGastos = gastos.reduce((a, g) => a + g.monto, 0);
   comisiones = Math.round(comisiones);

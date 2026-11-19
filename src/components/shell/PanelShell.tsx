@@ -187,6 +187,9 @@ export function PanelShell({
           <button onClick={salir} className="app-logout">
             <LogOut className="h-4 w-4" /> Cerrar sesión
           </button>
+          <Link href="/aviso-de-privacidad" className="app-privacidad">
+            Aviso de Privacidad
+          </Link>
         </div>
       </aside>
 
@@ -213,6 +216,9 @@ export function PanelShell({
         <div className="app-page">
           <TarjetaApp rol={sesion.rol} />
           {children}
+          <p className="app-privacidad-pie">
+            <Link href="/aviso-de-privacidad">Aviso de Privacidad</Link>
+          </p>
         </div>
 
         <nav className="app-mobile-nav" aria-label="Navegación móvil">

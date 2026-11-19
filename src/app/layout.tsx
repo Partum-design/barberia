@@ -61,11 +61,11 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "CortMart", statusBarStyle: "black" },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/iconos/icono-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/iconos/icono-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/iconos/icono-32-v2.png", type: "image/png", sizes: "32x32" },
+      { url: "/iconos/icono-192-v2.png", type: "image/png", sizes: "192x192" },
     ],
-    apple: "/iconos/apple-touch-icon.png",
+    apple: "/iconos/apple-touch-icon-v2.png",
   },
 };
 

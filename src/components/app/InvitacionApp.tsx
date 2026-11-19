@@ -301,7 +301,7 @@ export function InvitacionApp() {
         <div className="instalar-ficha" onPointerDown={alPresionar} onPointerMove={alMover} onPointerUp={alSoltar} onPointerCancel={alSoltar}>
           <span className="instalar-icono">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/iconos/icono-192.png" alt="" width={72} height={72} />
+            <img src="/iconos/icono-192-v2.png" alt="" width={72} height={72} />
           </span>
           <div className="min-w-0">
             <p className="instalar-nombre">CortMart</p>

@@ -25,8 +25,8 @@ self.addEventListener("push", (event) => {
       if (!mostrar) return;
       await self.registration.showNotification(titulo, {
         body: datos.cuerpo || "",
-        icon: "/iconos/icono-192.png",
-        badge: "/iconos/insignia-96.png",
+        icon: "/iconos/icono-192-v2.png",
+        badge: "/iconos/insignia-96-v2.png",
         data: { url: datos.url || "/" },
         tag: datos.url || undefined,
         renotify: true,

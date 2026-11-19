@@ -35,7 +35,7 @@ export function BotonInstalarApp({ variante = "tarjeta", className = "" }: { var
     <button type="button" className={`instalar-boton-tarjeta ${className}`} onClick={abrirInstalacion}>
       <span className="instalar-boton-logo" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/iconos/icono-192.png" alt="" width={48} height={48} />
+        <img src="/iconos/icono-192-v2.png" alt="" width={48} height={48} />
       </span>
       <span className="instalar-boton-texto">
         <b>Descarga la app</b>

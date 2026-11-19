@@ -8,6 +8,7 @@ import "./marca-bn.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 import { RegistrarApp } from "@/components/app/RegistrarApp";
+import { Precarga } from "@/components/shell/Precarga";
 import { InvitacionApp } from "@/components/app/InvitacionApp";
 
 // Display grotesk para titulares de producto
@@ -83,10 +84,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`dark ${outfit.variable} ${jakarta.variable} ${playfair.variable} ${bebas.variable} ${plexMono.variable} ${anton.variable}`}
     >
       <head>
+        <link rel="preload" href="/marca/logo-cm-blanco-recorte.png" as="image" />
         {/* Aplica las opciones de accesibilidad guardadas antes de pintar */}
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_ACCESIBILIDAD }} />
       </head>
       <body className="antialiased">
+        <Precarga />
         <a href="#contenido" className="skip-link">
           Saltar al contenido
         </a>

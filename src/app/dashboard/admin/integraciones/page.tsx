@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { BellRing, CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Mail, Megaphone, Plug } from "lucide-react";
+import { BellRing, CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Mail, Plug } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Metric, ModulePanel, SinAcceso } from "@/components/panel/ModuleUI";
-import {
-  GoogleAdsMark,
-  GoogleAnalyticsMark,
-  GoogleMark,
-  MercadoPagoMark,
-  MetaMark,
-  StripeMark,
-} from "@/components/payments/BrandMarks";
+import { GoogleMark, MercadoPagoMark, StripeMark } from "@/components/payments/BrandMarks";
 import { useBarberia } from "@/lib/store";
 import { WALLET_VISIBLE } from "@/lib/modo";
 
@@ -25,31 +18,10 @@ type Catalogo = {
   nombre: string;
   descripcion: string;
   logo: ReactNode;
-  grupo: "Marketing" | "Cobros" | "Operación";
+  grupo: "Cobros" | "Operación";
 };
 
 const CATALOGO_COMPLETO: Catalogo[] = [
-  {
-    id: "google-analytics",
-    nombre: "Google Analytics 4",
-    descripcion: "Audiencia, canales de adquisición y conversiones del sitio, con cuenta de servicio de solo lectura.",
-    logo: <GoogleAnalyticsMark />,
-    grupo: "Marketing",
-  },
-  {
-    id: "google-ads",
-    nombre: "Google Ads",
-    descripcion: "Campañas, inversión, CPA y términos de búsqueda vía GAQL sobre la API oficial.",
-    logo: <GoogleAdsMark />,
-    grupo: "Marketing",
-  },
-  {
-    id: "meta-ads",
-    nombre: "Meta Ads",
-    descripcion: "Campañas de Facebook e Instagram. El adaptador está declarado con el mismo contrato; se enciende definiendo sus variables.",
-    logo: <MetaMark />,
-    grupo: "Marketing",
-  },
   {
     id: "stripe",
     nombre: "Stripe",
@@ -101,6 +73,7 @@ const CATALOGO_COMPLETO: Catalogo[] = [
   },
 ];
 
+// Sólo lo que la barbería usa: lo de operación (activo) y los cobros.
 // Google Wallet se oculta hasta activarlo (ver WALLET_VISIBLE).
 const CATALOGO = CATALOGO_COMPLETO.filter((c) => WALLET_VISIBLE || c.id !== "google-wallet");
 
@@ -129,7 +102,7 @@ export default function IntegracionesPage() {
   if (!sesion || sesion.rol !== "admin") return <SinAcceso mensaje="Este módulo es del administrador" />;
 
   const conectadas = estado ? Object.values(estado).filter((e) => e.conectada).length : 0;
-  const grupos: Catalogo["grupo"][] = ["Marketing", "Cobros", "Operación"];
+  const grupos: Catalogo["grupo"][] = ["Operación", "Cobros"];
 
   return (
     <PanelShell sesion={sesion} activo="Integraciones" onLogout={store.logout}>
@@ -143,7 +116,6 @@ export default function IntegracionesPage() {
 
       <div className="metric-grid anim-in anim-d1">
         <Metric icono={<Plug />} label="Conectadas" valor={`${conectadas} / ${CATALOGO.length}`} nota="Con todas sus variables definidas" />
-        <Metric icono={<Megaphone />} label="Marketing" valor="3" nota="Google Analytics, Google Ads y Meta Ads" />
         <Metric icono={<CreditCard />} label="Cobros" valor="2" nota="Stripe y Mercado Pago" />
         <Metric icono={<CalendarDays />} label="Operación" valor="4" nota="Acceso con Google, Google Calendar, push y correo" />
       </div>

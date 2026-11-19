@@ -13,7 +13,7 @@ import { Modal } from "@/components/panel/Modal";
 import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { OtroRol } from "@/components/panel/ModuleUI";
-import { TarjetaGoogle } from "@/components/app/TarjetaGoogle";
+import { CuentasConectadas } from "@/components/app/CuentasConectadas";
 import { AvisoGoogle } from "@/components/app/AvisoGoogle";
 import { LogoGoogle } from "@/components/app/LogoGoogle";
 import { enlaceGoogleCalendar } from "@/lib/auth/google";
@@ -264,14 +264,15 @@ export default function CuentaPage() {
             )}
             <Link
               href="/cuenta/recompensas"
-              className="mt-4 inline-block text-sm font-medium text-white/90 underline-offset-4 hover:underline"
+              className="mt-4 inline-block text-sm font-semibold text-black/85 underline-offset-4 hover:underline"
             >
               Ver mi historial de recompensas →
             </Link>
           </div>
-          <TarjetaGoogle />
         </section>
       </div>
+
+      <CuentasConectadas volverA="/cuenta" />
 
       <Suspense fallback={null}>
         <SeguridadCuenta />

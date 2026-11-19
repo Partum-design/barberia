@@ -910,6 +910,9 @@ export function SitioNegocio() {
           </a>
         </p>
         <BotonInstalarApp variante="enlace" className="cm-footer-instalar" />
+        <Link href="/aviso-de-privacidad" className="cm-footer-privacidad">
+          Aviso de Privacidad
+        </Link>
         <Link href="/login" className="cm-admin-link">
           <LockKeyhole /> Administración
         </Link>

@@ -382,3 +382,8 @@ html[data-movimiento="reducido"] .precarga-barra::after { animation: none; }
 }
 .cm .cm-logo-mark,
 .cm .cm-footer-brand .cm-logo-mark { background: transparent; }
+
+/* Enlaces al Aviso de Privacidad */
+.cm .cm-footer-privacidad { display: inline-flex; align-items: center; min-height: 2.75rem; font-size: 0.9rem; color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; }
+.login-privacidad { margin-top: 0.75rem; text-align: center; font-size: 0.9rem; }
+.login-privacidad a { display: inline-flex; align-items: center; min-height: 2.75rem; color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; }

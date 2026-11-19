@@ -103,6 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <InvitacionApp />
         <footer className="site-footer">
           <Marca />
+          <a href="/aviso-de-privacidad">Aviso de Privacidad</a>
           <span>
             Desarrollado por{" "}
             <a href="https://partumdesign.com.mx" target="_blank" rel="noopener noreferrer">

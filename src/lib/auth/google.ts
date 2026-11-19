@@ -58,6 +58,35 @@ export async function vincularGoogleCalendar(volverA: string) {
   if (error) throw new Error(mensajeGoogle(error.message));
 }
 
+/**
+ * Liga Google como otra forma de entrar a la misma cuenta (quien entró con su
+ * número no crea una cuenta nueva). Requiere «Allow manual linking» en Supabase.
+ */
+export async function vincularCuentaGoogle(volverA: string) {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error("El acceso no está configurado.");
+  const { error } = await supabase.auth.linkIdentity({
+    provider: "google",
+    options: { redirectTo: callback({ next: volverA }), queryParams: { prompt: "select_account" } },
+  });
+  if (error) throw new Error(mensajeGoogle(error.message));
+}
+
+/** Quita Google como forma de entrar. Sigue entrando con su número o correo y contraseña. */
+export async function desvincularCuentaGoogle() {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error("El acceso no está configurado.");
+  const { data, error } = await supabase.auth.getUserIdentities();
+  if (error) throw new Error(mensajeGoogle(error.message));
+  const google = data?.identities.find((i) => i.provider === "google");
+  if (!google) return;
+  if ((data?.identities.length ?? 0) < 2) {
+    throw new Error("Google es tu única forma de entrar. Crea una contraseña antes de desvincularlo.");
+  }
+  const { error: e2 } = await supabase.auth.unlinkIdentity(google);
+  if (e2) throw new Error(mensajeGoogle(e2.message));
+}
+
 /** Enlace "Agregar a Google Calendar" para quien no vinculó su cuenta. */
 export function enlaceGoogleCalendar(cita: { inicio: string; fin: string; titulo: string; lugar?: string; detalle?: string }) {
   const f = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");

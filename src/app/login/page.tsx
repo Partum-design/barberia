@@ -496,6 +496,9 @@ function Acceso() {
           <p className="login-footnote">
             ¿Te registraron en la barbería o reservaste sólo con tu número? Escríbelo: la primera vez te pediremos crear tu contraseña.
           </p>
+          <p className="login-privacidad">
+            <Link href="/aviso-de-privacidad">Aviso de Privacidad</Link>
+          </p>
         </section>
       </div>
     </main>

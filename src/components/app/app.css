@@ -859,3 +859,40 @@ button.login-back { background: none; border: 0; cursor: pointer; }
 .aviso-vivo-cerrar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; margin: -0.35rem -0.35rem 0 0; color: rgba(255, 255, 255, 0.75); }
 .aviso-vivo-cerrar:hover { color: #ffffff; }
 html[data-movimiento="reducido"] .aviso-vivo { animation: none; }
+
+/* ── Cuentas conectadas: negro y blanco, un solo lugar ──────────────────── */
+.cuentas { margin-top: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.18); background: #0a0a0a; color: #ffffff; }
+.cuentas-head { padding: 1.1rem 1.2rem 0.9rem; border-bottom: 1px solid rgba(255, 255, 255, 0.18); }
+.cuentas-head h2 { font-family: var(--cm-sign, var(--font-display)); font-weight: 400; font-size: 1.5rem; letter-spacing: 0.02em; text-transform: uppercase; color: #ffffff; }
+.cuentas-head p { margin-top: 0.15rem; font-size: 0.9375rem; color: rgba(255, 255, 255, 0.7); }
+.cuentas-aviso, .cuentas-error { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0.9rem 1.2rem 0; padding: 0.7rem 0.85rem; font-size: 0.9375rem; }
+.cuentas-aviso { border: 1px solid rgba(92, 192, 141, 0.5); color: #ffffff; }
+.cuentas-aviso svg { width: 1.1rem; height: 1.1rem; flex: none; color: var(--ok, #5cc08d); }
+.cuentas-error { border: 1px solid rgba(224, 108, 100, 0.55); color: #ffd3cf; }
+.cuentas-lista { display: grid; }
+.cuentas-fila { display: grid; grid-template-columns: auto 1fr; gap: 0.6rem 0.9rem; align-items: start; padding: 1.1rem 1.2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.cuentas-fila:first-child { border-top: 0; }
+.cuentas-icono { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border: 1px solid rgba(255, 255, 255, 0.18); background: #000000; color: #ffffff; }
+.cuentas-icono svg { width: 1.2rem; height: 1.2rem; }
+.cuentas-titulo { font-weight: 700; font-size: 1rem; color: #ffffff; }
+.cuentas-detalle { margin-top: 0.1rem; font-size: 0.9rem; line-height: 1.45; color: rgba(255, 255, 255, 0.7); }
+.cuentas-estado { margin-top: 0.5rem; }
+.cuentas-chip { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.25rem 0.6rem; border: 1px solid rgba(255, 255, 255, 0.28); font-size: 0.85rem; font-weight: 600; color: #ffffff; overflow-wrap: anywhere; }
+.cuentas-chip svg { width: 0.95rem; height: 0.95rem; flex: none; }
+.cuentas-chip.is-ok { border-color: rgba(92, 192, 141, 0.6); }
+.cuentas-chip.is-ok svg { color: var(--ok, #5cc08d); }
+.cuentas-chip.is-mal { border-color: rgba(224, 108, 100, 0.6); color: #ffd3cf; }
+.cuentas-accion { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.cuentas-nota { font-size: 0.875rem; line-height: 1.4; color: rgba(255, 255, 255, 0.7); }
+.cuentas-enlace { min-height: 2.75rem; font-size: 0.9rem; color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; }
+.cuentas .google-boton.is-sm { width: auto; min-height: 2.75rem; padding: 0.5rem 1rem; font-size: 0.9rem; }
+.cuentas .btn-linea.is-sm, .cuentas .btn-gold.is-sm { min-height: 2.75rem; }
+/* Sin naranja aquí: el botón principal invierte a negro con borde blanco */
+@media (hover: hover) {
+  .cuentas .btn-gold:hover { background: #000000; color: #ffffff; border-color: #ffffff; box-shadow: 4px 4px 0 rgba(255, 255, 255, 0.25); }
+  .cuentas .btn-linea:hover { background: #ffffff; color: #000000; border-color: #ffffff; }
+}
+@media (min-width: 640px) {
+  .cuentas-fila { grid-template-columns: auto 1fr auto; align-items: center; }
+  .cuentas-accion { grid-column: 3; justify-content: flex-end; max-width: 16rem; }
+}

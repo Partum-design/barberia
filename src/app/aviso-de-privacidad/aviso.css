@@ -1,0 +1,19 @@
+/* Aviso de Privacidad: lectura larga, negro y blanco, texto ≥ 1rem */
+.aviso { min-height: 100vh; padding: 1.25rem clamp(1rem, 4vw, 3rem) 4rem; background: #000000; color: #ffffff; }
+.aviso-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 46rem; margin: 0 auto 2.5rem; }
+.aviso-marca { display: inline-flex; align-items: center; gap: 0.75rem; }
+.aviso-marca b { font-family: var(--cm-sign, var(--font-display)); font-weight: 400; font-size: 1.3rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.aviso-logo { display: block; width: 3.4rem; height: 4.2rem; }
+.aviso-volver { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; font-size: 0.95rem; color: #ffffff; }
+.aviso-volver svg { width: 1rem; height: 1rem; }
+.aviso-volver:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.aviso-cuerpo { max-width: 46rem; margin: 0 auto; font-size: 1.0625rem; line-height: 1.7; color: rgba(255, 255, 255, 0.86); }
+.aviso-kicker { font-family: var(--cm-sign, var(--font-display)); letter-spacing: 0.24em; text-transform: uppercase; font-size: 0.85rem; color: #ffffff; }
+.aviso-cuerpo h1 { margin: 0.25rem 0 0.4rem; font-family: var(--cm-sign, var(--font-display)); font-weight: 400; font-size: clamp(2.4rem, 7vw, 3.6rem); line-height: 1; text-transform: uppercase; color: #ffffff; }
+.aviso-fecha { margin-bottom: 1.75rem; font-size: 0.95rem; color: rgba(255, 255, 255, 0.62); }
+.aviso-cuerpo section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.aviso-cuerpo h2 { margin-bottom: 0.6rem; font-family: var(--cm-sign, var(--font-display)); font-weight: 400; font-size: 1.5rem; letter-spacing: 0.02em; text-transform: uppercase; color: #ffffff; }
+.aviso-cuerpo p + p { margin-top: 0.7rem; }
+.aviso-cuerpo ul { display: grid; gap: 0.45rem; margin: 0.6rem 0 0.8rem; padding-left: 1.2rem; list-style: square; }
+.aviso-cuerpo b { color: #ffffff; }
+.aviso-cuerpo a { color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; word-break: break-word; }

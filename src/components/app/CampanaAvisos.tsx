@@ -24,6 +24,18 @@ export function CampanaAvisos({ className = "" }: { className?: string }) {
   const raiz = useRef<HTMLDivElement>(null);
   const push = useNotificaciones();
 
+  // «Ver mis avisos» desde Cuentas conectadas abre la campana visible.
+  useEffect(() => {
+    const abrirDesdeFuera = () => {
+      if (raiz.current && raiz.current.offsetParent !== null) {
+        setAbierta(true);
+        void marcarLeidos();
+      }
+    };
+    window.addEventListener("avisos:abrir", abrirDesdeFuera);
+    return () => window.removeEventListener("avisos:abrir", abrirDesdeFuera);
+  }, []);
+
   useEffect(() => {
     if (!abierta) return;
     const fuera = (e: MouseEvent) => !raiz.current?.contains(e.target as Node) && setAbierta(false);

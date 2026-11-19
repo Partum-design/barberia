@@ -1,12 +1,15 @@
 /* ==========================================================================
-   CortMart en negro y blanco (noviembre 2026), con el monograma CM nuevo.
+   CortMart (noviembre 2026), con el monograma CM nuevo.
 
    Última hoja que se carga: fija la paleta y los componentes de marca sobre
    las anteriores. Reglas:
-   · Fondo negro, superficies en grises, tinta blanca. El acento es el blanco.
-   · Sólo dos colores de estado: verde (confirmada, éxito) y rojo (cancelada,
-     error). Nada de naranja, dorado ni crema.
-   · Bordes nítidos, sombras duras, sin degradados suaves.
+   · Base negra con tinta blanca y el monograma en blanco y negro: es la
+     estructura. El color entra en el acento y en las fotos.
+   · Acento: el naranja de letrero de CortMart, en detalles (filetes,
+     etiquetas, indicadores, precios, interruptores, hover del botón).
+     El botón principal sigue blanco: es lo que más contrasta.
+   · Fotos a todo color. Estados: verde (éxito) y rojo (error).
+   · Bordes nítidos, sombras duras.
    · Logotipo: negro sobre fondo claro, blanco sobre fondo oscuro.
    ========================================================================== */
 
@@ -29,40 +32,44 @@ html.dark {
   --line: rgba(255, 255, 255, 0.1);
   --line-strong: rgba(255, 255, 255, 0.18);
 
-  /* Los nombres viejos del acento apuntan al blanco */
-  --gold: #ffffff;
-  --gold-soft: #ffffff;
-  --gold-deep: #ffffff;
-  --brass-50: #ffffff;
-  --brass-100: #ffffff;
-  --brass-800: #3a3a3a;
-  --vital: #ffffff;
-  --pulse: #ffffff;
-  --signal: #ffffff;
-  --barberial: #ffffff;
-  --deep: #ffffff;
-  --oxblood: #000000;
-  --oxblood-soft: #2a2a2a;
-  --warn: #d4d4d4;
+  /* Acento de color: naranja de letrero (contraste ≥ 7:1 sobre negro) */
+  --acento: #f7931e;
+  --acento-vivo: #ff9a2e;
+  --acento-suave: rgba(247, 147, 30, 0.14);
+  --gold: var(--acento);
+  --gold-soft: #ffc067;
+  --gold-deep: #e8820f;
+  --brass-50: #ffe2bd;
+  --brass-100: #ffc067;
+  --brass-800: #7a3d08;
+  --vital: var(--acento);
+  --pulse: #e8820f;
+  --signal: var(--acento-vivo);
+  --barberial: #e2780c;
+  --deep: #e8820f;
+  --oxblood: #8f3320;
+  --oxblood-soft: #b0453a;
+  --warn: #e8b04a;
   --ok: #5cc08d;
   --danger: #e06c64;
 
-  --cm-orange: #ffffff;
-  --cm-orange-hot: #ffffff;
-  --cm-orange-deep: #ffffff;
+  --cm-orange: var(--acento);
+  --cm-orange-hot: var(--acento-vivo);
+  --cm-orange-deep: #e8820f;
   --cm-ink-dark: #000000;
-  --glow-brass: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --glow-brass: 0 0 0 1px rgba(247, 147, 30, 0.25), 0 18px 44px -24px rgba(247, 147, 30, 0.45);
   --sombra-dura: 4px 4px 0 #000000;
 
-  accent-color: #ffffff;
+  accent-color: var(--acento);
 }
 
-::selection { background: #ffffff; color: #000000; }
+::selection { background: var(--acento); color: #000000; }
 
-/* Fondo: negro con el muro apenas insinuado; sin resplandores de color */
+/* Fondo: negro con el muro insinuado y una luz cálida de foco arriba */
 body {
   background:
-    radial-gradient(ellipse 70% 45% at 85% -10%, rgba(255, 255, 255, 0.04), transparent 62%),
+    radial-gradient(ellipse 70% 45% at 85% -10%, rgba(255, 122, 18, 0.12), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 0% 105%, rgba(247, 147, 30, 0.06), transparent 60%),
     radial-gradient(130% 100% at 50% 40%, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.96) 75%),
     var(--cm-brick) 0 0 / 120px 60px,
     #000000;
@@ -90,10 +97,11 @@ body {
   .btn-gold:hover,
   .cm .cm-btn:not(.cm-btn-ghost):hover,
   .cm-btn:not(.cm-btn-ghost):hover {
-    background: #000000;
-    color: #ffffff;
+    background: var(--acento);
+    border-color: var(--acento);
+    color: #000000;
     filter: none;
-    box-shadow: 4px 4px 0 rgba(255, 255, 255, 0.35);
+    box-shadow: 4px 4px 0 #000000;
   }
 }
 .btn-gold:focus-visible,
@@ -114,7 +122,7 @@ body {
 @media (hover: hover) {
   .btn-linea:hover,
   .cm .cm-btn-ghost:hover,
-  .cm-btn-ghost:hover { background: #ffffff; color: #000000; border-color: #ffffff; }
+  .cm-btn-ghost:hover { background: #000000; color: var(--acento); border-color: var(--acento); }
 }
 .btn-linea.is-danger { color: var(--danger); border-color: var(--danger); }
 
@@ -126,8 +134,10 @@ body {
   color: #000000;
   box-shadow: none;
 }
+.app-nav-item.is-active { box-shadow: inset 4px 0 0 var(--acento); }
 .app-nav-item.is-active .app-nav-icon,
 .app-mobile-item.is-active svg { color: #000000; }
+.app-nav-item:not(.is-active):hover .app-nav-icon { color: var(--acento); }
 
 /* ── Marca: monograma sin placa de color ──────────────────────────────── */
 .app-brand-mark,
@@ -151,12 +161,12 @@ body {
 .app-brand::after {
   height: 4px;
   border-radius: 0;
-  background-image: repeating-linear-gradient(-55deg, #ffffff 0 6px, #000000 6px 12px);
+  background-image: repeating-linear-gradient(-55deg, #ffffff 0 6px, var(--acento) 6px 12px, #ffffff 12px 18px, #000000 18px 24px);
   opacity: 0.9;
 }
 .rule-chevron,
 .landing-hero::after {
-  background-image: repeating-linear-gradient(-55deg, #ffffff 0 0.5rem, #000000 0.5rem 1rem);
+  background-image: repeating-linear-gradient(-55deg, #ffffff 0 0.5rem, var(--acento) 0.5rem 1rem, #ffffff 1rem 1.5rem, #000000 1.5rem 2rem);
   border-radius: 0;
 }
 
@@ -171,8 +181,8 @@ body {
   letter-spacing: -0.005em;
   color: #ffffff;
 }
-.app-page > header::after { background: #ffffff; height: 4px; width: 5rem; }
-.module-panel-head p:first-child { color: #ffffff; }
+.app-page > header::after { background: linear-gradient(90deg, var(--acento), transparent); height: 4px; width: 7rem; }
+.module-panel-head p:first-child { color: var(--acento); }
 
 /* ── Marca de agua del monograma: portada y login ─────────────────────── */
 .cm .cm-hero::after,
@@ -202,12 +212,12 @@ body {
   opacity: 0.06;
 }
 
-/* Fotos de la portada en blanco y negro, con contraste */
+/* Fotos a todo color, con un poco más de viveza */
 .cm .cm-hero-photo img,
 .cm .cm-frame img,
 .cm .cm-barber img,
 .cm .cm-gallery img,
-.cm-tienda-pagina img:not(.logo-cm) { filter: grayscale(1) contrast(1.08); }
+.cm-tienda-pagina img:not(.logo-cm) { filter: saturate(1.12) contrast(1.04); }
 
 /* ── Superficies: tarjetas nítidas sobre negro ────────────────────────── */
 .module-panel,
@@ -221,11 +231,11 @@ body {
 /* ── Campana y aviso en pantalla ──────────────────────────────────────── */
 .campana-boton { background: #000000; border-color: rgba(255, 255, 255, 0.18); color: #ffffff; }
 .campana-boton:hover { border-color: #ffffff; }
-.campana-punto { background: #ffffff; color: #000000; box-shadow: 0 0 0 2px #000000; }
+.campana-punto { background: var(--acento); color: #000000; box-shadow: 0 0 0 2px #000000; }
 .campana-panel { background: #000000; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 0; box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.08); }
 .campana-panel li a:hover { background: rgba(255, 255, 255, 0.06); }
-.campana-panel li.is-nueva a { box-shadow: inset 3px 0 0 #ffffff; }
-.campana-activar { color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; }
+.campana-panel li.is-nueva a { box-shadow: inset 3px 0 0 var(--acento); }
+.campana-activar { color: var(--acento); text-decoration: underline; text-underline-offset: 0.2em; }
 
 /* ── Interruptores: pista blanca encendida, perilla negra ─────────────── */
 .alta-switch.is-on i::after,
@@ -233,8 +243,7 @@ body {
 .permiso-fila[aria-checked="true"] .permiso-switch::after { background: #000000; }
 .reserva-servicio.is-elegido .reserva-servicio-check { color: #000000; }
 
-/* Login: foto en blanco y negro y titulares en mayúsculas */
-.login-story { filter: grayscale(1) contrast(1.05); }
+/* Login: titulares en mayúsculas (la foto va a todo color) */
 .login-title-lg,
 .login-story-title { text-transform: uppercase; letter-spacing: -0.005em; }
 /* El monograma de agua también detrás del formulario */
@@ -256,3 +265,50 @@ body {
 .cm .cm-logo-mark,
 .login-brand-mark { flex: none; width: 2.75rem; height: 2.75rem; }
 .app-mobile-mark { flex: none; width: 2.25rem; height: 2.25rem; }
+
+/* ── Color con intención ──────────────────────────────────────────────── */
+/* Enlaces de texto y etiquetas pequeñas toman el acento */
+.kicker,
+.login-kicker,
+.cm .cm-eyebrow,
+.booking-hero .kicker { color: var(--acento); }
+.app-page a:not([class]):hover,
+.login-access a:not([class]):hover { color: var(--acento); }
+/* Iconos de las métricas con el acento */
+.metric-grid svg { color: var(--acento); }
+/* Foco del teclado visible y con color */
+:focus-visible { outline-color: var(--acento); }
+/* Aviso en pantalla: icono con el acento */
+.aviso-vivo { border-color: rgba(247, 147, 30, 0.45); }
+.aviso-vivo-icono { background: var(--acento); color: #000000; }
+
+/* ── Portada con color: estrellas, reseñas, nombres y fotos ───────────── */
+html:root { --estrella: #ffc531; }
+.cm .cm-stars { color: var(--estrella); filter: drop-shadow(0 0 6px rgba(255, 197, 49, 0.35)); }
+.cm .cm-rating strong { color: var(--estrella); }
+.cm .cm-rating:hover { border-color: var(--estrella); }
+
+/* Reseñas: tarjeta central con filo naranja y avatar de color por autor */
+.cm .cm-reviews { background: radial-gradient(60% 50% at 50% 40%, rgba(247, 147, 30, 0.14), transparent 70%), var(--cm-bg); }
+.cm .cm-review { background: linear-gradient(180deg, #17110b, #0a0a0a); border-color: rgba(247, 147, 30, 0.28); }
+.cm .cm-review.is-center { border-color: var(--acento); box-shadow: 0 30px 70px -24px rgba(247, 147, 30, 0.45); }
+.cm .cm-review-quote { background: var(--acento); color: #000000; }
+.cm .cm-review footer b { color: var(--acento); font-size: 1.02rem; }
+.cm .cm-review footer { border-top-color: rgba(247, 147, 30, 0.25); }
+.cm .cm-review-avatar { color: #000000; font-weight: 700; }
+.cm .cm-review:nth-child(5n + 1) .cm-review-avatar { background: #f7931e; }
+.cm .cm-review:nth-child(5n + 2) .cm-review-avatar { background: #5cc08d; }
+.cm .cm-review:nth-child(5n + 3) .cm-review-avatar { background: #6db3ff; }
+.cm .cm-review:nth-child(5n + 4) .cm-review-avatar { background: #ffc531; }
+.cm .cm-review:nth-child(5n + 5) .cm-review-avatar { background: #f08a9b; }
+
+/* Nombres: barberos, servicios y productos con el acento */
+.cm .cm-barber h3 { color: var(--acento); }
+.cm .cm-barber-role { color: var(--estrella); }
+.cm .cm-service h3,
+.cm .cm-prod h3 { color: var(--acento); }
+.cm .cm-prod-precio { -webkit-text-fill-color: currentColor; background: none; color: var(--estrella); }
+.cm .cm-barber-avatar { background: conic-gradient(from 0deg, var(--acento), #ffc531, #5cc08d, #6db3ff, var(--acento)); }
+
+/* Titular de portada: la segunda palabra en naranja de letrero */
+.cm .cm-hero-title .is-accent { background: linear-gradient(180deg, #ffd08a, var(--acento) 55%, #e8820f); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }

@@ -23,8 +23,8 @@ const mxnCompact = new Intl.NumberFormat("es-MX", { style: "currency", currency:
 
 // Paleta categórica validada (dataviz skill): pasos claros para superficie
 // clara, pasos oscuros para superficie oscura — mismo orden, sin ciclarla.
-const CATEGORICAL_LIGHT = ["#161616", "#2c2c2c", "#2a2a2a", "#B4432A", "#838383"];
-const CATEGORICAL_DARK = ["#a2a2a2", "#838383", "#B4432A", "#2a2a2a", "#2c2c2c"];
+const CATEGORICAL_LIGHT = ["#c25e0a", "#2f8f5f", "#2563c9", "#b4432a", "#7c4dcc"];
+const CATEGORICAL_DARK = ["#f7931e", "#5cc08d", "#6db3ff", "#e06c64", "#c9a2ff"];
 const INK_MUTED_LIGHT = "#6b6b6b";
 const INK_MUTED_DARK = "#cccccc";
 const GRID_LIGHT = "#dddddd";

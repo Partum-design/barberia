@@ -125,7 +125,7 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={5.5}
-          color="#ffffff"
+          color="#fff0d2"
           position={[3.2, 3.4, 2.6]}
           rotation={[-Math.PI / 4, Math.PI / 5, 0]}
           scale={[7, 3, 1]}
@@ -134,7 +134,7 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={3.1}
-          color="#ffffff"
+          color="#f7931e"
           position={[-4.2, 0.6, 2.2]}
           rotation={[0, Math.PI / 2.4, 0]}
           scale={[6, 4, 1]}
@@ -143,7 +143,7 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={2.6}
-          color="#2a2a2a"
+          color="#8f3320"
           position={[-1.4, -1.8, -4]}
           rotation={[Math.PI / 2.6, 0, 0]}
           scale={[6, 3, 1]}
@@ -164,7 +164,7 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={2.4}
-          color="#ffffff"
+          color="#f7ecd8"
           position={[0, 0.5, 6.5]}
           rotation={[0, 0, 0]}
           scale={[13, 11, 1]}
@@ -173,21 +173,21 @@ function RigDeLuz() {
         <Lightformer
           form="rect"
           intensity={0.85}
-          color="#3c3c3c"
+          color="#4a3a22"
           position={[0, -4, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           scale={[10, 10, 1]}
         />
       </Environment>
-      <directionalLight position={[3, 5, 4]} intensity={0.9} color="#ffffff" />
-      <directionalLight position={[-4, -1, 3]} intensity={0.35} color="#ffffff" />
+      <directionalLight position={[3, 5, 4]} intensity={0.9} color="#fff4dd" />
+      <directionalLight position={[-4, -1, 3]} intensity={0.35} color="#f7931e" />
     </>
   );
 }
 
 /** Latón pulido de la marca. */
 export const MATERIAL_LATON = {
-  color: "#a3a3a3",
+  color: "#c9a057",
   metalness: 1,
   roughness: 0.17,
   clearcoat: 0.55,
@@ -197,7 +197,7 @@ export const MATERIAL_LATON = {
 
 /** Latón mate para piezas secundarias (tornillos, casquillos). */
 export const MATERIAL_LATON_MATE = {
-  color: "#858585",
+  color: "#a8823f",
   metalness: 1,
   roughness: 0.34,
   envMapIntensity: 1.1,
@@ -210,7 +210,7 @@ export const MATERIAL_LATON_MATE = {
  * acero y mantiene la hoja legible.
  */
 export const MATERIAL_ACERO = {
-  color: "#cecece",
+  color: "#c8cfd6",
   metalness: 0.94,
   roughness: 0.16,
   clearcoat: 0.35,

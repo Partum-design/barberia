@@ -43,9 +43,9 @@ function Franjas() {
   const helices = useMemo(
     () =>
       [
-        { color: "#5f1d10", rugosidad: 0.5, metal: 0.12, desfase: 0 },
-        { color: "#ece2cf", rugosidad: 0.44, metal: 0.04, desfase: (Math.PI * 2) / 3 },
-        { color: "#c9a057", rugosidad: 0.22, metal: 0.9, desfase: (Math.PI * 4) / 3 },
+        { color: "#2a2a2a", rugosidad: 0.5, metal: 0.12, desfase: 0 },
+        { color: "#e3e3e3", rugosidad: 0.44, metal: 0.04, desfase: (Math.PI * 2) / 3 },
+        { color: "#a3a3a3", rugosidad: 0.22, metal: 0.9, desfase: (Math.PI * 4) / 3 },
       ].map((franja) => ({
         ...franja,
         geometria: new THREE.TubeGeometry(curvaHelice(franja.desfase), 220, 0.078, 14, false),
@@ -64,7 +64,7 @@ function Franjas() {
       {/* Núcleo marfil sobre el que se apoyan las hélices */}
       <mesh>
         <cylinderGeometry args={[0.288, 0.288, ALTO, 48]} />
-        <meshPhysicalMaterial color="#efe6d4" roughness={0.45} metalness={0.05} clearcoat={0.4} />
+        <meshPhysicalMaterial color="#e7e7e7" roughness={0.45} metalness={0.05} clearcoat={0.4} />
       </mesh>
       {helices.map((h) => (
         <mesh key={h.desfase} geometry={h.geometria} castShadow>

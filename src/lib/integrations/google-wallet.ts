@@ -77,7 +77,7 @@ function idObjeto(numero: string) {
 }
 
 function construirClase(datos: DatosPase, origen: string) {
-  const logo = process.env.GOOGLE_WALLET_LOGO_URL || `${origen}/wallet/logo`;
+  const logo = process.env.GOOGLE_WALLET_LOGO_URL || `${origen}/marca/logo-cm-wallet.png`;
   return {
     id: idClase(),
     issuerName: datos.negocio.nombre,
@@ -95,7 +95,7 @@ function construirClase(datos: DatosPase, origen: string) {
         defaultValue: { language: "es-MX", value: `Interior de ${datos.negocio.nombre}` },
       },
     },
-    hexBackgroundColor: process.env.GOOGLE_WALLET_COLOR || "#1a0f08",
+    hexBackgroundColor: process.env.GOOGLE_WALLET_COLOR || "#000000",
     countryCode: "MX",
     reviewStatus: "UNDER_REVIEW",
     localizedIssuerName: {

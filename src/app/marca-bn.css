@@ -1,0 +1,258 @@
+/* ==========================================================================
+   CortMart en negro y blanco (noviembre 2026), con el monograma CM nuevo.
+
+   Última hoja que se carga: fija la paleta y los componentes de marca sobre
+   las anteriores. Reglas:
+   · Fondo negro, superficies en grises, tinta blanca. El acento es el blanco.
+   · Sólo dos colores de estado: verde (confirmada, éxito) y rojo (cancelada,
+     error). Nada de naranja, dorado ni crema.
+   · Bordes nítidos, sombras duras, sin degradados suaves.
+   · Logotipo: negro sobre fondo claro, blanco sobre fondo oscuro.
+   ========================================================================== */
+
+html:root,
+html.dark {
+  --surface-0: #000000;
+  --surface-1: #0a0a0a;
+  --surface-2: #111111;
+  --surface-3: #1a1a1a;
+  --surface-4: #222222;
+  --bg: #000000;
+  --card: #111111;
+  --night: #111111;
+
+  --ink: #ffffff;
+  --ink-muted: rgba(255, 255, 255, 0.62);
+  /* 0.55 y no 0.4: así el texto auxiliar pasa 4.5:1 incluso sobre #222 */
+  --ink-faint: rgba(255, 255, 255, 0.55);
+  --ink-ghost: rgba(255, 255, 255, 0.4);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.18);
+
+  /* Los nombres viejos del acento apuntan al blanco */
+  --gold: #ffffff;
+  --gold-soft: #ffffff;
+  --gold-deep: #ffffff;
+  --brass-50: #ffffff;
+  --brass-100: #ffffff;
+  --brass-800: #3a3a3a;
+  --vital: #ffffff;
+  --pulse: #ffffff;
+  --signal: #ffffff;
+  --barberial: #ffffff;
+  --deep: #ffffff;
+  --oxblood: #000000;
+  --oxblood-soft: #2a2a2a;
+  --warn: #d4d4d4;
+  --ok: #5cc08d;
+  --danger: #e06c64;
+
+  --cm-orange: #ffffff;
+  --cm-orange-hot: #ffffff;
+  --cm-orange-deep: #ffffff;
+  --cm-ink-dark: #000000;
+  --glow-brass: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --sombra-dura: 4px 4px 0 #000000;
+
+  accent-color: #ffffff;
+}
+
+::selection { background: #ffffff; color: #000000; }
+
+/* Fondo: negro con el muro apenas insinuado; sin resplandores de color */
+body {
+  background:
+    radial-gradient(ellipse 70% 45% at 85% -10%, rgba(255, 255, 255, 0.04), transparent 62%),
+    radial-gradient(130% 100% at 50% 40%, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.96) 75%),
+    var(--cm-brick) 0 0 / 120px 60px,
+    #000000;
+  background-attachment: fixed;
+  color: var(--ink);
+}
+
+/* ── Botón principal: placa blanca, texto negro, mayúsculas ───────────── */
+.btn-gold,
+.cm .cm-btn:not(.cm-btn-ghost),
+.cm-btn:not(.cm-btn-ghost) {
+  border: 2px solid #ffffff;
+  border-radius: 0;
+  clip-path: none;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: var(--sombra-dura);
+  filter: none;
+}
+.cm .cm-btn::after, .cm-btn::after { display: none; }
+@media (hover: hover) {
+  .btn-gold:hover,
+  .cm .cm-btn:not(.cm-btn-ghost):hover,
+  .cm-btn:not(.cm-btn-ghost):hover {
+    background: #000000;
+    color: #ffffff;
+    filter: none;
+    box-shadow: 4px 4px 0 rgba(255, 255, 255, 0.35);
+  }
+}
+.btn-gold:focus-visible,
+.cm-btn:focus-visible,
+.btn-linea:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+
+/* ── Botón secundario: negro con borde blanco ─────────────────────────── */
+.btn-linea,
+.cm .cm-btn-ghost,
+.cm-btn-ghost {
+  border: 1.5px solid #ffffff;
+  border-radius: 0;
+  background: #000000;
+  color: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+@media (hover: hover) {
+  .btn-linea:hover,
+  .cm .cm-btn-ghost:hover,
+  .cm-btn-ghost:hover { background: #ffffff; color: #000000; border-color: #ffffff; }
+}
+.btn-linea.is-danger { color: var(--danger); border-color: var(--danger); }
+
+/* ── Navegación del panel: activo en blanco plano ─────────────────────── */
+.app-nav-item.is-active,
+.app-mobile-item.is-active,
+.mode-tab.is-active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: none;
+}
+.app-nav-item.is-active .app-nav-icon,
+.app-mobile-item.is-active svg { color: #000000; }
+
+/* ── Marca: monograma sin placa de color ──────────────────────────────── */
+.app-brand-mark,
+.app-mobile-mark,
+.login-brand-mark,
+.cm-logo-mark {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  overflow: hidden;
+}
+.app-brand-mark .logo-cm,
+.app-mobile-mark .logo-cm,
+.login-brand-mark .logo-cm,
+.cm-logo-mark .logo-cm { width: 88%; height: 88%; }
+.app-brand-pulse { display: none; }
+
+/* Cinta bajo el logotipo del sidebar: rayas diagonales blancas y negras */
+.app-brand::after {
+  height: 4px;
+  border-radius: 0;
+  background-image: repeating-linear-gradient(-55deg, #ffffff 0 6px, #000000 6px 12px);
+  opacity: 0.9;
+}
+.rule-chevron,
+.landing-hero::after {
+  background-image: repeating-linear-gradient(-55deg, #ffffff 0 0.5rem, #000000 0.5rem 1rem);
+  border-radius: 0;
+}
+
+/* ── Titulares: condensados, mayúsculas, tracking apretado ────────────── */
+.app-page > header h1,
+.panel-hero-title,
+.login-story-copy h1,
+.login-access h2,
+.booking-hero-copy h1,
+.cm .cm-hero-title {
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  color: #ffffff;
+}
+.app-page > header::after { background: #ffffff; height: 4px; width: 5rem; }
+.module-panel-head p:first-child { color: #ffffff; }
+
+/* ── Marca de agua del monograma: portada y login ─────────────────────── */
+.cm .cm-hero::after,
+.login-page::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background: url("/marca/logo-cm-blanco.png") center / contain no-repeat;
+}
+.cm .cm-hero::after {
+  z-index: -1;
+  right: -6%;
+  top: 50%;
+  width: min(78vw, 46rem);
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  opacity: 0.1;
+}
+.login-page { position: relative; isolation: isolate; overflow: hidden; background: #000000; }
+.login-page::before {
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: min(120vw, 60rem);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+}
+
+/* Fotos de la portada en blanco y negro, con contraste */
+.cm .cm-hero-photo img,
+.cm .cm-frame img,
+.cm .cm-barber img,
+.cm .cm-gallery img,
+.cm-tienda-pagina img:not(.logo-cm) { filter: grayscale(1) contrast(1.08); }
+
+/* ── Superficies: tarjetas nítidas sobre negro ────────────────────────── */
+.module-panel,
+.panel-card,
+.login-shell { border-color: var(--line-strong); }
+
+/* Estados: sólo verde y rojo */
+.badge-ok, .estado-confirmada, .is-confirmada { color: var(--ok); }
+.badge-danger, .estado-cancelada, .is-cancelada { color: var(--danger); }
+
+/* ── Campana y aviso en pantalla ──────────────────────────────────────── */
+.campana-boton { background: #000000; border-color: rgba(255, 255, 255, 0.18); color: #ffffff; }
+.campana-boton:hover { border-color: #ffffff; }
+.campana-punto { background: #ffffff; color: #000000; box-shadow: 0 0 0 2px #000000; }
+.campana-panel { background: #000000; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 0; box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.08); }
+.campana-panel li a:hover { background: rgba(255, 255, 255, 0.06); }
+.campana-panel li.is-nueva a { box-shadow: inset 3px 0 0 #ffffff; }
+.campana-activar { color: #ffffff; text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ── Interruptores: pista blanca encendida, perilla negra ─────────────── */
+.alta-switch.is-on i::after,
+.interruptor-pista.is-on span,
+.permiso-fila[aria-checked="true"] .permiso-switch::after { background: #000000; }
+.reserva-servicio.is-elegido .reserva-servicio-check { color: #000000; }
+
+/* Login: foto en blanco y negro y titulares en mayúsculas */
+.login-story { filter: grayscale(1) contrast(1.05); }
+.login-title-lg,
+.login-story-title { text-transform: uppercase; letter-spacing: -0.005em; }
+/* El monograma de agua también detrás del formulario */
+.login-access { position: relative; isolation: isolate; }
+.login-access::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -12%;
+  bottom: -10%;
+  width: 70%;
+  aspect-ratio: 1;
+  background: url("/marca/logo-cm-blanco.png") center / contain no-repeat;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* Monograma con tamaño fijo: que no se aplaste en la cabecera móvil */
+.cm .cm-logo-mark,
+.login-brand-mark { flex: none; width: 2.75rem; height: 2.75rem; }
+.app-mobile-mark { flex: none; width: 2.25rem; height: 2.25rem; }

@@ -24,7 +24,7 @@ export type DatosImagenQr = {
 
 const ANCHO = 1080;
 const ALTO = 1440;
-const NARANJA = "#f7931e";
+const ACENTO = "#ffffff";
 
 async function dibujar(d: DatosImagenQr): Promise<Blob> {
   const lienzo = document.createElement("canvas");
@@ -33,17 +33,17 @@ async function dibujar(d: DatosImagenQr): Promise<Blob> {
   const ctx = lienzo.getContext("2d");
   if (!ctx) throw new Error("Tu navegador no puede generar la imagen.");
 
-  ctx.fillStyle = "#0c0806";
+  ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, ANCHO, ALTO);
-  ctx.strokeStyle = NARANJA;
+  ctx.strokeStyle = ACENTO;
   ctx.lineWidth = 6;
   ctx.strokeRect(36, 36, ANCHO - 72, ALTO - 72);
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "#f6eee4";
+  ctx.fillStyle = "#efefef";
   ctx.font = "bold 76px system-ui, sans-serif";
   ctx.fillText(d.titulo.toUpperCase(), ANCHO / 2, 170, ANCHO - 140);
-  ctx.fillStyle = NARANJA;
+  ctx.fillStyle = ACENTO;
   ctx.font = "600 40px system-ui, sans-serif";
   ctx.fillText(d.subtitulo.toUpperCase(), ANCHO / 2, 235, ANCHO - 140);
 
@@ -57,18 +57,18 @@ async function dibujar(d: DatosImagenQr): Promise<Blob> {
     width: lado,
     margin: 0,
     errorCorrectionLevel: "M",
-    color: { dark: "#120802", light: "#ffffff" },
+    color: { dark: "#000000", light: "#ffffff" },
   });
   ctx.drawImage(qr, x, y, lado, lado);
 
-  ctx.fillStyle = "rgba(246, 238, 228, 0.7)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
   ctx.font = "500 34px system-ui, sans-serif";
   ctx.fillText("CÓDIGO", ANCHO / 2, y + lado + 110);
-  ctx.fillStyle = "#f6eee4";
+  ctx.fillStyle = "#efefef";
   ctx.font = "bold 72px ui-monospace, monospace";
   ctx.fillText(d.codigo, ANCHO / 2, y + lado + 190, ANCHO - 140);
 
-  ctx.fillStyle = "rgba(246, 238, 228, 0.85)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
   ctx.font = "500 38px system-ui, sans-serif";
   (d.detalles ?? []).slice(0, 3).forEach((linea, i) => {
     ctx.fillText(linea, ANCHO / 2, y + lado + 265 + i * 52, ANCHO - 140);

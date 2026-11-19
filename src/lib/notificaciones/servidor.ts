@@ -2,6 +2,7 @@ import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolverRol } from "@/lib/auth/roles";
 import type { Cita, Estado, Operacion, Sesion } from "@/lib/datos/modelo";
+import { correosDeCita, type TipoCorreo } from "@/lib/notificaciones/correo";
 
 // ---------------------------------------------------------------------------
 // Avisos: se guardan en la bandeja de cada persona (campana del panel) y, si
@@ -82,6 +83,12 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
   const avisar = (ids: (string | null | undefined)[], aviso: Aviso) =>
     envios.push(notificar(ids.filter((x): x is string => Boolean(x) && x !== s.id), aviso));
   const servicio = (c: Cita) => c.servicio_nombre || "Cita";
+  // Correo en paralelo con el push, una sola vez por operación. Quien hizo el
+  // cambio no se lo manda a sí mismo, salvo la confirmación de su reserva.
+  const correo = (tipo: TipoCorreo, c: Cita, para: ("cliente" | "barbero")[]) => {
+    const destino = para.filter((p) => tipo === "nueva" || (p === "cliente" ? c.cliente_id : c.barbero_id) !== s.id);
+    envios.push(correosDeCita(tipo, c, despues, destino));
+  };
 
   switch (op.tipo) {
     case "crearCita":
@@ -95,6 +102,7 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
       };
       avisar([c.barbero_id], { ...aviso, url: "/dashboard/barbero" });
       avisar(admins, { ...aviso, url: "/dashboard/admin/citas" });
+      correo("nueva", c, ["cliente", "barbero"]);
       envios.push(notificar([c.cliente_id], { titulo: "¡Cita confirmada!", cuerpo: `${servicio(c)} con ${c.barbero_nombre}, ${cuando(c.inicio)}. Muestra tu QR al llegar; pagas con transferencia, tarjeta o efectivo.`, url: "/cuenta" }));
       break;
     }
@@ -111,6 +119,7 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
         cuerpo: `${c.cliente_nombre} · ${servicio(c)}, ${cuando(c.inicio)}`,
         url: "/dashboard/barbero",
       });
+      correo("agendada", c, ["cliente", "barbero"]);
       break;
     }
     case "cancelarCita":
@@ -123,6 +132,7 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
         avisar([c.cliente_id], { ...aviso, url: "/cuenta" });
         avisar([c.barbero_id], { ...aviso, url: "/dashboard/barbero" });
         if (s.rol === "cliente") avisar(await idsDeAdmins(), { ...aviso, url: "/dashboard/admin/citas" });
+        correo("cancelada", c, ["cliente", "barbero"]);
       } else if (c.estado === "confirmada" && (a.inicio !== c.inicio || a.barbero_id !== c.barbero_id)) {
         avisar([c.cliente_id], {
           titulo: "Tu cita cambió",
@@ -134,6 +144,9 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
           cuerpo: `${c.cliente_nombre} · ${cuando(c.inicio)} con ${c.barbero_nombre}`,
           url: "/dashboard/barbero",
         });
+        correo("cambio", c, ["cliente", "barbero"]);
+        // Si cambió de barbero, el anterior se entera de que ya no la tiene.
+        if (a.barbero_id !== c.barbero_id && a.barbero_id !== s.id) envios.push(correosDeCita("cancelada", a, antes, ["barbero"]));
       } else if (c.estado === "asistida" && a.estado !== "asistida") {
         avisar([c.cliente_id], { titulo: "¡Gracias por tu visita!", cuerpo: "Sumamos un sello a tu tarjeta de lealtad.", url: "/cuenta/tarjeta" });
       }
@@ -150,5 +163,5 @@ export async function avisosDeOperacion(op: Operacion, antes: Estado, despues: E
     default:
       break;
   }
-  await Promise.all(envios);
+  await Promise.allSettled(envios);
 }

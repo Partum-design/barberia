@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, BellRing, CheckCheck } from "lucide-react";
 import { useNotificaciones } from "@/lib/app-nativa";
+import { marcarLeidos, useAvisos } from "@/lib/avisos-en-vivo";
 import "./app.css";
-
-type Aviso = { id: string; titulo: string; cuerpo: string; url: string; leida: boolean; creado_en: string };
 
 const hace = (iso: string) => {
   const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -20,34 +19,10 @@ const hace = (iso: string) => {
 
 /** Campana con la bandeja de avisos: citas nuevas, cambios, cancelaciones y recordatorios. */
 export function CampanaAvisos({ className = "" }: { className?: string }) {
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [sinLeer, setSinLeer] = useState(0);
+  const { avisos, sinLeer } = useAvisos();
   const [abierta, setAbierta] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
   const push = useNotificaciones();
-
-  const cargar = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notificaciones", { cache: "no-store", credentials: "same-origin" });
-      if (!res.ok) return;
-      const d = (await res.json()) as { avisos: Aviso[]; sinLeer: number };
-      setAvisos(d.avisos);
-      setSinLeer(d.sinLeer);
-    } catch {
-      /* sin conexión: se intenta en la siguiente vuelta */
-    }
-  }, []);
-
-  useEffect(() => {
-    void cargar();
-    const t = window.setInterval(() => document.visibilityState === "visible" && void cargar(), 30_000);
-    const alVolver = () => document.visibilityState === "visible" && void cargar();
-    document.addEventListener("visibilitychange", alVolver);
-    return () => {
-      window.clearInterval(t);
-      document.removeEventListener("visibilitychange", alVolver);
-    };
-  }, [cargar]);
 
   useEffect(() => {
     if (!abierta) return;
@@ -64,11 +39,7 @@ export function CampanaAvisos({ className = "" }: { className?: string }) {
   async function abrir() {
     const siguiente = !abierta;
     setAbierta(siguiente);
-    if (siguiente && sinLeer > 0) {
-      setSinLeer(0);
-      await fetch("/api/notificaciones", { method: "POST", credentials: "same-origin" }).catch(() => {});
-      setAvisos((l) => l.map((a) => ({ ...a, leida: true })));
-    }
+    if (siguiente) await marcarLeidos();
   }
 
   return (

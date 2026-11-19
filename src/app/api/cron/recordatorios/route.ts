@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { leerEstado } from "@/lib/datos/servidor";
 import { cuando, notificar } from "@/lib/notificaciones/servidor";
+import { correoAgendaDelDia, correosDeCita } from "@/lib/notificaciones/correo";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,8 @@ const HORA = new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City",
 
 /**
  * GET /api/cron/recordatorios — lo llama Vercel Cron cada mañana (vercel.json).
- * A cada cliente le recuerda su cita del día y a cada barbero le resume su agenda.
+ * A cada cliente le recuerda su cita del día y a cada barbero le resume su agenda,
+ * por push, campana y correo (si tienen correo registrado).
  */
 export async function GET(req: NextRequest) {
   const secreto = process.env.CRON_SECRET;
@@ -33,6 +35,7 @@ export async function GET(req: NextRequest) {
         url: "/cuenta",
       })
     );
+    envios.push(correosDeCita("recordatorio", c, estado, ["cliente"]));
   }
   const porBarbero = new Map<string, typeof deHoy>();
   for (const c of deHoy) porBarbero.set(c.barbero_id, [...(porBarbero.get(c.barbero_id) ?? []), c]);
@@ -44,6 +47,7 @@ export async function GET(req: NextRequest) {
         url: "/dashboard/barbero",
       })
     );
+    envios.push(correoAgendaDelDia(barberoId, citas, estado));
   }
   await Promise.allSettled(envios);
   return NextResponse.json({ ok: true, citas: deHoy.length });

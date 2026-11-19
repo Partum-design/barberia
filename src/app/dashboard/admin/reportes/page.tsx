@@ -23,12 +23,12 @@ const mxnCompact = new Intl.NumberFormat("es-MX", { style: "currency", currency:
 
 // Paleta categórica validada (dataviz skill): pasos claros para superficie
 // clara, pasos oscuros para superficie oscura — mismo orden, sin ciclarla.
-const CATEGORICAL_LIGHT = ["#10162E", "#5C2015", "#8F3320", "#B4432A", "#A5822F"];
-const CATEGORICAL_DARK = ["#CBA135", "#A5822F", "#B4432A", "#8F3320", "#5C2015"];
-const INK_MUTED_LIGHT = "#756A5A";
-const INK_MUTED_DARK = "#E2C7C0";
-const GRID_LIGHT = "#E6DCC8";
-const GRID_DARK = "#5C2015";
+const CATEGORICAL_LIGHT = ["#161616", "#2c2c2c", "#2a2a2a", "#B4432A", "#838383"];
+const CATEGORICAL_DARK = ["#a2a2a2", "#838383", "#B4432A", "#2a2a2a", "#2c2c2c"];
+const INK_MUTED_LIGHT = "#6b6b6b";
+const INK_MUTED_DARK = "#cccccc";
+const GRID_LIGHT = "#dddddd";
+const GRID_DARK = "#2c2c2c";
 
 function useEsDark() {
   const [esOscuro, setEsOscuro] = useState(false);
@@ -146,7 +146,7 @@ export default function ReportesPage() {
                   <CartesianGrid horizontal={false} stroke={grid} />
                   <XAxis type="number" tickFormatter={(v) => mxnCompact.format(v)} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
                   <YAxis type="category" dataKey="nombre" width={90} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
-                  <Tooltip content={<TooltipCard formatter={(v) => mxn.format(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)" }} />
+                  <Tooltip content={<TooltipCard formatter={(v) => mxn.format(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(23,23,23,0.04)" }} />
                   <Bar dataKey="ingresos" name="Ingresos" radius={[0, 4, 4, 0]} barSize={22} label={{ position: "right", fill: inkMuted, fontSize: 11, formatter: (v) => mxnCompact.format(Number(v)) }}>
                     {datos.porBarbero.map((_, i) => (
                       <Cell key={i} fill={cat[i % cat.length]} />
@@ -166,7 +166,7 @@ export default function ReportesPage() {
                 <CartesianGrid horizontal={false} stroke={grid} />
                 <XAxis type="number" tickFormatter={(v) => mxnCompact.format(v)} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
                 <YAxis type="category" dataKey="metodo" width={90} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
-                <Tooltip content={<TooltipCard formatter={(v) => mxn.format(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)" }} />
+                <Tooltip content={<TooltipCard formatter={(v) => mxn.format(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(23,23,23,0.04)" }} />
                 <Bar dataKey="ingresos" name="Ingresos" radius={[0, 4, 4, 0]} barSize={28} label={{ position: "right", fill: inkMuted, fontSize: 11, formatter: (v) => mxnCompact.format(Number(v)) }}>
                   <Cell fill={cat[0]} />
                   <Cell fill={cat[1]} />
@@ -184,7 +184,7 @@ export default function ReportesPage() {
                 <CartesianGrid vertical={false} stroke={grid} />
                 <XAxis dataKey="fecha" tick={{ fill: inkMuted, fontSize: 11 }} axisLine={{ stroke: grid }} tickLine={false} interval={1} />
                 <YAxis allowDecimals={false} tick={{ fill: inkMuted, fontSize: 12 }} axisLine={{ stroke: grid }} tickLine={false} />
-                <Tooltip content={<TooltipCard formatter={(v) => String(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)" }} />
+                <Tooltip content={<TooltipCard formatter={(v) => String(v)} />} cursor={{ fill: esOscuro ? "rgba(255,255,255,0.04)" : "rgba(23,23,23,0.04)" }} />
                 <Bar dataKey="atendidas" name="Atendidas" stackId="d" fill={cat[0]} barSize={18} />
                 <Bar dataKey="faltas" name="No asistió" stackId="d" fill={cat[2]} />
                 <Bar dataKey="agendadas" name="Por llegar" stackId="d" fill={cat[1]} radius={[4, 4, 0, 0]} />

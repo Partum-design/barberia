@@ -28,6 +28,9 @@ const REQUISITOS: Record<string, string[]> = {
   "mercado-pago": ["MERCADOPAGO_ACCESS_TOKEN", "NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY"],
   "google-auth": ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
   "google-calendar": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  push: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
+  // Reutiliza el cliente OAuth de google-calendar (GOOGLE_CLIENT_ID / SECRET).
+  "correo-gmail": ["GMAIL_SENDER", "GMAIL_REFRESH_TOKEN"],
   "google-wallet": [
     "GOOGLE_WALLET_ISSUER_ID",
     "GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL",

@@ -284,7 +284,7 @@ export default function EquipoBarberoPage() {
                 <dd className="font-semibold">{m.acepta_domicilio ? "Sí" : "No"}</dd>
               </div>
             </dl>
-            <dl className="mb-4 grid grid-cols-3 gap-2 rounded-2xl p-3 text-sm" style={{ background: "rgba(247,147,30,0.06)" }}>
+            <dl className="mb-4 grid grid-cols-3 gap-2 rounded-2xl p-3 text-sm" style={{ background: "rgba(255,255,255,0.06)" }}>
               <div>
                 <dt className="text-xs" style={{ color: "var(--ink-muted)" }}>Atendidas</dt>
                 <dd className="font-semibold">{m.stats.atendidas}</dd>

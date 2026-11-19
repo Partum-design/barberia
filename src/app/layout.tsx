@@ -4,6 +4,7 @@ import "./globals.css";
 import "./tema-cortmart.css";
 import "./correcciones-qa.css";
 import "./experiencia-movil.css";
+import "./marca-bn.css";
 import { Marca } from "@/components/shell/Marca";
 import { Accesibilidad, SCRIPT_ACCESIBILIDAD } from "@/components/a11y/Accesibilidad";
 import { RegistrarApp } from "@/components/app/RegistrarApp";
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0806",
+  themeColor: "#000000",
   colorScheme: "dark",
   // Para respetar la barra del iPhone (zona segura) en la app instalada.
   viewportFit: "cover",

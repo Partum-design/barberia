@@ -1,34 +1,10 @@
-import { ImageResponse } from "next/og";
-
-export const runtime = "edge";
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Logotipo PNG para el programa de lealtad en Google Wallet, que no acepta
- * SVG: las iniciales de CortMart sobre su naranja. Se sustituye por el
- * logo real con GOOGLE_WALLET_LOGO_URL.
+ * Logotipo del programa de lealtad en Google Wallet: el monograma CM en blanco
+ * sobre negro (public/marca/logo-cm-wallet.png). Se conserva esta ruta para
+ * los pases que ya apuntan aquí; se sustituye con GOOGLE_WALLET_LOGO_URL.
  */
-export function GET() {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          // Wallet muestra el logo recortado en círculo: fondo naranja a sangre
-          background: "#f7931e",
-          color: "#120802",
-          fontSize: 270,
-          letterSpacing: -6,
-          // Satori no trae negritas: el trazo se engrosa con sombras
-          textShadow: "4px 0 0 #120802, -4px 0 0 #120802, 0 4px 0 #120802, 0 -4px 0 #120802, 3px 3px 0 #120802, -3px -3px 0 #120802, 3px -3px 0 #120802, -3px 3px 0 #120802",
-        }}
-      >
-        CM
-      </div>
-    ),
-    { width: 660, height: 660, headers: { "Cache-Control": "public, max-age=86400" } }
-  );
+export function GET(req: NextRequest) {
+  return NextResponse.redirect(new URL("/marca/logo-cm-wallet.png", req.url), 308);
 }

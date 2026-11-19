@@ -37,7 +37,7 @@ export function TarjetaLealtadVisual({
       type: "svg",
       margin: 0,
       errorCorrectionLevel: "M",
-      color: { dark: "#14100b", light: "#00000000" },
+      color: { dark: "#101010", light: "#00000000" },
     }).then((svg) => vivo && setQr(svg));
     return () => {
       vivo = false;

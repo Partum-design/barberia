@@ -33,6 +33,8 @@ import type { Rol, Sesion } from "@/lib/store";
 import { Marca } from "@/components/shell/Marca";
 import { ValorVivo } from "@/components/panel/ModuleUI";
 import { CampanaAvisos } from "@/components/app/CampanaAvisos";
+import { ToastAvisos } from "@/components/app/ToastAvisos";
+import { LogoCM } from "@/components/shell/LogoCM";
 import { TarjetaApp } from "@/components/app/TarjetaApp";
 import { BotonInstalarApp } from "@/components/app/BotonInstalarApp";
 
@@ -140,8 +142,7 @@ export function PanelShell({
       <aside className="app-sidebar anim-in">
         <Link href="/" className="app-brand">
           <span className="app-brand-mark">
-            <span className="app-brand-pulse" />
-            <Scissors className="h-4 w-4" />
+            <LogoCM />
           </span>
           <span className="leading-none">
             <Marca className="block max-w-[10rem] truncate text-sm font-semibold uppercase tracking-[0.2em] text-white" />
@@ -192,7 +193,7 @@ export function PanelShell({
       <div className="app-main">
         <header className="app-mobile-header anim-in">
           <Link href="/" className="flex min-w-0 items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white" style={{ fontFamily: "var(--font-serif)" }}>
-            <span className="app-mobile-mark"><Scissors className="h-3.5 w-3.5" /></span>
+            <span className="app-mobile-mark"><LogoCM /></span>
             <Marca className="max-w-[11rem] truncate uppercase" />
           </Link>
           <div className="flex items-center gap-2">
@@ -208,6 +209,7 @@ export function PanelShell({
           </div>
         </header>
 
+        <ToastAvisos />
         <div className="app-page">
           <TarjetaApp rol={sesion.rol} />
           {children}

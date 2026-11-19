@@ -111,7 +111,7 @@ function MitadTijera({
             tijeras profesionales */}
         <mesh scale={[1.16, 1, 0.4]}>
           <torusGeometry args={[radioOjo - 0.05, 0.022, 14, 64]} />
-          <meshPhysicalMaterial {...MATERIAL_LATON_MATE} color="#3a2a15" metalness={0.2} roughness={0.6} />
+          <meshPhysicalMaterial {...MATERIAL_LATON_MATE} color="#2c2c2c" metalness={0.2} roughness={0.6} />
         </mesh>
       </group>
 
@@ -144,7 +144,7 @@ function Pivote() {
           {/* Ranura del destornillador */}
           <mesh position={[0, 0, z > 0 ? 0.017 : -0.017]}>
             <boxGeometry args={[0.15, 0.02, 0.006]} />
-            <meshStandardMaterial color="#20180c" roughness={0.85} metalness={0.1} />
+            <meshStandardMaterial color="#191919" roughness={0.85} metalness={0.1} />
           </mesh>
         </group>
       ))}
@@ -228,7 +228,7 @@ export function Navaja({ escala = 0.5 }: { escala?: number }) {
         {[0.062, -0.062].map((z) => (
           <mesh key={z} position={[-0.86, 0.2, z]} rotation={[0, 0, 0.16]} castShadow>
             <boxGeometry args={[1.6, 0.2, 0.038]} />
-            <meshPhysicalMaterial color="#1c150c" metalness={0.35} roughness={0.42} clearcoat={0.8} />
+            <meshPhysicalMaterial color="#161616" metalness={0.35} roughness={0.42} clearcoat={0.8} />
           </mesh>
         ))}
         <mesh position={[-1.62, 0.31, 0]} rotation={[Math.PI / 2, 0, 0]}>

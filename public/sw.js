@@ -12,15 +12,27 @@ self.addEventListener("push", (event) => {
   }
   const titulo = datos.titulo || "CortMart";
   event.waitUntil(
-    self.registration.showNotification(titulo, {
-      body: datos.cuerpo || "",
-      icon: "/iconos/icono-192.png",
-      badge: "/iconos/insignia-96.png",
-      data: { url: datos.url || "/" },
-      tag: datos.url || undefined,
-      renotify: true,
-      vibrate: [80, 40, 120],
-    })
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      // Con la app abierta y al frente, el aviso sale dentro de la página y no
+      // como notificación del sistema: se ve una sola vez. Safari (iPhone)
+      // exige mostrar siempre la notificación; ahí la página sólo actualiza la
+      // campana sin repetir el aviso.
+      const alFrente = ventanas.some((v) => v.visibilityState === "visible" && v.focused);
+      const exigeNotificacion = /iPhone|iPad|Macintosh/.test(self.navigator.userAgent) && !/Chrome|Android/.test(self.navigator.userAgent);
+      const mostrar = !alFrente || exigeNotificacion;
+      ventanas.forEach((v) => v.postMessage({ tipo: "cortmart:aviso", mostrada: mostrar }));
+      if (!mostrar) return;
+      await self.registration.showNotification(titulo, {
+        body: datos.cuerpo || "",
+        icon: "/iconos/icono-192.png",
+        badge: "/iconos/insignia-96.png",
+        data: { url: datos.url || "/" },
+        tag: datos.url || undefined,
+        renotify: true,
+        vibrate: [80, 40, 120],
+      });
+    })()
   );
 });
 

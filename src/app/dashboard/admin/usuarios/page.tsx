@@ -227,7 +227,7 @@ export default function UsuariosPage() {
           <ul className="divide-y divide-white/10">
             {visibles.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-500 font-semibold text-[#120802]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-500 font-semibold text-[#000000]">
                   {c.nombre.charAt(0).toUpperCase() || "?"}
                 </span>
                 <span className="min-w-0 flex-1">

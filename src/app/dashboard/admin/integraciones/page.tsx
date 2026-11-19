@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Megaphone, Plug } from "lucide-react";
+import { BellRing, CalendarDays, Check, Circle, CreditCard, IdCard, Loader2, Mail, Megaphone, Plug } from "lucide-react";
 import { PanelShell } from "@/components/shell/PanelShell";
 import { Metric, ModulePanel, SinAcceso } from "@/components/panel/ModuleUI";
 import {
@@ -75,14 +75,28 @@ const CATALOGO_COMPLETO: Catalogo[] = [
     id: "google-calendar",
     nombre: "Google Calendar",
     descripcion: "Sincronización bidireccional de la agenda de cada barbero con su calendario personal.",
-    logo: <CalendarDays className="h-5 w-5" style={{ color: "var(--gold)" }} />,
+    logo: <CalendarDays className="h-5 w-5" style={{ color: "var(--ink)" }} />,
+    grupo: "Operación",
+  },
+  {
+    id: "push",
+    nombre: "Notificaciones push",
+    descripcion: "Avisos en el teléfono o la computadora de barberos, administradores y clientes, aunque tengan la app cerrada (Web Push con claves VAPID).",
+    logo: <BellRing className="h-5 w-5" style={{ color: "var(--ink)" }} />,
+    grupo: "Operación",
+  },
+  {
+    id: "correo-gmail",
+    nombre: "Correo con Gmail",
+    descripcion: "Correo de cada cita nueva, cambio, cancelación y recordatorio al cliente y al barbero, enviado como CortMart. Usa el cliente OAuth de Google Calendar.",
+    logo: <Mail className="h-5 w-5" style={{ color: "var(--ink)" }} />,
     grupo: "Operación",
   },
   {
     id: "google-wallet",
     nombre: "Google Wallet",
     descripcion: "Tarjeta de lealtad de cada cliente en su teléfono, con QR y sellos que se actualizan solos. Puede reutilizar la cuenta de servicio de GA4.",
-    logo: <IdCard className="h-5 w-5" style={{ color: "var(--gold)" }} />,
+    logo: <IdCard className="h-5 w-5" style={{ color: "var(--ink)" }} />,
     grupo: "Operación",
   },
 ];
@@ -131,7 +145,7 @@ export default function IntegracionesPage() {
         <Metric icono={<Plug />} label="Conectadas" valor={`${conectadas} / ${CATALOGO.length}`} nota="Con todas sus variables definidas" />
         <Metric icono={<Megaphone />} label="Marketing" valor="3" nota="Google Analytics, Google Ads y Meta Ads" />
         <Metric icono={<CreditCard />} label="Cobros" valor="2" nota="Stripe y Mercado Pago" />
-        <Metric icono={<CalendarDays />} label="Operación" valor="2" nota="Acceso con Google y Google Calendar" />
+        <Metric icono={<CalendarDays />} label="Operación" valor="4" nota="Acceso con Google, Google Calendar, push y correo" />
       </div>
 
       {!estado && (

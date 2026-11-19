@@ -17,11 +17,11 @@
 /* ── Colores secundarios con contraste AA sobre negro ─────────────────── */
 html:root,
 html.dark {
-  --ink-muted: #c9c2ba;
+  --ink-muted: #c3c3c3;
   --ink-faint: #b5ada4;
 }
 main.cm {
-  --cm-mute: #c9c2ba;
+  --cm-mute: #c3c3c3;
 }
 
 /* ── Saltar al contenido: invisible hasta que se llega con el teclado ──── */
@@ -50,7 +50,7 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
 .a11y-fab { min-height: 3rem; min-width: 3rem; }
 
 /* ── Pie genérico (login, reserva, recuperar) ─────────────────────────── */
-.site-footer { font-size: 0.875rem; color: #c9c2ba; flex-wrap: wrap; }
+.site-footer { font-size: 0.875rem; color: #c3c3c3; flex-wrap: wrap; }
 .site-footer a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: 0.25rem; }
 .site-footer span:first-child { letter-spacing: 0.08em; }
 
@@ -64,17 +64,17 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
   gap: 0.55rem;
   min-height: 3.1rem;
   padding: 0.7rem 1rem;
-  border: 2px solid var(--cm-orange, #f7931e);
+  border: 2px solid var(--cm-orange, #ffffff);
   border-radius: 0.75rem;
-  background: rgb(247 147 30 / 0.08);
-  color: #f6eee4;
+  background: rgb(255 255 255 / 0.08);
+  color: #efefef;
   font-size: 1rem;
   font-weight: 700;
   text-align: center;
   transition: background 160ms ease;
 }
-.contacto-boton:hover { background: rgb(247 147 30 / 0.18); }
-.contacto-boton svg { width: 1.25rem; height: 1.25rem; flex: none; color: var(--cm-orange, #f7931e); }
+.contacto-boton:hover { background: rgb(255 255 255 / 0.18); }
+.contacto-boton svg { width: 1.25rem; height: 1.25rem; flex: none; color: var(--cm-orange, #ffffff); }
 .contacto-boton.is-whatsapp svg { color: #5fd38a; }
 
 /* ── Logo CM ───────────────────────────────────────────────────────────── */
@@ -93,12 +93,12 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
   font-family: var(--cm-sign, var(--font-serif));
   font-size: clamp(2.6rem, 7vw, 4.6rem);
   line-height: 1;
-  color: var(--cm-orange, #f7931e);
+  color: var(--cm-orange, #ffffff);
   text-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
-.login-page .login-story-copy > p:last-child { font-size: 1.0625rem; color: #d9d2c9; }
-.login-page .login-flow span { font-size: 0.9375rem; color: #d9d2c9; }
-.login-page .login-local-note { font-size: 0.875rem; color: #c9c2ba; }
+.login-page .login-story-copy > p:last-child { font-size: 1.0625rem; color: #d3d3d3; }
+.login-page .login-flow span { font-size: 0.9375rem; color: #d3d3d3; }
+.login-page .login-local-note { font-size: 0.875rem; color: #c3c3c3; }
 .login-page .login-back {
   display: inline-flex;
   align-items: center;
@@ -106,19 +106,19 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
   min-height: 2.75rem;
   padding-right: 0.5rem;
   font-size: 1rem;
-  color: #d9d2c9;
+  color: #d3d3d3;
 }
-.login-page .login-back:hover { color: var(--cm-orange, #f7931e); }
+.login-page .login-back:hover { color: var(--cm-orange, #ffffff); }
 .login-page .login-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
 .login-page .login-title-lg { font-size: clamp(1.9rem, 6vw, 2.5rem); }
 .login-page .login-access header > p:last-child,
-.login-page .login-lead-lg { font-size: 1.0625rem; color: #d9d2c9; }
-.login-page .login-field > label { font-size: 1rem; color: #ece5dc; }
+.login-page .login-lead-lg { font-size: 1.0625rem; color: #d3d3d3; }
+.login-page .login-field > label { font-size: 1rem; color: #e6e6e6; }
 .login-page .login-input-wrap > input { min-height: 3.25rem; font-size: 1.0625rem; }
-.login-page .login-input-wrap > input::placeholder { color: rgb(243 236 219 / 0.55); }
-.login-page .login-input-wrap > button { width: 2.75rem; height: 2.75rem; right: 0.3rem; color: #d9d2c9; }
+.login-page .login-input-wrap > input::placeholder { color: rgb(236 236 236 / 0.55); }
+.login-page .login-input-wrap > button { width: 2.75rem; height: 2.75rem; right: 0.3rem; color: #d3d3d3; }
 .login-page .login-field.has-error .login-input-wrap > input { border-color: #ef9992; box-shadow: 0 0 0 3px rgb(239 153 146 / 0.18); }
-.campo-ayuda { margin-top: 0.4rem; font-size: 0.9375rem; line-height: 1.45; color: #c9c2ba; }
+.campo-ayuda { margin-top: 0.4rem; font-size: 0.9375rem; line-height: 1.45; color: #c3c3c3; }
 .campo-error { display: flex; align-items: flex-start; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.9375rem; font-weight: 600; color: #ffaaa2; }
 .campo-error svg { width: 1.05rem; height: 1.05rem; flex: none; margin-top: 0.15rem; }
 .login-page .login-options { display: flex; justify-content: flex-start; margin-top: 0.5rem; }
@@ -131,28 +131,28 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
   min-height: 2.75rem;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--cm-orange, #f7931e);
+  color: var(--cm-orange, #ffffff);
 }
 .login-page .login-modes a:hover { text-decoration: underline; }
 .login-page .login-forgot.is-resaltado {
   padding: 0.5rem 0.9rem;
-  border: 2px solid var(--cm-orange, #f7931e);
+  border: 2px solid var(--cm-orange, #ffffff);
   border-radius: 0.75rem;
-  background: rgb(247 147 30 / 0.14);
+  background: rgb(255 255 255 / 0.14);
   animation: resaltar 1.2s ease 2;
 }
-@keyframes resaltar { 50% { background: rgb(247 147 30 / 0.32); } }
+@keyframes resaltar { 50% { background: rgb(255 255 255 / 0.32); } }
 .login-page .login-chip button { min-height: 2.75rem; padding-inline: 0.6rem; font-size: 1rem; }
 .login-page .login-chip { font-size: 1rem; }
 .login-page .login-alert { font-size: 1rem; }
-.login-page .login-footnote { font-size: 0.9375rem; line-height: 1.5; color: #c9c2ba; }
-.login-page .login-divisor { font-size: 0.875rem; color: #c9c2ba; }
+.login-page .login-footnote { font-size: 0.9375rem; line-height: 1.5; color: #c3c3c3; }
+.login-page .login-divisor { font-size: 0.875rem; color: #c3c3c3; }
 .login-page .google-boton { min-height: 3.1rem; font-size: 1rem; }
-.login-page .login-help { font-size: 1rem; color: #d9d2c9; }
-.login-page .login-help a { color: var(--cm-orange, #f7931e); font-weight: 700; text-decoration: underline; }
+.login-page .login-help { font-size: 1rem; color: #d3d3d3; }
+.login-page .login-help a { color: var(--cm-orange, #ffffff); font-weight: 700; text-decoration: underline; }
 .login-page .login-brand { min-height: 2.75rem; }
 .recuperar-resultado { margin-top: 1.5rem; }
-.recuperar-icono { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 999px; background: rgb(247 147 30 / 0.14); color: var(--cm-orange, #f7931e); }
+.recuperar-icono { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: var(--cm-orange, #ffffff); }
 .recuperar-icono svg { width: 1.8rem; height: 1.8rem; }
 .recuperar-acciones { display: grid; gap: 0.75rem; margin-top: 1.25rem; }
 .recuperar-acciones .btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
@@ -164,18 +164,18 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
 .booking-page .booking-back {
   display: inline-flex; align-items: center; gap: 0.35rem;
   min-height: 2.75rem; padding-inline: 0.5rem;
-  font-size: 1rem; color: #d9d2c9;
+  font-size: 1rem; color: #d3d3d3;
 }
-.booking-page .booking-hero-copy > p:last-child { font-size: 1.0625rem; color: #d9d2c9; }
+.booking-page .booking-hero-copy > p:last-child { font-size: 1.0625rem; color: #d3d3d3; }
 .booking-page .booking-trust { list-style: none; }
-.booking-page .booking-trust li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; color: #d9d2c9; }
-.booking-page .booking-trust svg { color: #f7931e; flex: none; }
+.booking-page .booking-trust li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; color: #d3d3d3; }
+.booking-page .booking-trust svg { color: #ffffff; flex: none; }
 .booking-page .booking-context h2 { font-size: 0.9375rem; letter-spacing: 0.12em; }
 .booking-page .booking-context li > span { height: 2rem; width: 2rem; font-size: 0.9375rem; }
 .booking-page .booking-context strong { font-size: 1rem; }
 .booking-page .booking-context small { font-size: 0.9375rem; line-height: 1.45; }
 .booking-telefono { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
-.booking-telefono p { font-size: 1rem; line-height: 1.5; color: #d9d2c9; }
+.booking-telefono p { font-size: 1rem; line-height: 1.5; color: #d3d3d3; }
 .booking-telefono .contacto-botones { grid-template-columns: 1fr; }
 @media (max-width: 1023px) {
   /* En el teléfono la reserva va primero; "Así funciona" queda debajo. */
@@ -186,14 +186,14 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
 .reserva-stepper { display: flex; gap: 0.5rem; list-style: none; }
 .reserva-stepper li { display: flex; flex: 1; flex-direction: column; gap: 0.4rem; font-size: 0.875rem; font-weight: 600; color: #b5ada4; }
 .reserva-stepper li span { height: 0.4rem; border-radius: 999px; background: rgb(255 255 255 / 0.12); }
-.reserva-stepper li.is-hecho { color: #f6eee4; }
-.reserva-stepper li.is-hecho span { background: linear-gradient(90deg, #ffab3d, #f7931e); }
-.reserva-resumen { display: grid; gap: 0.25rem; padding: 0.8rem 1rem; border: 1px solid var(--line-strong); border-radius: 0.9rem; font-size: 1rem; color: #d9d2c9; }
-.reserva-resumen b { color: #f6eee4; }
+.reserva-stepper li.is-hecho { color: #efefef; }
+.reserva-stepper li.is-hecho span { background: linear-gradient(90deg, #ffffff, #ffffff); }
+.reserva-resumen { display: grid; gap: 0.25rem; padding: 0.8rem 1rem; border: 1px solid var(--line-strong); border-radius: 0.9rem; font-size: 1rem; color: #d3d3d3; }
+.reserva-resumen b { color: #efefef; }
 .reserva-volver {
   display: inline-flex; align-items: center; gap: 0.35rem;
   min-height: 2.75rem; padding-right: 0.5rem;
-  font-size: 1rem; font-weight: 600; color: var(--cm-orange, #f7931e);
+  font-size: 1rem; font-weight: 600; color: var(--cm-orange, #ffffff);
 }
 .reserva-opcion {
   display: flex; align-items: center; gap: 1rem; width: 100%;
@@ -202,66 +202,66 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
   background: var(--card); text-align: left;
   transition: border-color 160ms ease, transform 160ms ease;
 }
-.reserva-opcion:hover { border-color: var(--cm-orange, #f7931e); transform: translateY(-2px); }
+.reserva-opcion:hover { border-color: var(--cm-orange, #ffffff); transform: translateY(-2px); }
 .reserva-avatar {
   display: grid; place-items: center; width: 3.25rem; height: 3.25rem; flex: none;
-  border-radius: 999px; background: linear-gradient(150deg, #ffab3d, #c25e0a);
-  color: #120802; font-family: var(--font-display); font-size: 1.5rem;
+  border-radius: 999px; background: linear-gradient(150deg, #ffffff, #ffffff);
+  color: #000000; font-family: var(--font-display); font-size: 1.5rem;
 }
-.reserva-opcion-titulo { display: block; font-size: 1.125rem; font-weight: 700; color: #f6eee4; }
-.reserva-opcion-sub { display: block; margin-top: 0.15rem; font-size: 0.9375rem; color: #c9c2ba; }
-.reserva-opcion-accion { flex: none; font-size: 1rem; font-weight: 700; color: var(--cm-orange, #f7931e); }
+.reserva-opcion-titulo { display: block; font-size: 1.125rem; font-weight: 700; color: #efefef; }
+.reserva-opcion-sub { display: block; margin-top: 0.15rem; font-size: 0.9375rem; color: #c3c3c3; }
+.reserva-opcion-accion { flex: none; font-size: 1rem; font-weight: 700; color: var(--cm-orange, #ffffff); }
 .booking-page .reserva-servicio { min-height: 4.5rem; padding: 1rem; font-size: 1rem; }
 .booking-page .reserva-servicio-cat { font-size: 0.875rem; }
 .booking-page .reserva-servicio-precio { font-size: 1.15rem; }
-.reserva-dia h3 { margin-bottom: 0.5rem; font-size: 1.0625rem; font-weight: 700; color: #f6eee4; }
+.reserva-dia h3 { margin-bottom: 0.5rem; font-size: 1.0625rem; font-weight: 700; color: #efefef; }
 .reserva-horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: 0.5rem; }
 .reserva-hora {
   min-height: 3rem; border: 2px solid var(--line-strong); border-radius: 0.75rem;
-  font-family: var(--font-num, inherit); font-size: 1.0625rem; font-weight: 700; color: #f6eee4;
+  font-family: var(--font-num, inherit); font-size: 1.0625rem; font-weight: 700; color: #efefef;
   transition: border-color 160ms ease, background 160ms ease;
 }
-.reserva-hora:hover { border-color: var(--cm-orange, #f7931e); background: rgb(247 147 30 / 0.12); }
+.reserva-hora:hover { border-color: var(--cm-orange, #ffffff); background: rgb(255 255 255 / 0.12); }
 .reserva-dia + .reserva-dia { margin-top: 1.25rem; }
-.reserva-vacio { padding: 1.5rem; border: 1px dashed var(--line-strong); border-radius: 1rem; font-size: 1rem; line-height: 1.5; color: #d9d2c9; }
+.reserva-vacio { padding: 1.5rem; border: 1px dashed var(--line-strong); border-radius: 1rem; font-size: 1rem; line-height: 1.5; color: #d3d3d3; }
 .reserva-datos { display: grid; gap: 0.25rem; }
 .reserva-dl { display: grid; gap: 0.5rem; margin: 0.75rem 0; padding: 1rem; border-radius: 1rem; background: rgb(255 255 255 / 0.03); }
 .reserva-dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; font-size: 1rem; }
-.reserva-dl dt { color: #c9c2ba; }
-.reserva-dl dd { font-weight: 600; color: #f6eee4; text-align: right; text-transform: none; }
+.reserva-dl dt { color: #c3c3c3; }
+.reserva-dl dd { font-weight: 600; color: #efefef; text-align: right; text-transform: none; }
 .reserva-dl dd:first-letter { text-transform: uppercase; }
-.reserva-dl dd.is-destacado { font-size: 1.2rem; color: var(--cm-orange, #f7931e); }
+.reserva-dl dd.is-destacado { font-size: 1.2rem; color: var(--cm-orange, #ffffff); }
 .reserva-modalidad { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; border: 0; padding: 0; margin: 0.5rem 0; }
 .reserva-modalidad legend { margin-bottom: 0.4rem; font-size: 1rem; font-weight: 600; }
 .reserva-modalidad button {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
   min-height: 3rem; border: 2px solid var(--line-strong); border-radius: 0.75rem; font-size: 1rem; font-weight: 600;
 }
-.reserva-modalidad button[aria-pressed="true"] { border-color: var(--cm-orange, #f7931e); background: rgb(247 147 30 / 0.14); color: #ffc067; }
-.reserva-quien { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; color: #d9d2c9; }
-.reserva-quien svg { width: 1.2rem; height: 1.2rem; color: var(--cm-orange, #f7931e); }
-.reserva-quien a { display: inline-flex; align-items: center; min-height: 2.75rem; font-weight: 700; color: var(--cm-orange, #f7931e); text-decoration: underline; }
-.reserva-nota { display: flex; gap: 0.5rem; margin-top: 1rem; padding: 0.8rem 1rem; border-radius: 0.8rem; background: rgb(247 147 30 / 0.1); font-size: 0.9375rem; line-height: 1.45; color: #f3dcbf; }
-.reserva-nota svg { width: 1.2rem; height: 1.2rem; flex: none; color: var(--cm-orange, #f7931e); }
-.reserva-confirmada { display: grid; gap: 0.75rem; padding: 1.5rem; border: 2px solid var(--cm-orange, #f7931e); border-radius: 1.25rem; background: var(--card); text-align: center; }
+.reserva-modalidad button[aria-pressed="true"] { border-color: var(--cm-orange, #ffffff); background: rgb(255 255 255 / 0.14); color: #ffffff; }
+.reserva-quien { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.75rem; font-size: 1rem; line-height: 1.5; color: #d3d3d3; }
+.reserva-quien svg { width: 1.2rem; height: 1.2rem; color: var(--cm-orange, #ffffff); }
+.reserva-quien a { display: inline-flex; align-items: center; min-height: 2.75rem; font-weight: 700; color: var(--cm-orange, #ffffff); text-decoration: underline; }
+.reserva-nota { display: flex; gap: 0.5rem; margin-top: 1rem; padding: 0.8rem 1rem; border-radius: 0.8rem; background: rgb(255 255 255 / 0.1); font-size: 0.9375rem; line-height: 1.45; color: #ffffff; }
+.reserva-nota svg { width: 1.2rem; height: 1.2rem; flex: none; color: var(--cm-orange, #ffffff); }
+.reserva-confirmada { display: grid; gap: 0.75rem; padding: 1.5rem; border: 2px solid var(--cm-orange, #ffffff); border-radius: 1.25rem; background: var(--card); text-align: center; }
 .reserva-confirmada .reserva-dl { text-align: left; }
 .reserva-check { width: 3.25rem; height: 3.25rem; margin: 0 auto; color: #5fd38a; }
-.reserva-qr { display: grid; justify-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.9375rem; color: #d9d2c9; }
-.reserva-cuenta { display: grid; gap: 0.6rem; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 1rem; color: #d9d2c9; }
+.reserva-qr { display: grid; justify-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.9375rem; color: #d3d3d3; }
+.reserva-cuenta { display: grid; gap: 0.6rem; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 1rem; color: #d3d3d3; }
 .reserva-cuenta .btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
 
 /* ==========================================================================
    Mi cuenta: "Tu acceso"
    ========================================================================== */
-.seguridad-cuenta { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--line-strong); border-radius: 1.1rem; background: var(--card); font-size: 1rem; line-height: 1.55; color: #d9d2c9; }
-.seguridad-cuenta h2 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: 700; color: #f6eee4; }
-.seguridad-cuenta h2 svg { width: 1.2rem; height: 1.2rem; color: var(--cm-orange, #f7931e); }
-.seguridad-cuenta b { color: #f6eee4; }
+.seguridad-cuenta { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--line-strong); border-radius: 1.1rem; background: var(--card); font-size: 1rem; line-height: 1.55; color: #d3d3d3; }
+.seguridad-cuenta h2 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: 700; color: #efefef; }
+.seguridad-cuenta h2 svg { width: 1.2rem; height: 1.2rem; color: var(--cm-orange, #ffffff); }
+.seguridad-cuenta b { color: #efefef; }
 .seguridad-correo { max-width: 32rem; margin-top: 0.75rem; }
-.seguridad-invita { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #ffc067; }
+.seguridad-invita { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #ffffff; }
 .seguridad-invita svg { width: 1.2rem; height: 1.2rem; }
 .seguridad-cuenta .login-field > label { display: block; margin-bottom: 0.4rem; font-size: 1rem; }
-.seguridad-cuenta .login-input-wrap > input { width: 100%; min-height: 3.1rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line-strong); border-radius: 0.8rem; background: rgb(255 255 255 / 0.03); font-size: 1.0625rem; color: #f6eee4; }
+.seguridad-cuenta .login-input-wrap > input { width: 100%; min-height: 3.1rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line-strong); border-radius: 0.8rem; background: rgb(255 255 255 / 0.03); font-size: 1.0625rem; color: #efefef; }
 .seguridad-cuenta .btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 3.1rem; margin-top: 1rem; font-size: 1rem; }
 .seguridad-cuenta .login-alert { margin-top: 0.75rem; font-size: 1rem; }
 
@@ -270,43 +270,43 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
    ========================================================================== */
 .app-nav-contador {
   display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; margin-left: auto; padding-inline: 0.4rem;
-  border-radius: 999px; background: var(--cm-orange, #f7931e); color: #120802; font-size: 0.875rem; font-weight: 800;
+  border-radius: 999px; background: var(--cm-orange, #ffffff); color: #000000; font-size: 0.875rem; font-weight: 800;
 }
 .restablecer-aviso {
   display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 1.25rem; padding: 0.9rem 1rem;
-  border: 2px solid rgb(247 147 30 / 0.55); border-radius: 0.9rem; background: rgb(247 147 30 / 0.1);
-  font-size: 1rem; line-height: 1.5; color: #f6eee4;
+  border: 2px solid rgb(255 255 255 / 0.55); border-radius: 0.9rem; background: rgb(255 255 255 / 0.1);
+  font-size: 1rem; line-height: 1.5; color: #efefef;
 }
-.restablecer-aviso svg { width: 1.4rem; height: 1.4rem; flex: none; color: var(--cm-orange, #f7931e); }
+.restablecer-aviso svg { width: 1.4rem; height: 1.4rem; flex: none; color: var(--cm-orange, #ffffff); }
 .restablecer-grid { display: grid; gap: 1.5rem; }
 @media (min-width: 1100px) { .restablecer-grid { grid-template-columns: 1fr 1.1fr; align-items: start; } }
 .restablecer-lista { display: grid; }
 .restablecer-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding-block: 0.75rem; border-bottom: 1px solid var(--line); font-size: 1rem; }
 .restablecer-lista li:last-child { border-bottom: 0; }
-.restablecer-meta { display: block; font-size: 0.9375rem; color: #c9c2ba; }
+.restablecer-meta { display: block; font-size: 0.9375rem; color: #c3c3c3; }
 .restablecer-label { display: block; margin-bottom: 0.5rem; font-size: 1rem; font-weight: 600; }
 .restablecer-buscar { display: flex; align-items: center; gap: 0.6rem; padding-inline: 0.9rem; border: 1px solid var(--line-strong); border-radius: 0.8rem; }
-.restablecer-buscar svg { width: 1.2rem; height: 1.2rem; flex: none; color: #c9c2ba; }
+.restablecer-buscar svg { width: 1.2rem; height: 1.2rem; flex: none; color: #c3c3c3; }
 .restablecer-buscar input { flex: 1; min-height: 3rem; background: transparent; font-size: 1.0625rem; outline: none; }
 .restablecer-boton {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
   min-height: 2.75rem; padding: 0.55rem 1rem; font-size: 1rem; font-weight: 700;
 }
-.restablecer-boton.is-ghost { border: 2px solid var(--line-strong); border-radius: 0.75rem; color: #f6eee4; }
-.restablecer-boton.is-ghost:hover { border-color: var(--cm-orange, #f7931e); }
+.restablecer-boton.is-ghost { border: 2px solid var(--line-strong); border-radius: 0.75rem; color: #efefef; }
+.restablecer-boton.is-ghost:hover { border-color: var(--cm-orange, #ffffff); }
 .restablecer-detalle { display: grid; gap: 1rem; font-size: 1rem; }
 .restablecer-datos { display: grid; gap: 0.6rem; }
 .restablecer-datos > div { display: grid; gap: 0.1rem; }
-.restablecer-datos dt { font-size: 0.9375rem; color: #c9c2ba; }
-.restablecer-datos dd { font-size: 1rem; font-weight: 600; color: #f6eee4; }
+.restablecer-datos dt { font-size: 0.9375rem; color: #c3c3c3; }
+.restablecer-datos dd { font-size: 1rem; font-weight: 600; color: #efefef; }
 .restablecer-acciones { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .restablecer-enlace { display: grid; gap: 0.75rem; padding: 1rem; border: 2px solid #5fd38a; border-radius: 1rem; background: rgb(95 211 138 / 0.08); }
-.restablecer-enlace input { width: 100%; min-height: 3rem; padding: 0.6rem 0.8rem; border: 1px solid var(--line-strong); border-radius: 0.7rem; background: #0c0806; font-family: var(--font-num, monospace); font-size: 0.9375rem; color: #f6eee4; }
+.restablecer-enlace input { width: 100%; min-height: 3rem; padding: 0.6rem 0.8rem; border: 1px solid var(--line-strong); border-radius: 0.7rem; background: #000000; font-family: var(--font-num, monospace); font-size: 0.9375rem; color: #efefef; }
 .restablecer-qr { display: grid; justify-items: center; gap: 0.5rem; margin: 0; }
 .restablecer-qr > div { width: 13rem; height: 13rem; padding: 0.5rem; border-radius: 0.75rem; background: #fff; }
 .restablecer-qr svg { width: 100%; height: 100%; }
-.restablecer-qr figcaption { font-size: 0.9375rem; color: #d9d2c9; }
-.restablecer-bitacora { display: grid; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.9375rem; color: #d9d2c9; }
+.restablecer-qr figcaption { font-size: 0.9375rem; color: #d3d3d3; }
+.restablecer-bitacora { display: grid; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.9375rem; color: #d3d3d3; }
 
 /* ==========================================================================
    Portada
@@ -356,13 +356,13 @@ body:not(:has(.app-shell)) { padding-bottom: calc(3rem + 2rem + env(safe-area-in
 .cm .cm-cta-tel {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
   min-height: 3.5rem; padding: 0.7rem 1rem;
-  border: 2px solid rgb(247 147 30 / 0.7);
-  background: rgb(18 12 8 / 0.6); backdrop-filter: blur(10px);
+  border: 2px solid rgb(255 255 255 / 0.7);
+  background: rgb(0 0 0 / 0.6); backdrop-filter: blur(10px);
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   font-family: var(--cm-display); font-size: 1.25rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cm-ink);
   transition: background 180ms ease;
 }
-.cm .cm-cta-tel:hover { background: rgb(247 147 30 / 0.16); }
+.cm .cm-cta-tel:hover { background: rgb(255 255 255 / 0.16); }
 .cm .cm-cta-tel svg { width: 1.3rem; height: 1.3rem; color: var(--cm-orange); }
 .cm .cm-cta-tel.is-whatsapp svg { color: #5fd38a; }
 .cm .cm-cta-extra a,

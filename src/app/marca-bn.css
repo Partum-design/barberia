@@ -392,3 +392,66 @@ html[data-movimiento="reducido"] .precarga-barra::after { animation: none; }
 .app-privacidad-pie { margin-top: 2.5rem; padding-bottom: 1rem; text-align: center; font-size: 0.875rem; }
 .app-privacidad-pie a { display: inline-flex; align-items: center; min-height: 2.75rem; color: rgba(255, 255, 255, 0.75); text-decoration: underline; text-underline-offset: 0.2em; }
 @media (min-width: 1024px) { .app-privacidad-pie { display: none; } }
+
+/* ── Panel: sin solapamientos y cajas limpias ──────────────────────────
+   La barra lateral ya no recorta lo que sale de ella (avisos), el nombre
+   cabe completo, el activo es un rectángulo y las tarjetas dejan de tener
+   esquinas cortadas que partían el borde. */
+@media (min-width: 768px) {
+  .app-sidebar {
+    width: 17.5rem;
+    padding: 1.1rem 1rem;
+    overflow: visible;
+    z-index: 40;
+  }
+}
+.app-sidebar::after { display: none; }
+.app-brand { gap: 0.7rem; padding: 0.25rem 0.25rem 0.6rem; min-width: 0; }
+.app-brand-mark { width: 4rem; height: 4.9rem; }
+.app-brand > .leading-none { min-width: 0; flex: 1; }
+.app-brand .block:first-child {
+  max-width: none !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  font-size: 1.05rem !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0.04em !important;
+}
+.app-brand .block:last-child { margin-top: 0.35rem; letter-spacing: 0.22em; }
+.app-brand::after { left: 0.25rem; right: 0.25rem; bottom: -0.2rem; }
+.app-nav-label { margin-top: 1.6rem; }
+.app-nav { gap: 0.25rem; padding-right: 0.45rem; margin-right: -0.25rem; scrollbar-gutter: stable; }
+.app-nav-item { border-radius: 0.6rem; line-height: 1.2; }
+.app-nav-item:hover { transform: none; }
+.app-nav-item.is-active {
+  clip-path: none;
+  border-radius: 0.6rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.app-user-card { margin-top: 0.75rem; border-radius: 1rem; }
+
+/* Avisos desde la tarjeta del usuario: salen hacia el contenido, encima */
+.app-sidebar .app-user-card { position: relative; }
+.app-sidebar .campana { position: static; }
+.app-sidebar .campana-boton { position: relative; }
+.app-sidebar .campana.is-arriba .campana-panel {
+  left: calc(100% + 1.75rem);
+  bottom: 0;
+  width: 22rem;
+  max-height: min(30rem, calc(100vh - 3rem));
+  z-index: 80;
+}
+
+/* Tarjetas: esquinas redondas en vez de cortadas */
+.kpi-card,
+.metric-card {
+  clip-path: none;
+  border-radius: 1rem;
+}
+.kpi-card::before { height: 3px; }
+.cm .cm-cta-tel { clip-path: none; border-radius: 0.75rem; }

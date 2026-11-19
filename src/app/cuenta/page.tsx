@@ -14,6 +14,7 @@ import { QrCita } from "@/components/citas/QrCita";
 import { BotonGuardarQr } from "@/components/citas/BotonGuardarQr";
 import { OtroRol } from "@/components/panel/ModuleUI";
 import { TarjetaGoogle } from "@/components/app/TarjetaGoogle";
+import { AvisoGoogle } from "@/components/app/AvisoGoogle";
 import { LogoGoogle } from "@/components/app/LogoGoogle";
 import { enlaceGoogleCalendar } from "@/lib/auth/google";
 import { SeguridadCuenta } from "@/components/cuenta/SeguridadCuenta";
@@ -69,6 +70,8 @@ export default function CuentaPage() {
           </Link>
         }
       />
+
+      <AvisoGoogle usuarioId={sesion.id} volverA="/cuenta" />
 
       {/* KPIs pastel */}
       <section className="mb-6 grid gap-4 sm:grid-cols-3">

@@ -56,6 +56,10 @@ function mensajeDeError(mensaje: string) {
   if (/email not confirmed/i.test(mensaje)) return "Tu correo aún no está confirmado.";
   if (/rate limit|too many/i.test(mensaje)) return "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
   if (/failed to fetch|network/i.test(mensaje)) return "No hay conexión. Revisa tu internet e inténtalo de nuevo.";
+  // Google rechazó la cuenta (la app aún está en modo de prueba) o la persona canceló.
+  if (/access_denied|access denied/i.test(mensaje)) {
+    return "Google no permitió entrar con esa cuenta. Usa tu celular o correo por ahora, o avísale a la barbería.";
+  }
   return mensaje;
 }
 
@@ -107,7 +111,10 @@ function Acceso() {
   const [conSms, setConSms] = useState(false);
   const [verClave, setVerClave] = useState(false);
   const [cargando, setCargando] = useState<null | "form" | "google">(null);
-  const [error, setError] = useState<string | null>(params.get("error"));
+  const [error, setError] = useState<string | null>(() => {
+    const e = params.get("error");
+    return e ? mensajeDeError(e) : null;
+  });
   const [errores, setErrores] = useState<Errores>({});
   const [aviso, setAviso] = useState<string | null>(null);
   const [bloqueado, setBloqueado] = useState(false);
@@ -320,6 +327,15 @@ function Acceso() {
 
           {(paso === "identificar" || paso === "registro") && (
             <>
+              <p className="login-nuevo-google">
+                <Sparkles className="h-4 w-4" aria-hidden />
+                <span>
+                  <b>Nuevo:</b>{" "}
+                  {paso === "registro"
+                    ? "crea tu cuenta con Google en un toque y tus citas aparecerán en tu Google Calendar."
+                    : "ya puedes entrar o crear tu cuenta con Google. Si ya tienes cuenta, vincúlala desde «Mi cuenta»."}
+                </span>
+              </p>
               <button type="button" className="google-boton" onClick={() => void google()} disabled={cargando !== null || !authDisponible}>
                 {cargando === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogoGoogle className="h-5 w-5" />}
                 {paso === "registro" ? "Crear cuenta con Google" : "Continuar con Google"}

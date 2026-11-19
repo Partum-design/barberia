@@ -13,6 +13,7 @@ import { PanelHero } from "@/components/panel/PanelHero";
 import { CalendarOverview } from "@/components/calendar/CalendarOverview";
 import { ETIQUETA_ESTADO_CITA, resumirCitas, useBarberia } from "@/lib/store";
 import { OtroRol } from "@/components/panel/ModuleUI";
+import { AvisoGoogle } from "@/components/app/AvisoGoogle";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
@@ -94,6 +95,9 @@ export default function DashboardBarberoPage() {
           </div>
         }
       />
+
+      {/* Vuelve a Configuración: ahí está la tarjeta que confirma «¡Listo!». */}
+      <AvisoGoogle usuarioId={sesion.id} volverA="/dashboard/barbero/configuracion" rol="barbero" />
 
       {aviso && (
         <p className="aviso-ok anim-pop mb-4" role="status">

@@ -131,7 +131,7 @@ export default function ConfiguracionBarberoPage() {
 
           <button
             onClick={guardar}
-            className="card-hover flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white"
+            className="card-hover flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-black"
           >
             {guardado ? (
               <>
@@ -151,7 +151,7 @@ export default function ConfiguracionBarberoPage() {
             Vista previa
           </p>
           <div className="flex items-center gap-4 rounded-2xl p-4 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-semibold text-white">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-semibold text-black">
               {sesion.nombre.replace(/^Dra?\.\s*/, "").charAt(0)}
             </div>
             <div className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión como barbero para ver este panel</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

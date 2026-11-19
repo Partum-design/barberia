@@ -189,7 +189,7 @@ export default function ConfiguracionAdminPage() {
       <div className="anim-in anim-d5 mt-6 flex flex-wrap items-center gap-3">
         <button
           onClick={guardar}
-          className="card-hover flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white"
+          className="card-hover flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-black"
         >
           {guardado ? (
             <>
@@ -224,7 +224,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión como administrador para ver este panel</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

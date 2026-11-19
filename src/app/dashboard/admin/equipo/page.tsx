@@ -147,7 +147,7 @@ export default function EquipoBarberoPage() {
         </div>
         <button
           onClick={() => setMostrarForm((v) => !v)}
-          className="card-hover flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md"
+          className="card-hover flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-black shadow-md"
         >
           {mostrarForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {mostrarForm ? "Cancelar" : "Dar de alta"}
@@ -250,7 +250,7 @@ export default function EquipoBarberoPage() {
               !form.email.includes("@") ||
               form.password.length < 8
             }
-            className="card-hover mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            className="card-hover mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-black disabled:opacity-40"
           >
             {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
             Crear barbero y su acceso
@@ -266,7 +266,7 @@ export default function EquipoBarberoPage() {
             style={{ background: "var(--card)" }}
           >
             <div className="mb-3 flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-semibold text-white">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-semibold text-black">
                 {m.nombre.replace(/^Dra?\.\s*/, "").charAt(0)}
               </span>
               <div className="min-w-0 flex-1">
@@ -358,7 +358,7 @@ export default function EquipoBarberoPage() {
               className={`w-full rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                 m.activo
                   ? "btn-danger-ghost"
-                  : "bg-gradient-to-r from-brand-600 to-accent-500 text-white"
+                  : "bg-gradient-to-r from-brand-600 to-accent-500 text-black"
               }`}
             >
               {m.activo ? "Desactivar" : "Reactivar"}
@@ -510,7 +510,7 @@ function Administradores({
           <input className={campo} type="email" placeholder="Correo" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required autoComplete="off" />
           <input className={campo} type="text" placeholder="Contraseña (mín. 8)" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} required minLength={8} autoComplete="new-password" />
           {error && <p className="text-sm sm:col-span-3" style={{ color: "var(--ox, #b4533c)" }}>{error}</p>}
-          <button type="submit" disabled={guardando} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-3 sm:justify-self-start">
+          <button type="submit" disabled={guardando} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-black disabled:opacity-40 sm:col-span-3 sm:justify-self-start">
             {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
             Crear administrador
           </button>
@@ -545,7 +545,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión como administrador para ver este panel</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

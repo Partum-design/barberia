@@ -45,7 +45,7 @@ export default function DashboardAdminPage() {
         </p>
         <Link
           href="/login"
-          className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+          className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
         >
           Iniciar sesión
         </Link>
@@ -107,7 +107,7 @@ export default function DashboardAdminPage() {
             <h2 className="font-semibold">Equipo de barberos</h2>
             <Link
               href="/dashboard/admin/equipo"
-              className="card-hover rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-4 py-1.5 text-sm font-medium text-white shadow-sm"
+              className="card-hover rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-4 py-1.5 text-sm font-medium text-black shadow-sm"
             >
               + Dar de alta
             </Link>
@@ -135,7 +135,7 @@ export default function DashboardAdminPage() {
                   <tr key={m.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5">
                     <td className="py-3">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-semibold text-white">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-semibold text-black">
                           {m.nombre.replace(/^Dra?\.\s*/, "").charAt(0)}
                         </span>
                         <span className="font-medium">{m.nombre}</span>
@@ -168,15 +168,15 @@ export default function DashboardAdminPage() {
 
         {/* Lealtad + acciones */}
         <div className="space-y-4">
-          <section className="anim-in anim-d4 card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-white shadow-md">
+          <section className="anim-in anim-d4 card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-black shadow-md">
             <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/15">
                 <Gift className="h-5 w-5" />
               </span>
               <h2 className="font-semibold">Programa de lealtad</h2>
             </div>
             <p className="text-3xl font-bold tabular-nums">{stats.recompensas}</p>
-            <p className="mt-1 text-sm text-white/80">
+            <p className="mt-1 text-sm text-black/80">
               recompensas desbloqueadas · regla activa: {recompensasConfig.citas_requeridas} citas
               → {recompensasConfig.valor_descuento}% de descuento
             </p>

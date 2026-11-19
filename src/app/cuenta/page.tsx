@@ -127,7 +127,7 @@ export default function CuentaPage() {
               className="card-hover flex items-center gap-4 rounded-2xl p-4 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
               style={{ background: "var(--card)" }}
             >
-              <div className="flex w-16 shrink-0 flex-col items-center rounded-xl bg-gradient-to-b from-brand-600 to-accent-600 py-2 text-white">
+              <div className="flex w-16 shrink-0 flex-col items-center rounded-xl bg-gradient-to-b from-brand-600 to-accent-600 py-2 text-black">
                 <span className="text-[10px] font-medium capitalize opacity-90">
                   {format(new Date(c.inicio), "d MMM", { locale: es })}
                 </span>
@@ -157,7 +157,7 @@ export default function CuentaPage() {
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.direccion_domicilio)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full bg-accent-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-600"
+                  className="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-accent-400"
                 >
                   Ver dirección
                 </a>
@@ -228,14 +228,14 @@ export default function CuentaPage() {
 
         {/* Programa de lealtad */}
         <section className="anim-in anim-d3 space-y-4">
-          <div className="card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-white shadow-md">
+          <div className="card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-black shadow-md">
             <div className="mb-4 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/15">
                 <Gift className="h-5 w-5" />
               </span>
               <h2 className="font-semibold">Tu recompensa</h2>
             </div>
-            <p className="text-sm text-white/85">
+            <p className="text-sm text-black/85">
               Cada <strong>{lealtad.requerido} citas asistidas</strong> desbloqueas un{" "}
               <strong>{recompensasConfig.valor_descuento}% de descuento</strong> en tu siguiente
               visita.
@@ -246,17 +246,17 @@ export default function CuentaPage() {
                 <span
                   key={i}
                   className={`h-2.5 flex-1 rounded-full transition-colors ${
-                    i < lealtad.progreso ? "bg-white" : "bg-white/25"
+                    i < lealtad.progreso ? "bg-black" : "bg-black/25"
                   }`}
                 />
               ))}
             </div>
-            <p className="mt-2 text-xs text-white/80">
+            <p className="mt-2 text-xs text-black/80">
               {lealtad.progreso} de {lealtad.requerido} citas · te faltan {lealtad.faltan}
             </p>
             {lealtad.recompensasGanadas > 0 && (
-              <p className="anim-pop mt-4 flex items-center gap-2 rounded-xl bg-white/15 px-4 py-3 text-sm font-medium">
-                <Sparkles className="h-4 w-4 shrink-0 text-mint-raw" />
+              <p className="anim-pop mt-4 flex items-center gap-2 rounded-xl bg-black/15 px-4 py-3 text-sm font-medium">
+                <Sparkles className="h-4 w-4 shrink-0 text-black" />
                 Tienes {lealtad.recompensasGanadas}{" "}
                 {lealtad.recompensasGanadas === 1 ? "descuento disponible" : "descuentos disponibles"}{" "}
                 — se aplicará en tu próxima reserva.
@@ -322,7 +322,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión para ver tu cuenta</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

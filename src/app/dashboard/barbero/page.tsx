@@ -149,7 +149,7 @@ export default function DashboardBarberoPage() {
             className={`anim-in anim-d${Math.min(i + 1, 6)} card-hover flex flex-wrap items-center gap-4 rounded-2xl p-4 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10`}
             style={{ background: "var(--card)" }}
           >
-            <div className="flex w-16 shrink-0 flex-col items-center rounded-xl bg-gradient-to-b from-brand-600 to-accent-600 py-2 text-white">
+            <div className="flex w-16 shrink-0 flex-col items-center rounded-xl bg-gradient-to-b from-brand-600 to-accent-600 py-2 text-black">
               <span className="text-[10px] font-medium capitalize opacity-90">
                 {format(new Date(cita.inicio), "d MMM", { locale: es })}
               </span>
@@ -191,7 +191,7 @@ export default function DashboardBarberoPage() {
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cita.direccion_domicilio)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full bg-accent-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-600"
+                    className="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-accent-400"
                   >
                     Ver dirección
                   </a>
@@ -245,7 +245,7 @@ function SinSesion({ rol }: { rol: string }) {
       <p className="anim-in text-lg font-semibold">Inicia sesión como {rol} para ver este panel</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

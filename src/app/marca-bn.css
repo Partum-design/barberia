@@ -312,3 +312,12 @@ html:root { --estrella: #ffc531; }
 
 /* Titular de portada: la segunda palabra en naranja de letrero */
 .cm .cm-hero-title .is-accent { background: linear-gradient(180deg, #ffd08a, var(--acento) 55%, #e8820f); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+
+/* ── Legibilidad: nunca texto negro sobre negro ni blanco sobre blanco ── */
+/* Las listas desplegables del sistema usan fondo oscuro (color-scheme dark) */
+select option,
+.cobro-agregar select option { background: #111111; color: #ffffff; }
+/* Botón principal y secundario: el texto siempre del color contrario al fondo */
+.btn-gold *, .cm .cm-btn:not(.cm-btn-ghost) * { color: inherit; }
+/* Palabra destacada de los títulos de sección en naranja */
+.cm .cm-h2 span { color: var(--acento); -webkit-text-fill-color: var(--acento); }

@@ -9,24 +9,24 @@
    reservado a la herencia del oficio (poste, ornamento, 3D) y verdigris exclusivo
    para estados de éxito. Ver docs/PLAN_REDISENO_2026.md. */
 @theme {
-  --color-brand-50: #ffffff;
-  --color-brand-100: #ffffff;
-  --color-brand-200: #ffffff;
-  --color-brand-400: #ffffff;
-  --color-brand-500: #ffffff;
-  --color-brand-600: #ffffff;
-  --color-brand-700: #ffffff;
+  --color-brand-50: #ffe2bd;
+  --color-brand-100: #ffc067;
+  --color-brand-200: #ffb24a;
+  --color-brand-400: #f99a2a;
+  --color-brand-500: #e8820f;
+  --color-brand-600: #f7931e;
+  --color-brand-700: #ffab3d;
   --color-brand-900: #111111;
 
-  --color-accent-100: #ffffff;
-  --color-accent-400: #ffffff;
-  --color-accent-500: #ffffff;
-  --color-accent-600: #ffffff;
-  --color-mint-raw: #ffffff;
+  --color-accent-100: #ffd9a8;
+  --color-accent-400: #f7931e;
+  --color-accent-500: #e8820f;
+  --color-accent-600: #a8500a;
+  --color-mint-raw: #f7931e;
 
-  --color-oxblood-400: #4a4a4a;
-  --color-oxblood-500: #2a2a2a;
-  --color-oxblood-600: #1f1f1f;
+  --color-oxblood-400: #b0453a;
+  --color-oxblood-500: #8f3320;
+  --color-oxblood-600: #6b2418;
 
   --color-cyan-50: #161616;
   --color-cyan-100: #1c1c1c;

@@ -55,9 +55,9 @@ export default function RecompensasPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="anim-in anim-d1 lg:col-span-2">
-          <div className="card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-white shadow-md">
+          <div className="card-hover rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-6 text-black shadow-md">
             <div className="mb-4 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/15">
                 <Gift className="h-5 w-5" />
               </span>
               <h2 className="font-semibold">Tu progreso</h2>
@@ -67,20 +67,20 @@ export default function RecompensasPage() {
                 <span
                   key={i}
                   className={`h-3 flex-1 rounded-full transition-colors ${
-                    i < lealtad.progreso ? "bg-white" : "bg-white/25"
+                    i < lealtad.progreso ? "bg-black" : "bg-black/25"
                   }`}
                 />
               ))}
             </div>
-            <p className="mt-2 text-sm text-white/85">
+            <p className="mt-2 text-sm text-black/85">
               {lealtad.progreso} de {lealtad.requerido} citas asistidas · te faltan{" "}
               {lealtad.faltan} para tu próxima recompensa
             </p>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3.5">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black/10 px-4 py-3.5">
               <div>
                 <p className="text-2xl font-bold tabular-nums">{disponibles}</p>
-                <p className="text-xs text-white/80">
+                <p className="text-xs text-black/80">
                   {disponibles === 1 ? "recompensa disponible" : "recompensas disponibles"} ·{" "}
                   {recompensasConfig.valor_descuento}% de descuento c/u
                 </p>
@@ -153,7 +153,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión para ver tus recompensas</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>

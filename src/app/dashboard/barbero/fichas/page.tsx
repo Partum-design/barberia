@@ -111,7 +111,7 @@ export default function FichasPage() {
                 }`}
                 style={seleccionado?.id === p.id ? undefined : { background: "var(--card)" }}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-semibold text-white">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-semibold text-black">
                   {p.nombre.charAt(0)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -137,7 +137,7 @@ export default function FichasPage() {
             <div className="space-y-4">
               <div className="rounded-3xl p-5 shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10" style={{ background: "var(--card)" }}>
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-semibold text-white">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-semibold text-black">
                     {seleccionado.nombre.charAt(0)}
                   </span>
                   <div>
@@ -168,7 +168,7 @@ export default function FichasPage() {
                   <button
                     onClick={agregarNota}
                     disabled={!servicio.trim()}
-                    className="card-hover rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                    className="card-hover rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-medium text-black disabled:opacity-40"
                   >
                     Guardar en ficha
                   </button>
@@ -215,7 +215,7 @@ function SinSesion() {
       <p className="anim-in text-lg font-semibold">Inicia sesión como barbero para ver este panel</p>
       <Link
         href="/login"
-        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md"
+        className="anim-in anim-d1 rounded-full bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-2.5 text-sm font-semibold text-black shadow-md"
       >
         Iniciar sesión
       </Link>
